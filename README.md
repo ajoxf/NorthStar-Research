@@ -56,7 +56,7 @@ See `.env.example` for the full annotated list. The ones that must be real befor
 
 | Variable | Notes |
 | --- | --- |
-| `DATABASE_URL` / `DIRECT_DATABASE_URL` | Postgres. Pooled for runtime, direct for migrations. |
+| `DATABASE_URL` / `DATABASE_URL_UNPOOLED` | Postgres. Pooled for runtime, direct for migrations. Both are injected automatically by the Neon integration in the Vercel Marketplace. |
 | `AUTH_SECRET` | Signs session cookies **and** short-lived report URLs. |
 | `APP_BASE_URL` | Used for every link sent by email/WhatsApp and for Cregis callback URLs. |
 | `CRON_SECRET` | The weekly send refuses to run without it. |
@@ -223,9 +223,10 @@ rendered in the site-wide footer and at `/disclaimer`. Do not shorten or paraphr
 
 ## Deployment
 
-1. Connect this repo to a Vercel project.
-2. Provision Postgres (Vercel Postgres or Neon) and Vercel Blob; set the connection string
-   and blob token.
+1. Connect this repo to a Vercel project (Settings → Git → Connect Git Repository).
+2. Provision Postgres via **Storage → Create Database → Neon**, which injects `DATABASE_URL`
+   and `DATABASE_URL_UNPOOLED` into the project by itself, and Vercel Blob for the
+   `BLOB_READ_WRITE_TOKEN`.
 3. Set every variable from `.env.example`. Set the three `CREGIS_*` values and
    `CREGIS_ALLOWLISTED_IP` to clearly-labelled `REPLACE_ME` placeholders for now.
 4. Deploy, then run `npm run db:push` (or `prisma migrate deploy`) against the production
