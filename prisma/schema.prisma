@@ -1,0 +1,215 @@
+// NorthStar Research — data model.
+//
+// This schema is deliberately CRM-shaped: a Member is not just an auth row, it is a
+// contact with a subscription, contact channels, tags/notes for segmentation, and a
+// queryable engagement history (DeliveryLog + ReportView).
+//
+// It is also deliberately ESP-friendly (see README "Portability"): email, names, tags
+// and notes are plain first-class columns, not buried in opaque JSON, so they map
+// directly onto how Kit.com and most ESPs model subscribers / tags / custom fields.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum Role {
+  member
+  admin
+}
+
+enum SubscriptionStatus {
+  pending
+  active
+  expired
+  cancelled
+}
+
+enum MemberSource {
+  cregis_checkout
+  admin_manual
+  import
+}
+
+enum ReportType {
+  commodities
+  international_markets
+  options_crypto_spread
+}
+
+enum CodeStatus {
+  unused
+  redeemed
+}
+
+enum OrderStatus {
+  pending
+  paid
+  failed
+  expired
+}
+
+enum DeliveryChannel {
+  email
+  whatsapp
+}
+
+enum DeliveryStatus {
+  queued
+  sent
+  delivered
+  failed
+  opened
+  clicked
+}
+
+model Member {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String?
+
+  firstName String?
+  lastName  String?
+
+  phoneNumber      String?
+  whatsappOptIn    Boolean @default(false)
+  whatsappVerified Boolean @default(false)
+
+  role Role @default(member)
+
+  subscriptionStatus    SubscriptionStatus @default(pending)
+  subscriptionStartedAt DateTime?
+  subscriptionRenewsAt  DateTime?
+
+  source MemberSource @default(cregis_checkout)
+
+  // Flat string[] + free text: maps 1:1 onto ESP tags / custom fields on migration.
+  tags       String[] @default([])
+  adminNotes String?
+
+  lastLoginAt        DateTime?
+  lastReportViewedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  redemptionCodes RedemptionCode[]
+  reportViews     ReportView[]
+  deliveryLogs    DeliveryLog[]
+  reportsCreated  Report[]         @relation("ReportAuthor")
+
+  @@index([subscriptionStatus])
+  @@index([createdAt])
+}
+
+model RedemptionCode {
+  id            String     @id @default(cuid())
+  code          String     @unique
+  cregisOrderId String?
+  email         String?
+  status        CodeStatus @default(unused)
+
+  redeemedByMemberId String?
+  redeemedByMember   Member? @relation(fields: [redeemedByMemberId], references: [id])
+
+  createdAt  DateTime  @default(now())
+  redeemedAt DateTime?
+
+  @@index([status])
+}
+
+/// Mirrors a Cregis checkout order. A code is only ever minted from a *verified*
+/// webhook transition of one of these rows to `paid` — never from a success redirect.
+model CheckoutOrder {
+  id            String      @id @default(cuid())
+  cregisOrderId String      @unique
+  email         String
+  phoneNumber   String?
+  amount        String
+  currency      String      @default("USD")
+  status        OrderStatus @default(pending)
+
+  rawCallback Json?
+
+  createdAt DateTime  @default(now())
+  paidAt    DateTime?
+}
+
+model Report {
+  id          String     @id @default(cuid())
+  type        ReportType
+  title       String
+  summary     String?
+  publishDate DateTime
+
+  pdfBlobUrl      String?
+  pdfBlobPathname String?
+
+  /// Responsive rendering used for the in-app reader and the (link-only) email view.
+  htmlContent String?
+
+  /// Structured rows behind the tabbed instrument table (see ReportInstrument in
+  /// src/lib/report-content.ts). Kept as JSON because it is presentation data, not
+  /// contact data — the ESP-portability rule applies to Member, not to report bodies.
+  instruments Json?
+
+  published   Boolean   @default(false)
+  publishedAt DateTime?
+
+  createdByAdminId String?
+  createdByAdmin   Member? @relation("ReportAuthor", fields: [createdByAdminId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  views        ReportView[]
+  deliveryLogs DeliveryLog[]
+
+  @@index([type, publishDate])
+  @@index([publishDate])
+}
+
+model ReportView {
+  id       String @id @default(cuid())
+  reportId String
+  report   Report @relation(fields: [reportId], references: [id])
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id])
+
+  viewedAt      DateTime @default(now())
+  ipAddress     String?
+  userAgent     String?
+  signedTokenId String?
+  downloaded    Boolean  @default(false)
+
+  @@index([memberId, viewedAt])
+  @@index([reportId])
+}
+
+model DeliveryLog {
+  id       String @id @default(cuid())
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id])
+  reportId String
+  report   Report @relation(fields: [reportId], references: [id])
+
+  channel DeliveryChannel
+  status  DeliveryStatus  @default(queued)
+
+  provider          String?
+  providerMessageId String?
+  error             String?
+
+  sentAt      DateTime  @default(now())
+  deliveredAt DateTime?
+  openedAt    DateTime?
+
+  @@unique([memberId, reportId, channel])
+  @@index([reportId])
+  @@index([memberId])
+}
