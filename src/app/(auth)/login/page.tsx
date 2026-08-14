@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 
 import { LoginForm } from '@/app/(auth)/login/login-form'
 import { getCurrentMember } from '@/lib/auth'
-import { googleConfigured } from '@/lib/oauth'
 
 export const metadata: Metadata = { title: 'Sign in' }
 
@@ -12,7 +11,8 @@ const ERRORS: Record<string, string> = {
   google_failed: 'Google sign-in did not complete. Please try again.',
   google_cancelled: 'Google sign-in was cancelled.',
   google_unverified: 'That Google account has no verified email address.',
-  google_unavailable: 'Google sign-in is not available on this deployment yet.',
+  google_unavailable:
+    'Google sign-in is not set up on this deployment yet. Use your email and password, or request a sign-in link.',
   link_expired: 'That sign-in link has expired. Request a new one.',
   link_invalid: 'That sign-in link is not valid.',
 }
@@ -52,7 +52,7 @@ export default async function LoginPage({
         </p>
       )}
 
-      <LoginForm next={next} googleEnabled={googleConfigured()} />
+      <LoginForm next={next} />
 
       <p className="mt-7 border-t border-line pt-6 text-[14px] text-ink-dim">
         Have an access code but no account yet?{' '}

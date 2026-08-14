@@ -16,7 +16,6 @@ const schema = z.object({
   firstName: z.string().trim().max(80).optional(),
   lastName: z.string().trim().max(80).optional(),
   phoneNumber: z.string().trim().optional(),
-  whatsappOptIn: z.boolean().optional(),
 })
 
 /**
@@ -39,7 +38,6 @@ export async function POST(request: Request) {
   const code = normaliseCode(parsed.data.code)
   const email = parsed.data.email.trim().toLowerCase()
   const phoneNumber = parsed.data.phoneNumber ? normalisePhone(parsed.data.phoneNumber) : null
-  const wantsWhatsApp = Boolean(parsed.data.whatsappOptIn && phoneNumber)
 
   const existing = await db.member.findUnique({ where: { email } })
   if (existing?.passwordHash) {
@@ -76,9 +74,6 @@ export async function POST(request: Request) {
           firstName: parsed.data.firstName || null,
           lastName: parsed.data.lastName || null,
           phoneNumber,
-          whatsappOptIn: wantsWhatsApp,
-          // Verification is a separate, explicit step — see /account.
-          whatsappVerified: false,
           role: 'member',
           subscriptionStatus: 'active',
           subscriptionStartedAt: now,
@@ -91,7 +86,6 @@ export async function POST(request: Request) {
           firstName: parsed.data.firstName || undefined,
           lastName: parsed.data.lastName || undefined,
           phoneNumber: phoneNumber ?? undefined,
-          whatsappOptIn: wantsWhatsApp,
           subscriptionStatus: 'active',
           subscriptionStartedAt: now,
           subscriptionRenewsAt: renewsAt,

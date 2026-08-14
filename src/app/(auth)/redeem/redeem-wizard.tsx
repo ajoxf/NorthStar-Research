@@ -33,7 +33,6 @@ export function RedeemWizard({ initialCode }: { initialCode: string }) {
   const [lastName, setLastName] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [phoneNumber, setPhoneNumber] = React.useState('')
-  const [whatsappOptIn, setWhatsappOptIn] = React.useState(false)
 
   async function validateCode(event: React.FormEvent) {
     event.preventDefault()
@@ -89,7 +88,6 @@ export function RedeemWizard({ initialCode }: { initialCode: string }) {
           firstName: firstName || undefined,
           lastName: lastName || undefined,
           phoneNumber: phoneNumber || undefined,
-          whatsappOptIn,
         }),
       })
       const data = await response.json()
@@ -217,36 +215,19 @@ export function RedeemWizard({ initialCode }: { initialCode: string }) {
             <PasswordStrength value={password} />
           </div>
 
-          <div className="mt-5 rounded-lg border border-line bg-panel-2 p-4">
-            <label className="flex cursor-pointer items-start gap-3">
-              <input
-                type="checkbox"
-                checked={whatsappOptIn}
-                onChange={(event) => setWhatsappOptIn(event.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
-              />
-              <span>
-                <span className="text-[15px] text-ink">Also send report links to WhatsApp</span>
-                <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
-                  We will send a link to each new report. You can change this any time.
-                </span>
-              </span>
-            </label>
-
-            {whatsappOptIn && (
-              <div className="mt-4 animate-fade-up">
-                <Label htmlFor="phone">Phone number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phoneNumber}
-                  autoComplete="tel"
-                  placeholder="+1 555 000 0000"
-                  onChange={(event) => setPhoneNumber(event.target.value)}
-                />
-                <Hint>Include the country code. You will confirm this number after signing in.</Hint>
-              </div>
-            )}
+          {/* Contact detail on your member record. Reports are delivered by email
+              only, so this is not a delivery preference. */}
+          <div className="mt-4">
+            <Label htmlFor="phone">Phone number — optional</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={phoneNumber}
+              autoComplete="tel"
+              placeholder="+1 555 000 0000"
+              onChange={(event) => setPhoneNumber(event.target.value)}
+            />
+            <Hint>Include the country code. Reports are delivered by email.</Hint>
           </div>
 
           <FieldError>{error}</FieldError>

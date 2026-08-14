@@ -16,7 +16,7 @@ import type { Recipient } from '@/lib/notifications/types'
  */
 
 /**
- * The link put in every email and WhatsApp message.
+ * The link put in every notification email.
  *
  * Note this is a plain portal route, not a payload URL and not a pre-signed link.
  * Opening it requires a live member session; the short-lived signed URL that actually
@@ -33,11 +33,16 @@ export type DeliverySummary = {
   sent: number
   failed: number
   skipped: number
-  byChannel: { email: number; whatsapp: number }
+  byChannel: { email: number }
 }
 
 /**
  * Deliver a report to every active member, one DeliveryLog row per member per channel.
+ *
+ * Email is the only delivery channel. WhatsApp was descoped: the DeliveryLog `channel`
+ * column, the member opt-in columns and the provider's WhatsApp methods are all left in
+ * place rather than dropped, so historic sends stay readable and turning the channel
+ * back on is a small change here — but nothing in the product offers or promises it.
  *
  * Idempotent by design: the `[memberId, reportId, channel]` unique constraint means
  * re-running a send (cron retry, admin re-publish) will not spam a member twice.
@@ -53,9 +58,6 @@ export async function deliverReportToActiveMembers(report: Report): Promise<Deli
       email: true,
       firstName: true,
       lastName: true,
-      phoneNumber: true,
-      whatsappOptIn: true,
-      whatsappVerified: true,
     },
   })
 
@@ -65,7 +67,7 @@ export async function deliverReportToActiveMembers(report: Report): Promise<Deli
     sent: 0,
     failed: 0,
     skipped: 0,
-    byChannel: { email: 0, whatsapp: 0 },
+    byChannel: { email: 0 },
   }
 
   const reportSummary = {
@@ -77,14 +79,7 @@ export async function deliverReportToActiveMembers(report: Report): Promise<Deli
   }
 
   for (const member of members) {
-    const channels: ('email' | 'whatsapp')[] = ['email']
-    // WhatsApp requires an explicit opt-in AND a verified number — an unverified
-    // opt-in is surfaced in the UI as a pending state rather than silently messaged.
-    if (member.whatsappOptIn && member.whatsappVerified && member.phoneNumber) {
-      channels.push('whatsapp')
-    }
-
-    for (const channel of channels) {
+    for (const channel of ['email'] as const) {
       const existing = await db.deliveryLog.findUnique({
         where: {
           memberId_reportId_channel: { memberId: member.id, reportId: report.id, channel },
@@ -96,10 +91,7 @@ export async function deliverReportToActiveMembers(report: Report): Promise<Deli
       }
 
       summary.attempted += 1
-      const result =
-        channel === 'email'
-          ? await provider.sendReportEmail(member as Recipient, reportSummary, url)
-          : await provider.sendReportWhatsApp(member as Recipient, reportSummary, url)
+      const result = await provider.sendReportEmail(member as Recipient, reportSummary, url)
 
       const data = {
         memberId: member.id,

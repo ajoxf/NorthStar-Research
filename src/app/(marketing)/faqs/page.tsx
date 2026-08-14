@@ -63,12 +63,12 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     ),
   },
   {
-    q: 'Can I get the reports on WhatsApp?',
+    q: 'How are the reports delivered?',
     a: (
       <>
-        Yes. Add and verify a phone number in your account settings and we will send a link to each
-        new report there as well as by email. The message contains a link into your member portal —
-        never the research itself — so you will need to be signed in to read it.
+        By email. Each notification contains a link into your member portal — never the research
+        itself — so you will need to be signed in to read it. The report then renders page by page
+        in the portal, charts included, on a phone as well as a desktop.
       </>
     ),
   },

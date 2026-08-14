@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: 'Report' }
 export const dynamic = 'force-dynamic'
 
 /**
- * The route every emailed and WhatsApp'd link resolves to (build spec §5.5).
+ * The route every emailed link resolves to (build spec §5.5).
  *
  * An anonymous request never renders report content: it is bounced to /login with a
  * `next` param so the member lands back here after signing in. That is the whole

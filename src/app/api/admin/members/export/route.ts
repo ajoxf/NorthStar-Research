@@ -39,8 +39,10 @@ export async function GET(request: Request) {
     'first_name',
     'last_name',
     'phone_number',
-    'whatsapp_opt_in',
-    'whatsapp_verified',
+    // Retained so historic exports stay comparable; WhatsApp delivery is descoped and
+    // these are no longer written to.
+    'whatsapp_opt_in_legacy',
+    'whatsapp_verified_legacy',
     'subscription_status',
     'subscription_started_at',
     'subscription_renews_at',

@@ -9,6 +9,7 @@ export const runtime = 'nodejs'
 const schema = z.object({
   firstName: z.string().trim().max(80).optional(),
   lastName: z.string().trim().max(80).optional(),
+  phoneNumber: z.string().trim().max(32).optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(10).optional(),
 })
@@ -28,6 +29,9 @@ export async function PATCH(request: Request) {
   const data: Record<string, unknown> = {
     firstName: parsed.data.firstName ?? null,
     lastName: parsed.data.lastName ?? null,
+    // Contact detail for the desk, not a delivery channel — WhatsApp delivery is
+    // descoped, so nothing is ever sent to this number.
+    phoneNumber: parsed.data.phoneNumber ? parsed.data.phoneNumber : null,
   }
 
   if (parsed.data.newPassword) {

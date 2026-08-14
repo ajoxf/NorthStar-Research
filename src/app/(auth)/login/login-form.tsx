@@ -11,7 +11,7 @@ import { isValidEmail } from '@/lib/utils'
 
 type Mode = 'password' | 'magic'
 
-export function LoginForm({ next, googleEnabled }: { next: string | null; googleEnabled: boolean }) {
+export function LoginForm({ next }: { next: string | null }) {
   const router = useRouter()
   const toast = useToast()
   const [mode, setMode] = React.useState<Mode>('password')
@@ -102,23 +102,26 @@ export function LoginForm({ next, googleEnabled }: { next: string | null; google
 
   return (
     <div className="mt-8">
-      {googleEnabled && (
-        <>
-          <a
-            href={`/api/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ''}`}
-            className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-line bg-panel text-[15px] font-medium text-ink transition-colors hover:border-accent/50 hover:bg-panel-2"
-          >
-            <GoogleMark />
-            Continue with Google
-          </a>
+      {/*
+        Always rendered, never feature-flagged on whether GOOGLE_CLIENT_ID happens to be
+        set. A sign-in method that appears only on some deployments is worse than one
+        that is always there: members learn the button exists, then cannot find it. If
+        the credentials are missing, /api/auth/google/start returns here with a plain
+        `google_unavailable` message rather than silently offering nothing.
+      */}
+      <a
+        href={`/api/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ''}`}
+        className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-line bg-panel text-[15px] font-medium text-ink transition-colors hover:border-accent/50 hover:bg-panel-2"
+      >
+        <GoogleMark />
+        Continue with Google
+      </a>
 
-          <div className="my-6 flex items-center gap-3">
-            <span className="h-px flex-1 bg-line" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">or</span>
-            <span className="h-px flex-1 bg-line" />
-          </div>
-        </>
-      )}
+      <div className="my-6 flex items-center gap-3">
+        <span className="h-px flex-1 bg-line" />
+        <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">or</span>
+        <span className="h-px flex-1 bg-line" />
+      </div>
 
       <form onSubmit={mode === 'password' ? signInWithPassword : sendMagicLink} noValidate>
         <div className="mb-4">

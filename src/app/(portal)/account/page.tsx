@@ -83,8 +83,6 @@ export default async function AccountPage() {
           firstName: member.firstName,
           lastName: member.lastName,
           phoneNumber: member.phoneNumber,
-          whatsappOptIn: member.whatsappOptIn,
-          whatsappVerified: member.whatsappVerified,
         }}
       />
     </div>

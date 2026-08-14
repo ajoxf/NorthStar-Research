@@ -54,7 +54,7 @@ export default function JoinPage() {
           </div>
 
           <ul className="space-y-2.5 py-6">
-            {['4 reports every week', 'Complete archive access', 'Email + optional WhatsApp delivery'].map(
+            {['4 reports every week', 'Complete archive access', 'Emailed the moment each report lands'].map(
               (item) => (
                 <li key={item} className="flex items-center gap-2.5 text-[14px] text-ink-dim">
                   <Check className="h-3.5 w-3.5 shrink-0 text-up" aria-hidden />

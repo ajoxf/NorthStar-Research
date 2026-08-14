@@ -14,19 +14,16 @@ export { cregisSign, signaturesMatch }
  * Cregis crypto-checkout client.
  *
  * ---------------------------------------------------------------------------
- * OPEN PRE-LAUNCH ITEM — STATIC OUTBOUND IP
+ * OUTBOUND IP
  * ---------------------------------------------------------------------------
- * Cregis allowlists the IP that calls its API. Vercel serverless functions have NO
- * static outbound IP by default, so these calls will originate from a rotating pool
- * and will be rejected once allowlisting is enforced. This build deliberately does
- * NOT pick a solution; `CREGIS_ALLOWLISTED_IP` is a placeholder so the decision is
- * not forgotten. Before go-live, choose one of:
- *   1. Vercel Secure Compute / static IP add-on;
- *   2. an outbound proxy with a fixed IP (QuotaGuard Static, Fixie) that these calls
- *      route through;
- *   3. isolating just these Cregis calls into a small always-on service (cheap VPS,
- *      Railway, Fly) with a genuinely static IP, called from this app.
- * This is an open decision for the client, not a build blocker.
+ * Cregis can allowlist the IP that calls its API, and Vercel serverless functions have
+ * no static outbound IP — calls originate from a rotating pool. The owner has confirmed
+ * a static outbound IP is not required for this account, so no proxy, Secure Compute
+ * add-on or side service is wired up here.
+ *
+ * If a checkout ever starts failing with an authorisation or IP error while the
+ * credentials are unchanged, this is the first thing to re-examine: a rejection on
+ * source IP means the key is *correct* and the caller is simply not on the list.
  * ---------------------------------------------------------------------------
  */
 

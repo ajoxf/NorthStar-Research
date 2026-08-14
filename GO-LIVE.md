@@ -29,10 +29,14 @@ is a deliberate decision, not a default.
 
 ---
 
-## 2. Cregis — resolve the IP allowlist
+## 2. Cregis — credentials only
 
-**Confirmed by a live failure**, not by reading the docs. A real checkout was attempted
-once the credentials were in:
+**The owner has confirmed a static outbound IP is not required for this account.** No
+proxy, Secure Compute add-on or relay service is needed, and nothing in the app is wired
+for one.
+
+Keep one piece of context in case a checkout ever fails. During integration a real
+checkout returned:
 
 ```
 POST 502 /api/checkout/create
@@ -41,25 +45,11 @@ The IP is not added to the whitelist list 98.81.6.170
 ```
 
 **Read that correctly: the credentials are right.** The request authenticated, reached
-Cregis, and was rejected purely on source IP. Nothing about the API key or project ID
-needs changing — the admin panel showing READY is accurate.
-
-`98.81.6.170` was that one invocation's egress address and **will rotate**. Adding that
-single IP to the allowlist may appear to fix it and then fail unpredictably later, which
-is worse than the current clean failure. Do not do that.
-
-Vercel serverless functions have **no static outbound IP** — calls come from a rotating
-pool, so there is no single address to allowlist. Options, cheapest first:
-
-1. **Confirm the scope first.** Send the email in §5. If allowlisting applies only to
-   dashboard/withdrawal APIs and not to Payment Engine checkout creation, there is
-   nothing to solve and this costs nothing.
-2. **Outbound proxy** (QuotaGuard Static, Fixie) — route only the Cregis `fetch` through
-   it. ~$20/mo, a few lines of code.
-3. **Vercel Secure Compute** — fixed outbound IP for the whole project. Cleanest, paid tier.
-4. **Small relay** on a VPS with a static IP that proxies Cregis calls.
-
-**Do not buy anything before their answer.**
+Cregis, and was rejected purely on source IP. So if this error returns, do not start
+rotating keys — and do not allowlist the address in the message either. Vercel serverless
+functions have no static outbound IP; `98.81.6.170` was one invocation's egress address
+and rotates. Allowlisting it would appear to fix the problem and then fail unpredictably
+later, which is worse than a clean failure. Raise it with Cregis instead (§5 has a draft).
 
 Then set in Vercel → Settings → Environment Variables (Production):
 
@@ -102,7 +92,7 @@ live one.
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob — report PDF storage. |
 | `ADMIN_BOOTSTRAP_SECRET` | Set it, create your admin at `/admin/bootstrap`, then **delete it**. |
 | `GOOGLE_CLIENT_ID` / `SECRET` | Optional. Redirect URI must be exactly `{APP_BASE_URL}/api/auth/google/callback`. |
-| Twilio vars | Only if WhatsApp launches. Needs a verified business sender and pre-approved templates — a separate process with its own lead time. |
+| Twilio vars | **Not needed.** WhatsApp delivery is descoped — reports go out by email only. Leave unset. |
 
 ---
 

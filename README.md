@@ -75,7 +75,6 @@ See `.env.example` for the full annotated list. The ones that must be real befor
 | `BLOB_READ_WRITE_TOKEN` | Vercel Blob, for uploaded PDFs. |
 | `CREGIS_PROJECT_ID` / `CREGIS_API_KEY` / `CREGIS_BASE_URL` | **Ships as `REPLACE_ME` placeholders on purpose.** |
 | `EMAIL_PROVIDER` + provider key | `console` (default), `resend`. |
-| `WHATSAPP_PROVIDER` + provider creds | `console` (default), `twilio`. |
 
 **Placeholders fail loudly, never silently.** `src/lib/env.ts` treats any value containing
 `REPLACE_ME` as unset. Invoking the Cregis client with a placeholder throws a
@@ -193,14 +192,18 @@ latter.
 
 Things this build deliberately did not decide, and things that need a real value.
 
-**Needs a decision (flagged, not resolved):**
+**Descoped by the owner:**
 
-- **Static outbound IP for Cregis.** Vercel serverless functions have no fixed outbound IP,
-  so calls to Cregis will come from a rotating pool and will fail once allowlisting is
-  enforced. `CREGIS_ALLOWLISTED_IP` is a placeholder and there is a note at the top of
-  `src/lib/cregis.ts`. The options are Vercel Secure Compute, an outbound proxy with a fixed
-  IP (QuotaGuard Static, Fixie), or isolating the Cregis calls into a small always-on
-  service. **This was intentionally not chosen — it is a client decision.**
+- **Static outbound IP for Cregis.** Confirmed not required for this account. Vercel
+  serverless functions still have no fixed outbound IP, so if a checkout ever fails with an
+  authorisation or IP error while the credentials are unchanged, re-read the note at the top
+  of `src/lib/cregis.ts` before touching the key — a rejection on source IP means the key is
+  correct.
+- **WhatsApp delivery.** Reports are delivered by email only. The `NotificationProvider`
+  WhatsApp methods and the Twilio provider remain in `src/lib/notifications/`, and the
+  `DeliveryLog.channel` column and member opt-in columns are untouched so historic rows stay
+  readable — but nothing calls them and no member is offered the channel. Re-enabling it is
+  a change in `src/lib/delivery.ts` plus the account UI.
 
 **Needs credentials / an account:**
 
@@ -208,10 +211,6 @@ Things this build deliberately did not decide, and things that need a real value
   values into Vercel.
 - **Email provider** — an account and API key. Built against Resend; any provider is a new
   implementation of the interface above.
-- **WhatsApp Business API** — a separate signup with its own business verification, plus
-  pre-approved message templates. A personal WhatsApp number cannot be used and this cannot
-  be faked. Built against Twilio; `TWILIO_WHATSAPP_TEMPLATE_SID` is the approved template
-  for the weekly report notification.
 
 **Needs content:**
 
@@ -239,8 +238,8 @@ rendered in the site-wide footer and at `/disclaimer`. Do not shorten or paraphr
 2. Provision Postgres via **Storage → Create Database → Neon**, which injects `DATABASE_URL`
    and `DATABASE_URL_UNPOOLED` into the project by itself, and Vercel Blob for the
    `BLOB_READ_WRITE_TOKEN`.
-3. Set every variable from `.env.example`. Set the three `CREGIS_*` values and
-   `CREGIS_ALLOWLISTED_IP` to clearly-labelled `REPLACE_ME` placeholders for now.
+3. Set every variable from `.env.example`. Set the three `CREGIS_*` values to
+   clearly-labelled `REPLACE_ME` placeholders for now.
 4. Deploy, then run `npm run db:push` (or `prisma migrate deploy`) against the production
    database, and `npm run create-admin -- --email=…` to seed the first admin.
 5. `vercel.json` registers the weekly cron at `/api/cron/weekly-send`. It publishes any

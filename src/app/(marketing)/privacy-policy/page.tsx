@@ -32,7 +32,7 @@ export default function PrivacyPolicyPage() {
             payment confirmation from our crypto payment processor. We never receive or store your
             card details, wallet keys or any payment credentials. When you activate your account we
             store your email address, a securely hashed password, and — only if you choose to
-            provide it — your name and a phone number for WhatsApp delivery.
+            provide it — your name and a phone number so we can reach you about your account.
           </p>
         </section>
 
@@ -40,9 +40,9 @@ export default function PrivacyPolicyPage() {
           <h2 className="mb-3 text-2xl text-ink">How we use it</h2>
           <p>
             We use your contact details to deliver the research you have paid for and to handle
-            support requests. If you opt in to WhatsApp, we use your phone number solely to send you
-            a link to each new report. We do not sell member data, and we do not share it with third
-            parties other than the service providers that deliver our email and WhatsApp messages
+            support requests. If you give us a phone number, we use it solely to contact you about
+            your account — we do not send the research to it. We do not sell member data, and we do
+            not share it with third parties other than the service providers that deliver our email
             and host our infrastructure.
           </p>
         </section>
@@ -59,8 +59,8 @@ export default function PrivacyPolicyPage() {
         <section>
           <h2 className="mb-3 text-2xl text-ink">Your choices</h2>
           <p>
-            You can turn WhatsApp delivery off at any time in your account settings. You can request
-            a copy of your data, correction of it, or deletion of your account by contacting us
+            You can update or remove your contact details at any time in your account settings. You
+            can request a copy of your data, correction of it, or deletion of your account by contacting us
             through {SITE_DOMAIN}. Deleting your account ends your access to the archive.
           </p>
         </section>

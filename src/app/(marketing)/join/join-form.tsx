@@ -125,7 +125,7 @@ export function JoinForm({
             placeholder="+1 555 000 0000"
             onChange={(event) => setPhone(event.target.value)}
           />
-          <Hint>Only used if you want your report links on WhatsApp. You can add it later.</Hint>
+          <Hint>So the desk can reach you about your order. You can add it later.</Hint>
         </div>
       )}
 

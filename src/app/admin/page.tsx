@@ -63,7 +63,7 @@ export default async function AdminDashboard() {
         <Stat label="Active members" value={activeMembers} />
         <Stat label="Paid, not yet redeemed" value={pendingMembers} hint={`${unusedCodes} unused codes`} />
         <Stat label="Lapsed / cancelled" value={lapsedMembers} />
-        <Stat label="Sends this week" value={sentThisWeek} hint="email + WhatsApp" />
+        <Stat label="Sends this week" value={sentThisWeek} hint="report emails" />
       </div>
 
       <ConfigurationPanel providers={providers} />
@@ -125,8 +125,13 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
  * The build ships with placeholder credentials on purpose, so the console states plainly
  * which integrations are live and which are not — the failure mode to avoid is an admin
  * assuming reports went out when delivery was only ever logging to the console.
+ *
+ * Only integrations the product actually uses appear here. WhatsApp delivery and the
+ * Cregis static outbound IP are both descoped; a permanently amber row for something
+ * nobody intends to configure trains an operator to ignore the panel, which is exactly
+ * what it exists to prevent.
  */
-function ConfigurationPanel({ providers }: { providers: { email: string; whatsapp: string } }) {
+function ConfigurationPanel({ providers }: { providers: { email: string } }) {
   const rows = [
     {
       label: 'Card billing (Stripe)',
@@ -147,7 +152,7 @@ function ConfigurationPanel({ providers }: { providers: { email: string; whatsap
       ready: googleConfigured(),
       detail: googleConfigured()
         ? 'Enabled on the sign-in page'
-        : 'Not configured — the Google button is hidden',
+        : 'Credentials missing — the button is shown but returns an error',
     },
     {
       label: 'Email delivery',
@@ -158,26 +163,11 @@ function ConfigurationPanel({ providers }: { providers: { email: string; whatsap
           : `Sending via ${providers.email}`,
     },
     {
-      label: 'WhatsApp delivery',
-      ready: providers.whatsapp !== 'console',
-      detail:
-        providers.whatsapp === 'console'
-          ? 'No provider configured — sends are logged, not delivered'
-          : `Sending via ${providers.whatsapp}`,
-    },
-    {
       label: 'File storage (Vercel Blob)',
       ready: isConfigured('BLOB_READ_WRITE_TOKEN'),
       detail: isConfigured('BLOB_READ_WRITE_TOKEN')
         ? 'Token set'
         : 'No token — PDF uploads will fail',
-    },
-    {
-      label: 'Cregis static outbound IP',
-      ready: isConfigured('CREGIS_ALLOWLISTED_IP'),
-      detail: isConfigured('CREGIS_ALLOWLISTED_IP')
-        ? process.env.CREGIS_ALLOWLISTED_IP ?? ''
-        : 'Open pre-launch decision — see README',
     },
   ]
 

@@ -65,7 +65,7 @@ function Hero() {
             {[
               { icon: FileText, label: '4 reports / week' },
               { icon: Archive, label: 'Full archive' },
-              { icon: Smartphone, label: 'Email + WhatsApp' },
+              { icon: Smartphone, label: 'Reads on mobile' },
             ].map((item) => (
               <li key={item.label} className="flex items-center gap-2">
                 <item.icon className="h-3.5 w-3.5 text-accent" aria-hidden />
@@ -112,7 +112,7 @@ function SampleReportSection() {
                 {
                   icon: Lock,
                   title: 'Members-only, in every channel',
-                  body: 'Email and WhatsApp carry a link, never the research. Opening it always requires a signed-in member session.',
+                  body: 'Every email carries a link, never the research. Opening it always requires a signed-in member session.',
                 },
                 {
                   icon: ShieldCheck,
@@ -121,8 +121,8 @@ function SampleReportSection() {
                 },
                 {
                   icon: MessageCircle,
-                  title: 'Delivered where you read',
-                  body: 'Email by default. Add WhatsApp if you would rather get the link on your phone.',
+                  title: 'Built to read on a phone',
+                  body: 'Charts and levels render page by page in the portal — no pinching at a PDF in a browser tab.',
                 },
               ].map((feature) => (
                 <li key={feature.title} className="flex gap-3.5">
@@ -161,9 +161,9 @@ function PricingSection() {
             </span>
           </div>
           <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
-            One plan. Four reports a week, the complete archive of everything published, and
-            delivery by email or WhatsApp. Pay by card and it renews itself — cancel any time — or
-            pay in crypto and renew whenever you choose.
+            One plan. Four reports a week, the complete archive of everything published, and an
+            email the moment each one lands. Pay by card and it renews itself — cancel any time —
+            or pay in crypto and renew whenever you choose.
           </p>
 
           <ul className="mt-8 space-y-3 border-t border-line pt-7">
@@ -171,7 +171,7 @@ function PricingSection() {
               'All four weekly reports',
               'Full archive of every past report',
               'Mobile-ready reading view',
-              'Optional WhatsApp delivery',
+              'Emailed the moment each report lands',
               'Card or crypto — cancel any time',
             ].map((item) => (
               <li key={item} className="flex items-center gap-2.5 text-[15px] text-ink">

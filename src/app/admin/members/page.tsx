@@ -113,11 +113,6 @@ export default async function AdminMembersPage({
                   <td className="px-5 py-3.5">
                     <div className="flex flex-wrap gap-1.5">
                       <Badge tone="muted">Email</Badge>
-                      {member.whatsappOptIn && (
-                        <Badge tone={member.whatsappVerified ? 'up' : 'accent'}>
-                          {member.whatsappVerified ? 'WhatsApp' : 'WA unverified'}
-                        </Badge>
-                      )}
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-dim">

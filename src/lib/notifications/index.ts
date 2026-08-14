@@ -96,6 +96,13 @@ export function getNotificationProvider(): NotificationProvider {
   return new CompositeProvider()
 }
 
-export function providerNames(): { email: string; whatsapp: string } {
-  return { email: emailProvider().name, whatsapp: whatsappProvider().name }
+/**
+ * Names of the providers actually in use, for the admin console's status panel.
+ *
+ * WhatsApp is descoped as a delivery channel, so it is not reported here — but the
+ * provider plumbing below is left intact rather than deleted, so re-enabling it is a
+ * change in src/lib/delivery.ts and nowhere else.
+ */
+export function providerNames(): { email: string } {
+  return { email: emailProvider().name }
 }

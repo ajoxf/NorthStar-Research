@@ -112,7 +112,7 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
         <p className="mb-5 text-[14px] leading-relaxed text-ink-dim">
           {report.published
             ? 'This report is live. Re-sending delivers only to active members who have not already received it — nobody gets a duplicate.'
-            : 'Publishing makes this report visible to members and immediately emails every active member a link to it (plus WhatsApp for those who have opted in and verified their number).'}
+            : 'Publishing makes this report visible to members and immediately emails every active member a link to it.'}
         </p>
 
         {confirmPublish ? (

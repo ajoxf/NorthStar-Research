@@ -179,13 +179,5 @@ export async function POST(request: Request) {
     console.error(`[cregis:webhook] code ${code} issued but email threw`, error)
   }
 
-  if (order.phoneNumber) {
-    try {
-      await provider.sendRedemptionCodeWhatsApp({ phoneNumber: order.phoneNumber }, code, redeemUrl)
-    } catch (error) {
-      console.error('[cregis:webhook] WhatsApp code delivery threw', error)
-    }
-  }
-
   return ack()
 }
