@@ -67,15 +67,23 @@ cannot verify. A placeholder can never be mistaken for a working integration.
 signs every member out and invalidates outstanding report links — expected, but do it
 deliberately.
 
-## 4. Deploy, then initialise the database
+## 4. Deploy, then create your admin
 
-Deploy from the dashboard. The schema still has to be created once — from a local checkout
-with the same `DATABASE_URL`:
+**The schema creates itself.** The build runs `prisma db push` against `DATABASE_URL`, so
+the tables appear on the first deploy after Postgres exists, and every later schema change
+applies on the deploy that carries it. Nothing to run by hand.
 
-```bash
-npm install
-npx prisma db push
-```
+Two safeguards worth knowing:
+
+- With no database configured the sync is **skipped, not failed** — the site still builds,
+  which is what lets you deploy before provisioning Neon. The skip is logged loudly.
+- The sync never passes `--accept-data-loss`. If a change would drop a column or table the
+  build **fails** instead. Losing member data should be a human decision, not a side effect
+  of a deploy.
+
+While the schema is still moving, `db push` is the right tool. Once it settles, switch to
+committed migration files and `prisma migrate deploy` for a reviewable history — change the
+command in `scripts/db-deploy.mjs`.
 
 Then create the first administrator. Either:
 
@@ -84,7 +92,7 @@ and visit `/admin/bootstrap`. It creates the admin, signs you in, and refuses to
 again once an admin exists. Delete the variable afterwards.
 
 **Or from the CLI:** `npm run create-admin -- --email=you@example.com`, which prints a
-generated password once.
+generated password once (needs a local checkout with `DATABASE_URL` set).
 
 Either way you then sign in at `/admin/login`.
 

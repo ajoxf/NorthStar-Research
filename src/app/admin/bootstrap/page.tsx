@@ -47,9 +47,9 @@ export default async function AdminBootstrapPage() {
           <div className="mt-7 rounded-lg border border-down/40 bg-down/10 p-5 text-[14px] leading-relaxed text-ink">
             <strong className="font-medium">The database is not reachable.</strong>
             <p className="mt-2 text-ink-dim">
-              Provision Postgres (Storage → Create Database → Neon), then run{' '}
-              <code className="font-mono text-accent">npx prisma db push</code> against it to create
-              the tables. Reload this page afterwards.
+              Provision Postgres in Vercel (Storage → Create Database → Neon) and connect it to
+              this project, then redeploy. The build creates the tables automatically — no
+              commands to run. Reload this page once the deploy finishes.
             </p>
           </div>
         ) : !enabled ? (

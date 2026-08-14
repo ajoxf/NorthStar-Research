@@ -37,7 +37,7 @@ Next.js 14 (App Router) · TypeScript · Postgres/Prisma · Tailwind · Vercel B
 ```bash
 npm install
 cp .env.example .env.local        # then fill in DATABASE_URL and AUTH_SECRET
-npm run db:push                   # create the schema
+npm run db:push                   # create the schema (production does this at build time)
 npm run create-admin -- --email=you@example.com
 npm run seed-demo                 # optional: a demo member + published reports
 npm run dev
