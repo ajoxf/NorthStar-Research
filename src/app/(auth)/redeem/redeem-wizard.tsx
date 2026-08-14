@@ -223,7 +223,7 @@ export function RedeemWizard({ initialCode }: { initialCode: string }) {
                 type="checkbox"
                 checked={whatsappOptIn}
                 onChange={(event) => setWhatsappOptIn(event.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[#00E0FF]"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#39FF14]"
               />
               <span>
                 <span className="text-[15px] text-ink">Also send report links to WhatsApp</span>

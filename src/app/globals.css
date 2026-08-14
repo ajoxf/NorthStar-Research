@@ -9,11 +9,11 @@
   --line: #1E2228;
   --ink: #F2F4F7;
   --ink-dim: #8A93A0;
-  --accent: #00E0FF;
+  --accent: #39FF14;
   --up: #00E08A;
   --down: #FF4D5E;
-  --series-1: #0E93AA;
-  --series-2: #B87C18;
+  --series-1: #3FA82F;
+  --series-2: #8B6FE8;
 
   --font-newsreader: 'Newsreader', Georgia, serif;
   --font-plex-mono: 'IBM Plex Mono', ui-monospace, monospace;
@@ -36,7 +36,7 @@
   }
 
   ::selection {
-    background: rgba(0, 224, 255, 0.22);
+    background: rgba(57, 255, 20, 0.22);
   }
 
   :focus-visible {

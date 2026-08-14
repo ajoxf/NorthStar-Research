@@ -17,7 +17,7 @@ const PANEL = '#0E1013'
 const LINE = '#1E2228'
 const INK = '#F2F4F7'
 const INK_DIM = '#8A93A0'
-const ACCENT = '#00E0FF'
+const ACCENT = '#39FF14'
 
 function shell(title: string, body: string, footerNote?: string): string {
   return `<!doctype html>

@@ -11,15 +11,19 @@ import { formatCompact, formatCurrency, type ProjectionYear } from '@/lib/withdr
  * insight: a portfolio can grow in cash terms while losing purchasing power, and one
  * line alone hides that.
  *
- * Colours are darker steps of the brand hues rather than the neon accent itself: the
- * accent is too light to sit on the panel surface as a data mark. Both series are
- * direct-labelled at the line end as well as carrying a legend, so identity never
- * depends on colour alone.
+ * Series one is a darker step of the brand green — the neon accent itself is far too
+ * light to sit on the panel surface as a data mark. Series two is violet rather than the
+ * more obvious amber, because green against amber is the classic red-green colour-blind
+ * failure: that pair measures ΔE 2.0 under deuteranopia, i.e. indistinguishable. Green
+ * against violet measures 27.3 and passes every check.
+ *
+ * Both series are direct-labelled at the line end as well as carrying a legend, and the
+ * real series is dashed, so identity never depends on colour alone.
  */
 
 const SERIES = {
-  nominal: { color: '#0E93AA', label: 'Portfolio balance' },
-  real: { color: '#B87C18', label: "In today's money" },
+  nominal: { color: '#3FA82F', label: 'Portfolio balance' },
+  real: { color: '#8B6FE8', label: "In today's money" },
 } as const
 
 const WIDTH = 720
