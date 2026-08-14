@@ -2,7 +2,9 @@
 
 import * as React from 'react'
 
+import { ChartGallery } from '@/components/chart-gallery'
 import { cn } from '@/lib/utils'
+import type { ChartImage } from '@/lib/pdf-sections'
 import type { ReportInstrument } from '@/lib/report-content'
 
 /**
@@ -10,7 +12,7 @@ import type { ReportInstrument } from '@/lib/report-content'
  *
  * The tabbed `InstrumentTable` is still right for the marketing preview, where the point
  * is to show the *format* compactly. Inside a report it hid work: a member reading the
- * commodities edition had to discover that four more instruments existed behind tabs, and
+ * commodities edition had to discover that six more instruments existed behind tabs, and
  * on a phone the tab strip scrolled off screen entirely. Here every instrument gets its
  * own band, so scrolling the report is the same gesture as reading it.
  *
@@ -22,28 +24,42 @@ import type { ReportInstrument } from '@/lib/report-content'
  * otherwise true black. Up/down colours are therefore defined twice, because #00E08A on
  * white is close to unreadable.
  */
+
+export type InstrumentBandModel = {
+  /** Stable identity, uppercase and alphanumeric — `XAUUSD`, `SPX`. */
+  key: string
+  /** Heading as printed in the document, or the admin-authored symbol. */
+  title: string
+  /** Charts lifted from the report PDF, in document order. */
+  charts: ChartImage[]
+  /** Admin-authored levels. Absent when the instrument only has charts. */
+  instrument?: ReportInstrument
+  /** Pages of the source PDF this band covers, for the "page n" reference. */
+  pages: number[]
+}
+
 export function InstrumentSections({
-  instruments,
+  bands,
   watermarkStyle,
   watermarkStyleLight,
 }: {
-  instruments: ReportInstrument[]
+  bands: InstrumentBandModel[]
   /** Tile for the black bands — a pale mark on black. */
   watermarkStyle?: React.CSSProperties
   /** Tile for the white bands. A pale mark is invisible there, so it is inverted. */
   watermarkStyleLight?: React.CSSProperties
 }) {
-  if (instruments.length === 0) return null
+  if (bands.length === 0) return null
 
   return (
-    <section aria-label="Instrument levels">
-      {instruments.length > 1 && <InstrumentJumpNav instruments={instruments} />}
+    <section aria-label="Instruments">
+      {bands.length > 1 && <InstrumentJumpNav bands={bands} />}
 
       <div className="space-y-4 sm:space-y-5">
-        {instruments.map((instrument, index) => (
+        {bands.map((band, index) => (
           <InstrumentBand
-            key={`${instrument.symbol}-${index}`}
-            instrument={instrument}
+            key={`${band.key}-${index}`}
+            band={band}
             index={index}
             light={index % 2 === 1}
             watermarkStyle={index % 2 === 1 ? watermarkStyleLight : watermarkStyle}
@@ -55,23 +71,23 @@ export function InstrumentSections({
 }
 
 /**
- * Chips that jump to a band. On a four-to-six instrument report this is the difference
- * between reading and hunting; it scrolls horizontally rather than wrapping, so it stays
- * one row at phone width.
+ * Chips that jump to a band. On a seven-instrument report this is the difference between
+ * reading and hunting; it scrolls horizontally rather than wrapping, so it stays one row
+ * at phone width.
  */
-function InstrumentJumpNav({ instruments }: { instruments: ReportInstrument[] }) {
+function InstrumentJumpNav({ bands }: { bands: InstrumentBandModel[] }) {
   return (
     <nav
       aria-label="Jump to instrument"
       className="mb-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
-      {instruments.map((instrument, index) => (
+      {bands.map((band, index) => (
         <a
-          key={`${instrument.symbol}-${index}`}
-          href={`#instrument-${slug(instrument.symbol)}-${index}`}
+          key={`${band.key}-${index}`}
+          href={`#instrument-${band.key.toLowerCase()}-${index}`}
           className="inline-flex h-9 shrink-0 items-center rounded-full border border-line px-3.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
         >
-          {instrument.symbol}
+          {band.key}
         </a>
       ))}
     </nav>
@@ -79,21 +95,22 @@ function InstrumentJumpNav({ instruments }: { instruments: ReportInstrument[] })
 }
 
 function InstrumentBand({
-  instrument,
+  band,
   index,
   light,
   watermarkStyle,
 }: {
-  instrument: ReportInstrument
+  band: InstrumentBandModel
   index: number
   light: boolean
   watermarkStyle?: React.CSSProperties
 }) {
-  const biasTone = toneClass(instrument.bias, light)
+  const instrument = band.instrument
+  const biasTone = toneClass(instrument?.bias, light)
 
   return (
     <article
-      id={`instrument-${slug(instrument.symbol)}-${index}`}
+      id={`instrument-${band.key.toLowerCase()}-${index}`}
       // scroll-mt keeps the heading clear of the sticky portal header after a jump.
       className={cn(
         'watermarked scroll-mt-20 overflow-hidden rounded-2xl border',
@@ -115,6 +132,7 @@ function InstrumentBand({
             )}
           >
             Instrument {String(index + 1).padStart(2, '0')}
+            {band.pages.length > 0 && ` · page ${band.pages[0]}`}
           </div>
           <h3
             className={cn(
@@ -122,21 +140,18 @@ function InstrumentBand({
               light ? 'text-black' : 'text-ink',
             )}
           >
-            {instrument.symbol}
+            {band.title}
           </h3>
-          {instrument.name && (
+          {instrument?.name && (
             <div
-              className={cn(
-                'mt-1.5 truncate text-[14px]',
-                light ? 'text-black/55' : 'text-ink-dim',
-              )}
+              className={cn('mt-1.5 truncate text-[14px]', light ? 'text-black/55' : 'text-ink-dim')}
             >
               {instrument.name}
             </div>
           )}
         </div>
 
-        {(instrument.last || instrument.change) && (
+        {instrument && (instrument.last || instrument.change) && (
           <div className="text-right">
             <div className={cn('font-mono text-xl sm:text-2xl', light ? 'text-black' : 'text-ink')}>
               {instrument.last}
@@ -148,40 +163,46 @@ function InstrumentBand({
         )}
       </header>
 
-      {/* Definition list, not a <table>: it reflows to a single column on a phone instead
-          of scrolling sideways. */}
-      <dl className={cn('divide-y', light ? 'divide-black/10' : 'divide-line')}>
-        {instrument.rows.map((row, rowIndex) => (
-          <div
-            key={`${row.label}-${rowIndex}`}
-            className="flex flex-col gap-1 px-5 py-3.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8 sm:px-7"
-          >
-            <dt
-              className={cn(
-                'font-mono text-[11px] uppercase tracking-[0.12em]',
-                light ? 'text-black/50' : 'text-ink-dim',
-              )}
-            >
-              {row.label}
-            </dt>
-            <dd
-              className={cn(
-                'font-mono text-[15px] sm:text-right',
-                toneClass(row.bias, light, light ? 'text-black' : 'text-ink'),
-              )}
-            >
-              {row.value}
-              {row.note && (
-                <span className={cn('ml-2', light ? 'text-black/50' : 'text-ink-dim')}>
-                  {row.note}
-                </span>
-              )}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {/* Charts lead. They are what the research actually is; the levels below are an
+          index over them. */}
+      <ChartGallery charts={band.charts} light={light} />
 
-      {instrument.commentary && (
+      {instrument && instrument.rows.length > 0 && (
+        // Definition list, not a <table>: it reflows to a single column on a phone
+        // instead of scrolling sideways.
+        <dl className={cn('border-t divide-y', light ? 'border-black/10 divide-black/10' : 'border-line divide-line')}>
+          {instrument.rows.map((row, rowIndex) => (
+            <div
+              key={`${row.label}-${rowIndex}`}
+              className="flex flex-col gap-1 px-5 py-3.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-8 sm:px-7"
+            >
+              <dt
+                className={cn(
+                  'font-mono text-[11px] uppercase tracking-[0.12em]',
+                  light ? 'text-black/50' : 'text-ink-dim',
+                )}
+              >
+                {row.label}
+              </dt>
+              <dd
+                className={cn(
+                  'font-mono text-[15px] sm:text-right',
+                  toneClass(row.bias, light, light ? 'text-black' : 'text-ink'),
+                )}
+              >
+                {row.value}
+                {row.note && (
+                  <span className={cn('ml-2', light ? 'text-black/50' : 'text-ink-dim')}>
+                    {row.note}
+                  </span>
+                )}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {instrument?.commentary && (
         <div
           className={cn(
             'border-t px-5 py-5 text-[15px] leading-relaxed sm:px-7',
@@ -208,8 +229,4 @@ function toneClass(
   if (bias === 'up') return light ? 'text-[#0B7A4B]' : 'text-up'
   if (bias === 'down') return light ? 'text-[#B31D2B]' : 'text-down'
   return neutral ?? (light ? 'text-black/55' : 'text-ink-dim')
-}
-
-function slug(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }

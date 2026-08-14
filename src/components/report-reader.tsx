@@ -4,7 +4,7 @@ import * as React from 'react'
 import { Download, FileText, ShieldAlert } from 'lucide-react'
 
 import { InstrumentSections } from '@/components/instrument-sections'
-import { PdfFlipReader } from '@/components/pdf-flip-reader'
+import { ReportDocument } from '@/components/report-document'
 import { Button, Spinner } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { watermarkTile } from '@/lib/watermark'
@@ -13,16 +13,12 @@ import type { ReportInstrument } from '@/lib/report-content'
 /**
  * In-app reading view.
  *
- * Order matters here. Every edition is authored as a PDF, and the charts in it *are* the
- * research — so the PDF pages are rendered first, page by page, exactly as drawn. An
- * earlier build tried to re-typeset the document from its text layer; it dropped every
- * chart and mangled price tables, which is why nothing on this page derives report
- * content from the file automatically (see src/lib/pdf.ts).
+ * When there is a PDF — which is every real edition — `ReportDocument` owns the
+ * experience: the pages as a book, then the charts pulled out of them and grouped by
+ * instrument. Everything below here is what remains for the cases where there is not one.
  *
- * The instrument bands and any hand-written reading view sit *below* the document. They
- * are a structured index over it — quick levels on a phone — not a replacement for it.
- *
- * The original PDF is still offered as an explicit, logged download.
+ * Any hand-written reading view is shown after the document, as a supplement to it rather
+ * than a substitute; the original PDF is still offered as an explicit, logged download.
  */
 export function ReportReader({
   reportId,
@@ -76,16 +72,27 @@ export function ReportReader({
   return (
     <div>
       {hasPdf && (
-        <section className="mb-10" aria-label="Report document">
-          <PdfFlipReader reportId={reportId} watermarkLabel={watermarkLabel} />
+        <section className="mb-10" aria-label="Report contents">
+          <ReportDocument
+            reportId={reportId}
+            watermarkLabel={watermarkLabel}
+            instruments={instruments}
+          />
         </section>
       )}
 
-      {instruments.length > 0 && (
+      {/* No PDF, but an admin wrote levels: show them on their own. */}
+      {!hasPdf && instruments.length > 0 && (
         <section className="mb-10">
           <h2 className="eyebrow mb-4">Instrument levels</h2>
           <InstrumentSections
-            instruments={instruments}
+            bands={instruments.map((instrument) => ({
+              key: instrument.symbol.toUpperCase().replace(/[^A-Z0-9]/g, ''),
+              title: instrument.symbol,
+              charts: [],
+              instrument,
+              pages: [],
+            }))}
             watermarkStyle={watermarkStyle}
             watermarkStyleLight={watermarkStyleLight}
           />

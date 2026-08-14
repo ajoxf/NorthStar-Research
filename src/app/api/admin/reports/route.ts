@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   const file = form.get('pdf')
   let pdfBlobUrl: string | null = null
   let pdfBlobPathname: string | null = null
-  // Surfaced to the operator when a PDF is stored with no reading view written for it.
+  // Surfaced to the operator when something about the upload needs saying.
   let warning: string | null = null
 
   if (file instanceof File && file.size > 0) {
@@ -124,14 +124,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The PDF could not be uploaded.' }, { status: 502 })
     }
 
-    // Reading views are hand-authored — see the note at the top of src/lib/pdf.ts.
-    // A PDF alone is not an acceptable delivery format (build spec §12), so say so
-    // plainly rather than generating something unreliable to fill the gap.
-    if (!parsed.data.htmlContent?.trim()) {
-      warning =
-        'The PDF was saved, but this report has no reading view yet. Members on a phone ' +
-        'would see only a download link. Add the reading view content before publishing.'
-    }
+    // A PDF on its own is now a complete report: the member's reader renders it as a
+    // book and lifts the charts out of it per instrument. Nothing further is required,
+    // and nothing is auto-generated from the file's text — see src/lib/pdf-sections.ts.
   }
 
   const htmlContent = parsed.data.htmlContent?.trim()

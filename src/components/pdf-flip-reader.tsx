@@ -1,53 +1,52 @@
 'use client'
 
 import * as React from 'react'
-import { ChevronLeft, ChevronRight, FileWarning, Loader2, Maximize2, Minimize2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Maximize2, Minimize2 } from 'lucide-react'
 
+import { PdfPage } from '@/components/pdf-page'
 import { cn } from '@/lib/utils'
 import { watermarkTile } from '@/lib/watermark'
+import type { PdfDocument } from '@/lib/pdf-client'
 
 /**
- * Page-by-page PDF reader with a flip transition.
+ * The report as a book.
  *
- * This renders the actual PDF pages to canvas, so charts, tables and layout arrive
- * exactly as they were authored. That is the point: an earlier approach extracted the
- * text layer instead, which dropped every chart and mangled price tables into runs like
- * `DXY 101.977100.365100.020`. On a research product the levels *are* the product, so
- * the document is shown, not re-typeset.
+ * On anything wide enough it opens as a two-page spread with a gutter down the middle and
+ * a leaf that swings across on the turn; on a phone it is a single page that swipes. Both
+ * are the same document rendered from the real PDF, so charts and layout arrive exactly
+ * as authored — the document is *shown*, never re-typeset. See the note at the top of
+ * src/lib/pdf-sections.ts for why that distinction is load-bearing.
  *
- * Access is unchanged: the bytes come from a short-lived signed URL bound to one member
- * and one report, fetched into memory and never exposed as a shareable link.
- *
- * Mobile is a first-class case, not a fallback — swipe to turn, pages sized to the
- * container width, and controls large enough to hit with a thumb.
+ * The document is passed in rather than loaded here: the report page also mines it for
+ * per-instrument charts, and fetching several megabytes twice on a phone is not
+ * acceptable.
  */
 
-type LoadState = 'idle' | 'loading' | 'ready' | 'error'
+/** Below this container width a spread would make each page too small to read. */
+const SPREAD_MIN_WIDTH = 880
 
 export function PdfFlipReader({
-  reportId,
+  doc,
   watermarkLabel,
 }: {
-  reportId: string
+  doc: PdfDocument
   watermarkLabel: string
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null)
-  const canvasRef = React.useRef<HTMLCanvasElement>(null)
-  // Held in a ref, not state: the document is large and must never trigger a re-render.
-  const docRef = React.useRef<{ numPages: number; getPage: (n: number) => Promise<unknown> } | null>(
-    null,
-  )
-  const renderTaskRef = React.useRef<{ cancel: () => void } | null>(null)
 
-  const [state, setState] = React.useState<LoadState>('idle')
-  const [error, setError] = React.useState<string | null>(null)
-  const [pageCount, setPageCount] = React.useState(0)
-  const [page, setPage] = React.useState(1)
-  const [flip, setFlip] = React.useState<'none' | 'next' | 'prev'>('none')
+  const [leaf, setLeaf] = React.useState(0)
+  const [turning, setTurning] = React.useState<'none' | 'next' | 'prev'>('none')
   const [expanded, setExpanded] = React.useState(false)
   const [width, setWidth] = React.useState(0)
 
-  // Track container width so pages re-render crisply on resize and rotation.
+  const pageCount = doc.numPages
+  const spread = width >= SPREAD_MIN_WIDTH && pageCount > 1
+  const perLeaf = spread ? 2 : 1
+  const leafCount = Math.ceil(pageCount / perLeaf)
+  const firstPage = leaf * perLeaf + 1
+
+  // Track container width so pages re-render crisply on resize and rotation, and so the
+  // layout can drop from a spread to a single page when the window narrows.
   React.useEffect(() => {
     const element = containerRef.current
     if (!element) return
@@ -60,123 +59,38 @@ export function PdfFlipReader({
     return () => observer.disconnect()
   }, [])
 
-  // Load the document once.
+  // Keep the reader on the same page when the layout switches between one page and two.
+  const perLeafRef = React.useRef(perLeaf)
   React.useEffect(() => {
-    let cancelled = false
+    if (perLeafRef.current === perLeaf) return
+    const page = leaf * perLeafRef.current + 1
+    perLeafRef.current = perLeaf
+    setLeaf(Math.floor((page - 1) / perLeaf))
+  }, [leaf, perLeaf])
 
-    async function load() {
-      setState('loading')
-      setError(null)
-
-      try {
-        const response = await fetch(`/api/reports/${reportId}/view-url`, { method: 'POST' })
-        const data = await response.json()
-        if (!response.ok) throw new Error(data.error ?? 'Could not open the document.')
-
-        const pdfjs = await import('pdfjs-dist')
-        // Served from our own origin, copied into /public at build time by
-        // scripts/copy-pdf-worker.mjs. Never a CDN: paid research must not fail to
-        // render because a third-party host is slow or blocked.
-        pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-
-        const bytes = await (await fetch(data.url)).arrayBuffer()
-        if (cancelled) return
-
-        const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes) }).promise
-        if (cancelled) return
-
-        docRef.current = doc as never
-        setPageCount(doc.numPages)
-        setPage(1)
-        setState('ready')
-      } catch (err) {
-        if (cancelled) return
-        console.error('[pdf-reader]', err)
-        setError(err instanceof Error ? err.message : 'Could not open the document.')
-        setState('error')
-      }
-    }
-
-    void load()
-    return () => {
-      cancelled = true
-    }
-  }, [reportId])
-
-  // Render the current page whenever it, or the available width, changes.
-  React.useEffect(() => {
-    if (state !== 'ready' || !docRef.current || width === 0) return
-
-    let cancelled = false
-
-    async function render() {
-      const doc = docRef.current
-      const canvas = canvasRef.current
-      if (!doc || !canvas) return
-
-      // Cancel any in-flight render before starting another — rapid page turns
-      // otherwise paint out of order.
-      renderTaskRef.current?.cancel()
-
-      const pdfPage = (await doc.getPage(page)) as {
-        getViewport: (o: { scale: number }) => { width: number; height: number }
-        render: (o: unknown) => { promise: Promise<void>; cancel: () => void }
-      }
-      if (cancelled) return
-
-      const base = pdfPage.getViewport({ scale: 1 })
-      // Cap the device pixel ratio: a 3x phone screen on a large page produces a canvas
-      // big enough to be refused by the browser.
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      const scale = (width / base.width) * dpr
-      const viewport = pdfPage.getViewport({ scale })
-
-      const context = canvas.getContext('2d')
-      if (!context) return
-
-      canvas.width = Math.floor(viewport.width)
-      canvas.height = Math.floor(viewport.height)
-      canvas.style.width = '100%'
-      canvas.style.height = 'auto'
-
-      const task = pdfPage.render({ canvasContext: context, viewport })
-      renderTaskRef.current = task
-
-      try {
-        await task.promise
-      } catch {
-        // A cancelled render is expected during fast paging, not an error.
-      }
-    }
-
-    void render()
-    return () => {
-      cancelled = true
-    }
-  }, [state, page, width])
-
-  const goTo = React.useCallback(
+  const goToLeaf = React.useCallback(
     (next: number) => {
-      if (next < 1 || next > pageCount || next === page) return
-      setFlip(next > page ? 'next' : 'prev')
-      setPage(next)
-      // Matches the CSS transition below; purely cosmetic, so a missed timeout is harmless.
-      window.setTimeout(() => setFlip('none'), 260)
+      if (next < 0 || next >= leafCount || next === leaf) return
+      setTurning(next > leaf ? 'next' : 'prev')
+      setLeaf(next)
+      // Matches the CSS transition; purely cosmetic, so a missed timeout is harmless.
+      window.setTimeout(() => setTurning('none'), 420)
     },
-    [page, pageCount],
+    [leaf, leafCount],
   )
 
-  // Keyboard paging.
   React.useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'ArrowRight') goTo(page + 1)
-      if (event.key === 'ArrowLeft') goTo(page - 1)
+      const target = event.target as HTMLElement | null
+      if (target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)) return
+      if (event.key === 'ArrowRight') goToLeaf(leaf + 1)
+      if (event.key === 'ArrowLeft') goToLeaf(leaf - 1)
+      if (event.key === 'Escape') setExpanded(false)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [goTo, page])
+  }, [goToLeaf, leaf])
 
-  // Swipe paging for touch.
   const touchStart = React.useRef<number | null>(null)
   function onTouchStart(event: React.TouchEvent) {
     touchStart.current = event.touches[0]?.clientX ?? null
@@ -189,40 +103,34 @@ export function PdfFlipReader({
 
     const delta = end - start
     if (Math.abs(delta) < 45) return
-    goTo(delta < 0 ? page + 1 : page - 1)
+    goToLeaf(delta < 0 ? leaf + 1 : leaf - 1)
   }
 
-  // Dark fill: PDF pages render on their own white paper, so the pale tile used on the
-  // black surfaces would be invisible here.
+  // Dark fill: pages render on their own white paper, so the pale tile used on the black
+  // surfaces would be invisible here.
   const watermarkStyle = React.useMemo(
     () => ({ backgroundImage: watermarkTile(watermarkLabel, '#000000') }) as React.CSSProperties,
     [watermarkLabel],
   )
 
-  if (state === 'error') {
-    return (
-      <div className="panel flex flex-col items-center px-6 py-14 text-center">
-        <FileWarning className="mb-4 h-6 w-6 text-down" aria-hidden />
-        <h3 className="font-display text-lg text-ink">This document could not be opened</h3>
-        <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-ink-dim">{error}</p>
-        <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-ink-dim">
-          Reload the page to try again — view links expire after a few minutes.
-        </p>
-      </div>
-    )
-  }
+  // Gutter is a real gap between two bound pages, so each page gets half of what is left.
+  const gutter = spread ? 2 : 0
+  const pageWidth = Math.max(0, Math.floor((width - gutter) / perLeaf))
+  const lastPage = Math.min(firstPage + perLeaf - 1, pageCount)
 
   return (
     <div className={cn(expanded && 'fixed inset-0 z-50 overflow-auto bg-bg p-3 sm:p-6')}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
-          {state === 'ready' ? `Page ${page} of ${pageCount}` : 'Loading document…'}
+          {firstPage === lastPage
+            ? `Page ${firstPage} of ${pageCount}`
+            : `Pages ${firstPage}–${lastPage} of ${pageCount}`}
         </span>
 
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
-          className="flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+          className="flex h-9 items-center gap-1.5 rounded-full border border-line px-3 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
         >
           {expanded ? (
             <>
@@ -242,57 +150,64 @@ export function PdfFlipReader({
         ref={containerRef}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
-        className="relative overflow-hidden rounded-xl border border-line bg-white"
-        style={{ perspective: '2000px' }}
+        className="relative overflow-hidden rounded-xl border border-line bg-[#111]"
+        style={{ perspective: '2400px' }}
       >
-        {state !== 'ready' && (
-          <div className="flex aspect-[1/1.414] items-center justify-center bg-panel">
-            <Loader2 className="h-6 w-6 animate-spin text-accent" aria-hidden />
+        {pageWidth > 0 && (
+          <div
+            className={cn(
+              'book-leaf flex',
+              turning === 'next' && 'book-leaf-next',
+              turning === 'prev' && 'book-leaf-prev',
+            )}
+            style={{ gap: gutter, transformOrigin: spread ? 'center left' : 'left center' }}
+          >
+            <PdfPage doc={doc} pageNumber={firstPage} width={pageWidth} />
+            {spread && firstPage + 1 <= pageCount && (
+              <PdfPage doc={doc} pageNumber={firstPage + 1} width={pageWidth} />
+            )}
           </div>
         )}
 
-        <div
-          className={cn(
-            'page-leaf origin-left transition-transform duration-300 ease-out',
-            flip === 'next' && 'page-leaf-next',
-            flip === 'prev' && 'page-leaf-prev',
-            state !== 'ready' && 'hidden',
-          )}
-          style={{ transformStyle: 'preserve-3d' }}
-        >
-          <canvas ref={canvasRef} className="block w-full" />
-
-          {/* Watermark sits above the rendered page, tying any screenshot to an account. */}
+        {/* The binding: a soft shadow down the centre so a spread reads as one open book
+            rather than two pages parked next to each other. */}
+        {spread && (
           <div
-            className="pointer-events-none absolute inset-0 opacity-[0.07]"
-            style={watermarkStyle}
+            className="pointer-events-none absolute inset-y-0 left-1/2 w-10 -translate-x-1/2"
+            style={{
+              background:
+                'linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.20) 42%, rgba(0,0,0,0.32) 50%, rgba(0,0,0,0.20) 58%, rgba(0,0,0,0) 100%)',
+            }}
             aria-hidden
           />
-        </div>
-
-        {/* Generous tap targets on the page edges — the natural place to reach on a phone. */}
-        {state === 'ready' && (
-          <>
-            <button
-              type="button"
-              aria-label="Previous page"
-              onClick={() => goTo(page - 1)}
-              disabled={page <= 1}
-              className="absolute inset-y-0 left-0 w-[18%] cursor-w-resize disabled:cursor-default"
-            />
-            <button
-              type="button"
-              aria-label="Next page"
-              onClick={() => goTo(page + 1)}
-              disabled={page >= pageCount}
-              className="absolute inset-y-0 right-0 w-[18%] cursor-e-resize disabled:cursor-default"
-            />
-          </>
         )}
+
+        {/* Watermark over the paper, tying any screenshot to an account. */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          style={watermarkStyle}
+          aria-hidden
+        />
+
+        {/* Generous tap targets on the outer edges — where a thumb naturally falls. */}
+        <button
+          type="button"
+          aria-label="Previous page"
+          onClick={() => goToLeaf(leaf - 1)}
+          disabled={leaf <= 0}
+          className="absolute inset-y-0 left-0 w-[14%] cursor-w-resize disabled:cursor-default"
+        />
+        <button
+          type="button"
+          aria-label="Next page"
+          onClick={() => goToLeaf(leaf + 1)}
+          disabled={leaf >= leafCount - 1}
+          className="absolute inset-y-0 right-0 w-[14%] cursor-e-resize disabled:cursor-default"
+        />
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <PagerButton onClick={() => goTo(page - 1)} disabled={page <= 1} label="Previous">
+        <PagerButton onClick={() => goToLeaf(leaf - 1)} disabled={leaf <= 0} label="Previous page">
           <ChevronLeft className="h-4 w-4" aria-hidden />
           <span className="hidden sm:inline">Previous</span>
         </PagerButton>
@@ -300,14 +215,18 @@ export function PdfFlipReader({
         <input
           type="range"
           min={1}
-          max={Math.max(pageCount, 1)}
-          value={page}
-          onChange={(event) => goTo(Number(event.target.value))}
+          max={Math.max(leafCount, 1)}
+          value={leaf + 1}
+          onChange={(event) => goToLeaf(Number(event.target.value) - 1)}
           aria-label="Jump to page"
           className="mx-2 h-1 flex-1 cursor-pointer appearance-none rounded-full bg-line accent-[#D0F53C]"
         />
 
-        <PagerButton onClick={() => goTo(page + 1)} disabled={page >= pageCount} label="Next">
+        <PagerButton
+          onClick={() => goToLeaf(leaf + 1)}
+          disabled={leaf >= leafCount - 1}
+          label="Next page"
+        >
           <span className="hidden sm:inline">Next</span>
           <ChevronRight className="h-4 w-4" aria-hidden />
         </PagerButton>

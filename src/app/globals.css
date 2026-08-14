@@ -174,20 +174,28 @@
   font-size: 0.85em;
 }
 
-/* Page-turn transition for the PDF reader. Tailwind 3 has no rotate-Y utility, and the
-   leaf must keep its 3D transform style, so it is expressed here rather than inline. The
-   hinge is the left edge, which is where a bound page turns from. */
-.page-leaf {
+/* The page turn.
+
+   Tailwind 3 has no rotate-Y utility and the leaf must keep its 3D transform context, so
+   this is expressed here rather than inline. The hinge is the binding — the centre of a
+   spread, the left edge of a single page — and the leaf swings through it and settles,
+   which is what makes turning a page feel like turning a page rather than a slide
+   changing. Shadow deepens through the swing so the paper reads as lifting. */
+.book-leaf {
   transform-style: preserve-3d;
-  backface-visibility: hidden;
+  transition:
+    transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    filter 420ms ease-out;
 }
 
-.page-leaf-next {
-  transform: rotateY(-12deg);
+.book-leaf-next {
+  transform: rotateY(-14deg) translateZ(18px);
+  filter: drop-shadow(-18px 12px 22px rgba(0, 0, 0, 0.55));
 }
 
-.page-leaf-prev {
-  transform: rotateY(12deg);
+.book-leaf-prev {
+  transform: rotateY(14deg) translateZ(18px);
+  filter: drop-shadow(18px 12px 22px rgba(0, 0, 0, 0.55));
 }
 
 /* Report watermarking (build spec §7): a repeating diagonal tile carrying the viewing

@@ -59,24 +59,19 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
       </div>
 
       {/*
-        Reading views are hand-authored (see src/lib/pdf.ts), so a PDF with no reading
-        view simply means one has not been written yet.
+        An uploaded PDF is enough to publish. The member's reader renders the pages as a
+        book and pulls the charts out of them per instrument, so no second version of the
+        report has to be written.
 
-        Stated here rather than only in a toast at upload time: a toast lasts a few
-        seconds, and this is something an operator needs to see every time they open the
-        report, right up until they fix it or decide to publish anyway.
+        The optional extras below add levels and prose *around* the document — they never
+        replace it, and no number is ever read out of the file automatically.
       */}
-      {report.pdfBlobUrl && !report.htmlContent && (
+      {!report.pdfBlobUrl && (
         <div className="mt-6 rounded-xl border border-down/40 bg-down/10 p-5">
-          <h2 className="text-[16px] text-ink">This report has no reading view</h2>
+          <h2 className="text-[16px] text-ink">This report has no document</h2>
           <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
-            Members on a phone will see nothing to read — only a download link. Reading views
-            are written by hand, on purpose: automatic extraction produced garbled price levels,
-            and a wrong level is worse than a missing one.
-          </p>
-          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
-            Write the report content into{' '}
-            <span className="text-ink">Reading view content</span> below before publishing.
+            Members will have nothing to read. Upload the edition PDF below before publishing —
+            the reader builds the whole reading experience from it.
           </p>
         </div>
       )}
