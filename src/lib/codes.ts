@@ -20,19 +20,37 @@ export function generateRedemptionCode(): string {
 }
 
 /**
- * How long an access code stays usable.
+ * Default life of an access code.
  *
  * A code is a promise of a membership, not the membership itself — the paid period starts
  * at redemption, not at issue — so an unbounded code is an open-ended liability sitting in
  * an inbox. Fourteen days is long enough that nobody who bought one loses it to a holiday,
  * and short enough that a leaked or forwarded code stops working.
+ *
+ * It is a default, not a rule: a launch offer that runs for a quarter and a code handed to
+ * one person in a meeting are not the same promise, so the operator sets the validity per
+ * batch. This is only what they get if they do not choose.
  */
 export const CODE_VALIDITY_DAYS = 14
 
-/** When a code issued now stops working. */
-export function codeExpiresAt(from: Date = new Date()): Date {
+/** Longest validity the operator may set, so a typo cannot mint a decade-long code. */
+export const MAX_CODE_VALIDITY_DAYS = 365
+
+/**
+ * When a code issued at `from` stops working.
+ *
+ * `days` of null means it never does. That is a real choice an operator can make and the
+ * UI names it plainly, rather than something reachable by entering a very large number —
+ * an unlimited code should be something you decided, not something you typed.
+ */
+export function codeExpiresAt(
+  from: Date = new Date(),
+  days: number | null = CODE_VALIDITY_DAYS,
+): Date | null {
+  if (days === null) return null
+
   const expires = new Date(from)
-  expires.setDate(expires.getDate() + CODE_VALIDITY_DAYS)
+  expires.setDate(expires.getDate() + days)
   return expires
 }
 

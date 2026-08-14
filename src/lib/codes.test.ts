@@ -14,20 +14,38 @@ import { CODE_VALIDITY_DAYS, codeExpiresAt, isCodeExpired, normaliseCode } from 
 describe('code expiry', () => {
   const issued = new Date('2026-08-01T09:00:00Z')
 
-  it('is valid for exactly the stated number of days', () => {
-    const expires = codeExpiresAt(issued)
-    const days = (expires.getTime() - issued.getTime()) / 86_400_000
+  /** Every case here sets an expiry, so the null branch is not the one under test. */
+  function expiryFor(days?: number): Date {
+    const expires = days === undefined ? codeExpiresAt(issued) : codeExpiresAt(issued, days)
+    assert.ok(expires, 'expected an expiry date')
+    return expires
+  }
+
+  it('defaults to exactly the stated number of days', () => {
+    const days = (expiryFor().getTime() - issued.getTime()) / 86_400_000
     assert.equal(days, CODE_VALIDITY_DAYS)
   })
 
+  it('honours a validity the operator chose', () => {
+    for (const chosen of [1, 7, 30, 90, 365]) {
+      const days = (expiryFor(chosen).getTime() - issued.getTime()) / 86_400_000
+      assert.equal(days, chosen, `failed for ${chosen} days`)
+    }
+  })
+
+  it('returns no expiry at all when validity is null', () => {
+    // The deliberate "never expires" choice, not something a large number falls into.
+    assert.equal(codeExpiresAt(issued, null), null)
+  })
+
   it('is still usable the instant before it lapses', () => {
-    const expiresAt = codeExpiresAt(issued)
+    const expiresAt = expiryFor()
     const aMomentBefore = new Date(expiresAt.getTime() - 1000)
     assert.equal(isCodeExpired({ expiresAt }, aMomentBefore), false)
   })
 
   it('is expired at the moment it lapses, not a moment later', () => {
-    const expiresAt = codeExpiresAt(issued)
+    const expiresAt = expiryFor()
     assert.equal(isCodeExpired({ expiresAt }, expiresAt), true)
   })
 

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 
 import { Button, Spinner } from '@/components/ui/button'
 import { Input, Label } from '@/components/ui/field'
-import { CODE_VALIDITY_DAYS } from '@/lib/codes'
+import { CODE_VALIDITY_DAYS, MAX_CODE_VALIDITY_DAYS } from '@/lib/codes'
 
 /**
  * Operator-facing code minting. Deliberately few fields — this is used by whoever runs
@@ -23,6 +23,10 @@ export function CodeGenerator() {
   const [note, setNote] = React.useState('')
   // 100% — a free code — is what an operator wants nine times out of ten.
   const [discountPercent, setDiscountPercent] = React.useState(100)
+  const [validityDays, setValidityDays] = React.useState(CODE_VALIDITY_DAYS)
+  // Separate from the days field rather than encoded as 0 or a huge number: an unlimited
+  // code should be something the operator decided, not something they typed.
+  const [neverExpires, setNeverExpires] = React.useState(false)
   const [busy, setBusy] = React.useState(false)
   const [codes, setCodes] = React.useState<string[]>([])
   const [error, setError] = React.useState('')
@@ -37,7 +41,12 @@ export function CodeGenerator() {
       const response = await fetch('/api/admin/codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count, note: note.trim() || undefined, discountPercent }),
+        body: JSON.stringify({
+          count,
+          note: note.trim() || undefined,
+          discountPercent,
+          validityDays: neverExpires ? null : validityDays,
+        }),
       })
       const data = await response.json()
 
@@ -62,8 +71,8 @@ export function CodeGenerator() {
       <h2 className="font-display text-lg text-ink">Create access codes</h2>
       <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-ink-dim">
         Each code lets one person activate a membership without paying here. Redeeming it gives
-        them one month from the day they use it, and the code itself stops working{' '}
-        {CODE_VALIDITY_DAYS} days after you create it.
+        them one month from the day they use it. Set how long the code itself stays usable —{' '}
+        {CODE_VALIDITY_DAYS} days unless you change it.
       </p>
 
       <div className="mt-5 grid grid-cols-2 items-end gap-4 sm:flex sm:flex-wrap">
@@ -98,6 +107,28 @@ export function CodeGenerator() {
           </select>
         </div>
 
+        <div>
+          <Label htmlFor="validity">Valid for</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="validity"
+              type="number"
+              min={1}
+              max={MAX_CODE_VALIDITY_DAYS}
+              value={neverExpires ? '' : validityDays}
+              disabled={neverExpires}
+              placeholder="—"
+              onChange={(event) =>
+                setValidityDays(
+                  Math.max(1, Math.min(MAX_CODE_VALIDITY_DAYS, Number(event.target.value) || 1)),
+                )
+              }
+              className="w-full sm:w-20"
+            />
+            <span className="shrink-0 text-[14px] text-ink-dim">days</span>
+          </div>
+        </div>
+
         <div className="col-span-2 min-w-[220px] flex-1">
           <Label htmlFor="note">What for (optional)</Label>
           <Input
@@ -122,6 +153,20 @@ export function CodeGenerator() {
         </Button>
       </div>
 
+      <label className="mt-4 flex cursor-pointer items-start gap-2.5">
+        <input
+          type="checkbox"
+          checked={neverExpires}
+          onChange={(event) => setNeverExpires(event.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+        />
+        <span className="text-[14px] leading-relaxed text-ink-dim">
+          <span className="text-ink">Never expires.</span> The code works until it is used. Worth
+          knowing: an unused code with no expiry is an open-ended membership sitting in somebody
+          else&rsquo;s inbox.
+        </span>
+      </label>
+
       {/* Said next to the control, not only in a doc comment: a percentage beside a
           "create" button is otherwise a fair thing to read as pricing. */}
       <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
@@ -135,7 +180,8 @@ export function CodeGenerator() {
         <div className="mt-6 rounded-lg border border-accent/30 bg-accent/[0.06] p-4">
           <div className="flex items-center justify-between gap-4">
             <span className="eyebrow">
-              {codes.length} code{codes.length === 1 ? '' : 's'} ready to share
+              {codes.length} code{codes.length === 1 ? '' : 's'} ready to share ·{' '}
+              {neverExpires ? 'no expiry' : `valid ${validityDays} days`}
             </span>
             <Button
               size="sm"

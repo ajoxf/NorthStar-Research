@@ -46,8 +46,8 @@ export default async function AdminCodesPage() {
         <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Access codes</h1>
         <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
           {liveGifted} gifted code{liveGifted === 1 ? '' : 's'} still live
-          {lapsed > 0 && ` · ${lapsed} expired unredeemed`}. Codes are valid for{' '}
-          {CODE_VALIDITY_DAYS} days from the day they are issued.
+          {lapsed > 0 && ` · ${lapsed} expired unredeemed`}. Validity is set per batch —{' '}
+          {CODE_VALIDITY_DAYS} days unless you choose otherwise.
         </p>
 
         {offers.length > 0 && (

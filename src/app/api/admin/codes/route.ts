@@ -3,7 +3,12 @@ import { z } from 'zod'
 
 import { db } from '@/lib/db'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
-import { CODE_VALIDITY_DAYS, codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
+import {
+  CODE_VALIDITY_DAYS,
+  MAX_CODE_VALIDITY_DAYS,
+  codeExpiresAt,
+  generateRedemptionCode,
+} from '@/lib/codes'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -13,6 +18,14 @@ const schema = z.object({
   note: z.string().trim().max(120).optional(),
   /** 100 = free, 0 = full price. Metadata only — see the note below. */
   discountPercent: z.number().int().min(0).max(100).default(100),
+  /** Days the code stays usable. Null means it never expires — a deliberate choice. */
+  validityDays: z
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_CODE_VALIDITY_DAYS)
+    .nullable()
+    .default(CODE_VALIDITY_DAYS),
 })
 
 /**
@@ -52,7 +65,10 @@ export async function POST(request: Request) {
     )
   }
 
-  const { count, note, discountPercent } = parsed.data
+  const { count, note, discountPercent, validityDays } = parsed.data
+  // Computed once for the batch: codes minted in the same click should lapse together,
+  // not a few milliseconds apart.
+  const expiresAt = codeExpiresAt(new Date(), validityDays)
   const created: string[] = []
 
   // `code` is unique. On the astronomically unlikely collision, retry rather than
@@ -72,7 +88,7 @@ export async function POST(request: Request) {
             // gifted code carried an operator's scribble where an address belonged.
             note: note || null,
             discountPercent,
-            expiresAt: codeExpiresAt(),
+            expiresAt,
           },
         })
         created.push(code)
@@ -91,5 +107,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ codes: created, validForDays: CODE_VALIDITY_DAYS })
+  return NextResponse.json({ codes: created, validForDays: validityDays })
 }
