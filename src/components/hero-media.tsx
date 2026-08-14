@@ -63,9 +63,14 @@ export function HeroMedia({
             fill
             priority
             sizes="(max-width: 1024px) 100vw, 64vw"
-            // Much dimmer on a phone, where the headline sits *over* the photograph
+            // Graded in CSS rather than baked into the file, so the photograph stays the
+            // photograph and the treatment stays adjustable. The source is a bright,
+            // cool-lit office; on true black it needs the midtones pulled down and the
+            // colour eased off before it sits in the page instead of glaring out of it.
+            //
+            // Much dimmer again on a phone, where the headline sits *over* the picture
             // rather than beside it — a face behind a headline is noise, not atmosphere.
-            className="object-cover object-[68%_center] opacity-[0.42] saturate-[0.82] contrast-[1.08] lg:opacity-90"
+            className="object-cover object-[70%_center] opacity-[0.38] brightness-[0.62] contrast-[1.12] saturate-[0.72] lg:opacity-100 lg:brightness-[0.78]"
           />
         </div>
       </div>

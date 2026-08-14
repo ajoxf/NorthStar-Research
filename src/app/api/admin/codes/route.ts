@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { db } from '@/lib/db'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
-import { generateRedemptionCode } from '@/lib/codes'
+import { CODE_VALIDITY_DAYS, codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -22,7 +22,9 @@ const schema = z.object({
  * gifted code from a paid one in the list view and in any later reporting.
  *
  * Redeeming any code grants one billing period from the moment of redemption
- * (`addBillingPeriod`, +1 calendar month), so issuing a code early costs nothing.
+ * (`addBillingPeriod`, +1 calendar month), so issuing a code early costs nothing — but
+ * the code itself lapses after CODE_VALIDITY_DAYS, so it is not an open-ended liability
+ * sitting in an inbox.
  */
 export async function POST(request: Request) {
   try {
@@ -54,7 +56,16 @@ export async function POST(request: Request) {
     for (let attempt = 0; attempt < 5 && !minted; attempt += 1) {
       const code = generateRedemptionCode()
       try {
-        await db.redemptionCode.create({ data: { code, status: 'unused', email: note || null } })
+        await db.redemptionCode.create({
+          data: {
+            code,
+            status: 'unused',
+            // The note is a note. It used to be written into `email`, which meant a
+            // gifted code carried an operator's scribble where an address belonged.
+            note: note || null,
+            expiresAt: codeExpiresAt(),
+          },
+        })
         created.push(code)
         minted = true
       } catch {
@@ -71,5 +82,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ codes: created })
+  return NextResponse.json({ codes: created, validForDays: CODE_VALIDITY_DAYS })
 }

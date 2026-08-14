@@ -4,7 +4,8 @@ import { db } from '@/lib/db'
 import { addBillingPeriod, appBaseUrl, MissingConfigError } from '@/lib/env'
 import { verifyCregisCallback } from '@/lib/cregis'
 import { isPaidStatus, isUnderpaid, unwrapCallbackOrder } from '@/lib/cregis-protocol'
-import { generateRedemptionCode } from '@/lib/codes'
+import { codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
+import { recordReferralConversion } from '@/lib/referral-attribution'
 import { getNotificationProvider } from '@/lib/notifications'
 
 export const runtime = 'nodejs'
@@ -144,7 +145,16 @@ export async function POST(request: Request) {
     })
 
     await tx.redemptionCode.create({
-      data: { code, cregisOrderId, email: order.email, status: 'unused' },
+      // Expiry starts from payment, not from delivery: the buyer has the code the moment
+      // the callback lands, and dating it from anything later would be a promise the
+      // system cannot keep if an email is slow.
+      data: {
+        code,
+        cregisOrderId,
+        email: order.email,
+        status: 'unused',
+        expiresAt: codeExpiresAt(),
+      },
     })
 
     // Create the CRM contact now, at 'pending' — the subscription only becomes active
@@ -166,6 +176,10 @@ export async function POST(request: Request) {
 
   const redeemUrl = `${appBaseUrl()}/redeem?code=${encodeURIComponent(code)}`
   const provider = getNotificationProvider()
+
+  // Credit the affiliate, if this buyer came through one. Never throws — see the note in
+  // referral-attribution.ts: the payment is real whatever bookkeeping does.
+  await recordReferralConversion(order.email, Math.round(Number(order.amount) || 0))
 
   // Delivery failures must not fail the webhook: the payment is real and the code is
   // issued. Cregis retrying would only mint a duplicate. Log loudly and let the admin

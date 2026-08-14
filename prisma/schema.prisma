@@ -60,6 +60,32 @@ enum CodeStatus {
   redeemed
 }
 
+/// Where an affiliate stands. Nothing is ever deleted — an affiliate who stops promoting
+/// is `paused` (link keeps working for people who already have it, no new credit accrues)
+/// or `closed` (link stops attributing). Their history stays either way.
+enum AffiliateStatus {
+  active
+  paused
+  closed
+}
+
+/// A referral's life. `visited` is a click that has not converted; `signed_up` a member
+/// created under the code; `converted` a member who actually paid. Only `converted`
+/// earns an award, because a signup that never pays is not a sale.
+enum ReferralStatus {
+  visited
+  signed_up
+  converted
+}
+
+/// How an affiliate is rewarded. `percent` of the first payment, `fixed` in USD, or
+/// `free_months` of membership granted to the affiliate instead of money.
+enum AffiliateRewardKind {
+  percent
+  fixed
+  free_months
+}
+
 enum OrderStatus {
   pending
   paid
@@ -98,17 +124,17 @@ model Member {
 
   role Role @default(member)
 
-  subscriptionStatus SubscriptionStatus @default(pending)
+  subscriptionStatus    SubscriptionStatus @default(pending)
   subscriptionStartedAt DateTime?
   /// End of the paid period. Access is denied once this passes, whichever provider
   /// billed it — Stripe extends it automatically, Cregis renewals extend it by hand.
-  subscriptionRenewsAt DateTime?
+  subscriptionRenewsAt  DateTime?
 
-  billingProvider   BillingProvider?
-  stripeCustomerId  String?          @unique
-  stripeSubscriptionId String?
+  billingProvider       BillingProvider?
+  stripeCustomerId      String?          @unique
+  stripeSubscriptionId  String?
   /// Stripe subscription set to stop at period end; access continues until then.
-  cancelAtPeriodEnd Boolean          @default(false)
+  cancelAtPeriodEnd     Boolean          @default(false)
   /// Guards against sending the same renewal reminder repeatedly.
   renewalReminderSentAt DateTime?
 
@@ -137,23 +163,125 @@ model RedemptionCode {
   id            String     @id @default(cuid())
   code          String     @unique
   cregisOrderId String?
+  /// Email the code was *issued* to, when checkout captured one. Null for gifted codes.
   email         String?
+  /// Operator's note on a gifted code — who it went to and why. Never an email address:
+  /// it used to be written into `email`, which meant a gifted code carried a note where
+  /// an address belonged and no redeemer was ever recorded against it.
+  note          String?
+  /// Email that actually redeemed the code. Always captured, however the code was issued,
+  /// so every activation can be traced to a person without joining through Member.
+  redeemedEmail String?
   status        CodeStatus @default(unused)
 
   redeemedByMemberId String?
   redeemedByMember   Member? @relation(fields: [redeemedByMemberId], references: [id])
 
+  /// Codes stop working after this. Null means no expiry — codes issued before validity
+  /// existed keep working, because retroactively killing a code already in someone's
+  /// inbox is worse than an old code living on.
+  expiresAt DateTime?
+
   createdAt  DateTime  @default(now())
   redeemedAt DateTime?
 
   @@index([status])
+  @@index([expiresAt])
+}
+
+/// Someone who promotes the product in exchange for a reward.
+///
+/// Deliberately its own record rather than a flag on Member: an affiliate is often not a
+/// member, and a member who becomes an affiliate must not have their membership tangled
+/// with their payout terms. The two are linked when they happen to be the same person.
+model Affiliate {
+  id     String          @id @default(cuid())
+  /// The bit that appears in a link: /join?ref=SLUG. Lowercase, URL-safe, never reused.
+  slug   String          @unique
+  name   String
+  email  String
+  status AffiliateStatus @default(active)
+
+  /// Terms, captured per affiliate rather than globally so a deal can be struck with one
+  /// partner without changing anyone else's.
+  rewardKind   AffiliateRewardKind @default(percent)
+  /// Percent (0–100), whole USD, or a number of months, depending on rewardKind.
+  rewardAmount Int                 @default(20)
+
+  /// Optional discount handed to the *visitor* — the other half of a referral deal.
+  /// Percent off the first payment; 100 means free.
+  visitorDiscountPercent Int?
+
+  notes String?
+
+  /// Set when the affiliate is also a member of the product.
+  memberId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  referrals Referral[]
+  awards    AffiliateAward[]
+
+  @@index([status])
+}
+
+/// One person arriving through an affiliate link, and what became of them.
+///
+/// A row is created on the click, not on the sale, so the funnel is visible: clicks that
+/// never convert are exactly what tells an operator a partner is sending the wrong
+/// traffic. Nothing is deleted; a referral moves forward through its statuses.
+model Referral {
+  id          String         @id @default(cuid())
+  affiliateId String
+  affiliate   Affiliate      @relation(fields: [affiliateId], references: [id])
+  status      ReferralStatus @default(visited)
+
+  /// Anonymous until they sign up. Filled in as the referral progresses.
+  email    String?
+  memberId String?
+
+  /// Amount actually paid, in whole USD, when the referral converts.
+  amountUsd Int?
+
+  visitedAt   DateTime  @default(now())
+  signedUpAt  DateTime?
+  convertedAt DateTime?
+
+  awards AffiliateAward[]
+
+  @@index([affiliateId, status])
+  @@index([visitedAt])
+}
+
+/// What an affiliate has earned. A ledger, not a balance: rows are only ever added, so
+/// the history of what was awarded and why survives any change to the affiliate's terms.
+///
+/// Payment happens outside this system — there is no payout processing here by design.
+/// An award is marked settled by the operator once they have paid it their own way.
+model AffiliateAward {
+  id          String    @id @default(cuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+  referralId  String?
+  referral    Referral? @relation(fields: [referralId], references: [id])
+
+  kind   AffiliateRewardKind
+  /// USD for percent/fixed awards; months for free_months.
+  amount Int
+  reason String?
+
+  settledAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([affiliateId, settledAt])
 }
 
 /// Mirrors a checkout order from either processor. Access is only ever granted from a
 /// *verified* webhook transition of one of these rows to `paid` — never from a success
 /// redirect, which anyone can visit without paying.
 model CheckoutOrder {
-  id String @id @default(cuid())
+  id            String          @id @default(cuid())
   /// Processor's own identifier: a Cregis order id, or a Stripe Checkout Session id.
   cregisOrderId String          @unique
   provider      BillingProvider @default(cregis)

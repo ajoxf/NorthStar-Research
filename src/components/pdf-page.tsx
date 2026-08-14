@@ -5,25 +5,6 @@ import * as React from 'react'
 import type { PdfDocument, PdfTextItem } from '@/lib/pdf-client'
 
 /**
- * One rendered PDF page, with the numbers in neon green.
- *
- * The page is a canvas — the document exactly as authored, charts and all. Over each
- * numeric run sits a lime rectangle in a blend mode chosen so that only the *glyphs*
- * change colour and the paper behind them does not:
- *
- *   - on a dark page, `multiply` — white type × lime = lime, near-black paper × lime is
- *     still near-black;
- *   - on light paper, `screen` — dark type ∪ lime = lime, white paper ∪ lime is still
- *     white.
- *
- * So the numbers come out neon green either way, with no highlighter block behind them,
- * and without re-drawing a single glyph: the type keeps the document's own font, weight
- * and kerning, because it is still the document's own type underneath.
- *
- * Positions come from pdf.js's own text layer geometry — the data that drives text
- * selection — so the marks land on the glyphs rather than near them.
- */
-/**
  * Supersampling factor above the device pixel ratio.
  *
  * A report is read by zooming into a level or opening a page full screen, and a canvas
@@ -39,6 +20,24 @@ const SUPERSAMPLE = 2
  */
 const MAX_CANVAS_PIXELS = 24_000_000
 
+/**
+ * One rendered PDF page, with the numbers in neon green on dark pages.
+ *
+ * The page is a canvas — the document exactly as authored, charts and all. Over each
+ * numeric run sits a lime rectangle set to `multiply`, which on a dark page recolours the
+ * *glyphs* and leaves the paper alone: white type × lime is lime, near-black paper × lime
+ * is still near-black. No highlighter block, and not a single glyph redrawn — the type
+ * keeps the document's own font, weight and kerning, because it is still the document's
+ * own type underneath.
+ *
+ * **Light pages are left completely alone.** Lime on white is around 1.3:1 against the
+ * paper — it fails every contrast threshold there is, and a level a reader cannot read is
+ * worse than one that was never coloured. Black on white already reads better than
+ * anything this could do to it, so on a light page nothing is marked at all.
+ *
+ * Positions come from pdf.js's own text layer geometry — the data that drives text
+ * selection — so the marks land on the glyphs rather than near them.
+ */
 export function PdfPage({
   doc,
   pageNumber,
@@ -129,8 +128,9 @@ export function PdfPage({
     >
       <canvas ref={canvasRef} className="block h-full w-full" />
 
+      {/* Dark pages only — see the note above. */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
-        {marks.map((mark, index) => (
+        {(dark ? marks : []).map((mark, index) => (
           <span
             key={`${mark.left}-${mark.top}-${index}`}
             style={{
@@ -140,9 +140,9 @@ export function PdfPage({
               width: mark.width,
               height: mark.height,
               background: 'var(--accent)',
-              // See the note at the top: the blend is what recolours the type instead of
-              // covering it, and which one does that depends on the page's own tone.
-              mixBlendMode: dark ? 'multiply' : 'screen',
+              // Multiply is what recolours the type instead of covering it. See the note
+              // at the top for why this is never applied to a light page.
+              mixBlendMode: 'multiply',
             }}
           />
         ))}

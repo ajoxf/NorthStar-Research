@@ -1,5 +1,6 @@
 import { reportTypeLabel } from '@/lib/report-content'
 import type { ReportSummary } from '@/lib/notifications/types'
+import { CODE_VALIDITY_DAYS } from '@/lib/codes'
 
 /**
  * Email markup.
@@ -96,7 +97,7 @@ export function redemptionCodeEmail(code: string, redeemUrl: string, firstName?:
       <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:24px;letter-spacing:.14em;color:${ACCENT};">${escapeHtml(code)}</div>
     </td></tr></table>
     ${button(redeemUrl, 'Activate my membership')}
-    <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Keep this code private. It can only be redeemed once.</p>
+    <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Keep this code private. It can only be redeemed once, and it expires ${CODE_VALIDITY_DAYS} days from today.</p>
   `
 
   return {
@@ -104,7 +105,8 @@ export function redemptionCodeEmail(code: string, redeemUrl: string, firstName?:
     html: shell('Your NorthStar Research access code', body),
     text:
       `Your membership is confirmed.\n\nAccess code: ${code}\n\n` +
-      `Activate your membership: ${redeemUrl}\n\nThis code can only be redeemed once.`,
+      `Activate your membership: ${redeemUrl}\n\n` +
+      `This code can only be redeemed once, and it expires ${CODE_VALIDITY_DAYS} days from today.`,
   }
 }
 

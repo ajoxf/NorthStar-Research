@@ -4,8 +4,9 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { addBillingPeriod } from '@/lib/env'
 import { hashPassword, startSession } from '@/lib/auth'
-import { normaliseCode } from '@/lib/codes'
+import { isCodeExpired, normaliseCode } from '@/lib/codes'
 import { normalisePhone } from '@/lib/utils'
+import { recordReferralSignup, referralSlugFromCookie } from '@/lib/referral-attribution'
 
 export const runtime = 'nodejs'
 
@@ -51,14 +52,28 @@ export async function POST(request: Request) {
 
   try {
     const member = await db.$transaction(async (tx) => {
-      // Conditional on status: the update touches 0 rows if someone else just claimed it.
+      // Conditional on status *and* expiry, both inside the transaction: the update
+      // touches 0 rows if someone else just claimed it, or if it lapsed between the
+      // validate call and this one. The email is written here rather than only onto the
+      // Member, so every activation is traceable from the code row itself.
+      const claimedAt = new Date()
       const claimed = await tx.redemptionCode.updateMany({
-        where: { code, status: 'unused' },
-        data: { status: 'redeemed', redeemedAt: new Date() },
+        where: {
+          code,
+          status: 'unused',
+          OR: [{ expiresAt: null }, { expiresAt: { gt: claimedAt } }],
+        },
+        data: { status: 'redeemed', redeemedAt: claimedAt, redeemedEmail: email },
       })
 
       if (claimed.count === 0) {
-        throw new RedemptionError('That code is no longer valid. It may have already been used.')
+        // Distinguish the two so the person is told something they can act on.
+        const current = await tx.redemptionCode.findUnique({ where: { code } })
+        throw new RedemptionError(
+          current && current.status === 'unused' && isCodeExpired(current, claimedAt)
+            ? 'This code has expired. Contact support and we will issue you a new one.'
+            : 'That code is no longer valid. It may have already been used.',
+        )
       }
 
       const now = new Date()
@@ -99,6 +114,10 @@ export async function POST(request: Request) {
 
       return created
     })
+
+    // After the transaction, and never inside it: attribution must not be able to roll
+    // back a membership somebody has paid for.
+    await recordReferralSignup(referralSlugFromCookie(), email, member.id)
 
     await startSession(member)
     return NextResponse.json({ ok: true, redirectTo: '/dashboard' })

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 
+import { ReferralTracker } from '@/components/referral-tracker'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -35,7 +36,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {/* Records an affiliate click once per visit, wherever the link landed. Renders
+            nothing and never blocks the page. */}
+        <ReferralTracker />
+      </body>
     </html>
   )
 }

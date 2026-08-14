@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
 import { MissingConfigError, addBillingPeriod, appBaseUrl } from '@/lib/env'
-import { generateRedemptionCode } from '@/lib/codes'
+import { codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
 import { getNotificationProvider } from '@/lib/notifications'
 import { verifyStripeWebhook, type Stripe } from '@/lib/stripe'
+import { recordReferralConversion } from '@/lib/referral-attribution'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -108,7 +109,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     })
 
     await tx.redemptionCode.create({
-      data: { code, cregisOrderId: session.id, email, status: 'unused' },
+      // Expiry runs from payment: the buyer has the code the moment this callback lands.
+      data: {
+        code,
+        cregisOrderId: session.id,
+        email,
+        status: 'unused',
+        expiresAt: codeExpiresAt(),
+      },
     })
 
     await tx.member.upsert({
@@ -128,6 +136,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       },
     })
   })
+
+  // Credit the affiliate, if this buyer came through one. Never throws — see the note in
+  // referral-attribution.ts: the payment is real whatever bookkeeping does.
+  await recordReferralConversion(email, Math.round((session.amount_total ?? 19900) / 100))
 
   const redeemUrl = `${appBaseUrl()}/redeem?code=${encodeURIComponent(code)}`
   try {

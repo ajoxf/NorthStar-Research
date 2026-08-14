@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { db } from '@/lib/db'
-import { normaliseCode } from '@/lib/codes'
+import { isCodeExpired, normaliseCode } from '@/lib/codes'
 
 export const runtime = 'nodejs'
 
@@ -36,6 +36,15 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: 'This code has already been used. If that was not you, contact support.' },
       { status: 409 },
+    )
+  }
+
+  // Says plainly that it expired rather than that it is invalid: someone holding a real
+  // code that ran out needs to know to ask for a new one, not to re-type this one.
+  if (isCodeExpired(record)) {
+    return NextResponse.json(
+      { error: 'This code has expired. Contact support and we will issue you a new one.' },
+      { status: 410 },
     )
   }
 
