@@ -76,9 +76,16 @@ export default async function AdminReportsPage() {
                     {report._count.views}
                   </td>
                   <td className="px-5 py-3.5">
-                    <Badge tone={report.published ? 'up' : 'muted'}>
-                      {report.published ? 'Published' : 'Draft'}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge tone={report.published ? 'up' : 'muted'}>
+                        {report.published ? 'Published' : 'Draft'}
+                      </Badge>
+                      {/* Surfaced in the list too, so an unreadable report is obvious
+                          without opening every row. */}
+                      {report.pdfBlobUrl && !report.htmlContent && (
+                        <Badge tone="down">No reading view</Badge>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

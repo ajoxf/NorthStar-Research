@@ -58,6 +58,29 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
         <Stat label="Views" value={report._count.views} />
       </div>
 
+      {/*
+        A PDF with no reading view means the text extraction came back empty — usually a
+        scan or an image-only export, which pdfjs cannot read and we do not OCR.
+        This is stated here rather than only in a toast at upload time: a toast lasts a
+        few seconds and this is the kind of thing an operator needs to see every time
+        they open the report, right up until they fix it or decide to publish anyway.
+      */}
+      {report.pdfBlobUrl && !report.htmlContent && (
+        <div className="mt-6 rounded-xl border border-down/40 bg-down/10 p-5">
+          <h2 className="text-[16px] text-ink">This report has no reading view</h2>
+          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+            No text could be extracted from the PDF, so members on a phone will see nothing to
+            read — only a download link. This normally means the PDF is a scan or an image
+            export rather than a text document.
+          </p>
+          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+            Paste the report content into <span className="text-ink">Reading view content</span>{' '}
+            below before publishing, or re-export the PDF with selectable text and upload it
+            again.
+          </p>
+        </div>
+      )}
+
       <ReportAdminPanel
         report={{
           id: report.id,
