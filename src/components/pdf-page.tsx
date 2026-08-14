@@ -5,35 +5,60 @@ import * as React from 'react'
 import type { PdfDocument, PdfTextItem } from '@/lib/pdf-client'
 
 /**
- * One rendered PDF page, with the numbers marked.
+ * One rendered PDF page, with the numbers in neon green.
  *
- * The page itself is a canvas — the document exactly as authored, charts and all. Over it
- * sits a transparent layer of absolutely-positioned boxes, one per numeric run, drawn in
- * the accent lime like a marker pen.
+ * The page is a canvas — the document exactly as authored, charts and all. Over each
+ * numeric run sits a lime rectangle in a blend mode chosen so that only the *glyphs*
+ * change colour and the paper behind them does not:
  *
- * Why a highlighter and not recoloured type: the glyphs are already painted into the
- * canvas. Painting lime text on top would need the font metrics to agree exactly, and
- * where they did not the result would be a doubled, blurred number — worse than no
- * highlight at all. A translucent box behind the ink is robust to that, and reads the way
- * someone marking up a printed report with a highlighter would.
+ *   - on a dark page, `multiply` — white type × lime = lime, near-black paper × lime is
+ *     still near-black;
+ *   - on light paper, `screen` — dark type ∪ lime = lime, white paper ∪ lime is still
+ *     white.
  *
- * Positions come from pdf.js's own text layer geometry, the same data that drives text
- * selection, so the boxes land on the glyphs rather than near them.
+ * So the numbers come out neon green either way, with no highlighter block behind them,
+ * and without re-drawing a single glyph: the type keeps the document's own font, weight
+ * and kerning, because it is still the document's own type underneath.
+ *
+ * Positions come from pdf.js's own text layer geometry — the data that drives text
+ * selection — so the marks land on the glyphs rather than near them.
  */
+/**
+ * Supersampling factor above the device pixel ratio.
+ *
+ * A report is read by zooming into a level or opening a page full screen, and a canvas
+ * rendered at exactly 1 device pixel per CSS pixel goes soft the moment either happens.
+ * Rendering above the display's resolution keeps the type crisp through both.
+ */
+const SUPERSAMPLE = 2
+
+/**
+ * Ceiling on total canvas pixels. Browsers refuse to allocate a canvas beyond a few tens
+ * of megapixels — Safari on iOS most aggressively — and a refused canvas is a blank page,
+ * so the scale is pulled back to fit rather than gambling on the limit.
+ */
+const MAX_CANVAS_PIXELS = 24_000_000
+
 export function PdfPage({
   doc,
   pageNumber,
   width,
   className,
+  onCanvas,
 }: {
   doc: PdfDocument
   pageNumber: number
-  /** CSS width in pixels. The canvas is rendered at device resolution above this. */
+  /** CSS width in pixels. The canvas is rendered well above this — see SUPERSAMPLE. */
   width: number
   className?: string
+  /** Handed the painted canvas, so a page turn can photograph it before it changes. */
+  onCanvas?: (canvas: HTMLCanvasElement) => void
 }) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null)
   const renderTaskRef = React.useRef<{ cancel: () => void } | null>(null)
+  // Held in a ref so a caller passing an inline callback does not re-trigger the render.
+  const onCanvasRef = React.useRef(onCanvas)
+  onCanvasRef.current = onCanvas
   const [marks, setMarks] = React.useState<NumberMark[]>([])
   const [ratio, setRatio] = React.useState(1.414)
   const [dark, setDark] = React.useState(true)
@@ -53,10 +78,13 @@ export function PdfPage({
       if (cancelled) return
 
       const base = page.getViewport({ scale: 1 })
-      // Cap the device pixel ratio: a 3x phone screen on a large page produces a canvas
-      // big enough for the browser to refuse.
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
-      const viewport = page.getViewport({ scale: (width / base.width) * dpr })
+
+      let scale = (width / base.width) * dpr * SUPERSAMPLE
+      const pixels = base.width * scale * (base.height * scale)
+      if (pixels > MAX_CANVAS_PIXELS) scale *= Math.sqrt(MAX_CANVAS_PIXELS / pixels)
+
+      const viewport = page.getViewport({ scale })
 
       const context = canvas.getContext('2d')
       if (!context) return
@@ -76,6 +104,7 @@ export function PdfPage({
       }
       if (cancelled) return
 
+      onCanvasRef.current?.(canvas)
       setDark(isDarkPage(canvas))
 
       // Marks are positioned in CSS pixels, so they are computed against the unscaled
@@ -111,14 +140,9 @@ export function PdfPage({
               width: mark.width,
               height: mark.height,
               background: 'var(--accent)',
-              // Chosen from the page's own tone, not assumed. On light paper `multiply`
-              // keeps the dark glyphs readable through the lime, exactly like a
-              // highlighter over print; on a dark page multiply would render the mark
-              // invisible, so `screen` lifts the background to lime instead and the pale
-              // glyphs stay legible on top.
-              mixBlendMode: dark ? 'screen' : 'multiply',
-              opacity: dark ? 0.42 : 0.55,
-              borderRadius: 2,
+              // See the note at the top: the blend is what recolours the type instead of
+              // covering it, and which one does that depends on the page's own tone.
+              mixBlendMode: dark ? 'multiply' : 'screen',
             }}
           />
         ))}
@@ -221,12 +245,14 @@ function numberMarks(
     const runWidth = (item.width ?? 0) * viewport.scale
     if (runWidth <= 0) continue
 
-    const top = t[5] - fontHeight
-    const height = fontHeight * 1.15
+    // Cap height at the glyphs themselves. Padding used to soften a highlighter block;
+    // now that the mark recolours type, anything overhanging tints the paper instead.
+    const top = t[5] - fontHeight * 0.92
+    const height = fontHeight * 1.02
 
     // Whole run is one number: exact box, straight from pdf.js's geometry.
     if (numbers.length === 1 && numbers[0].start === 0 && numbers[0].end === item.str.length) {
-      marks.push({ left: t[4] - 1.5, top, width: runWidth + 3, height })
+      marks.push({ left: t[4], top, width: runWidth, height })
       continue
     }
 
@@ -246,7 +272,7 @@ function numberMarks(
       const left = t[4] + ruler.measureText(item.str.slice(0, start)).width * correction
       const width = ruler.measureText(item.str.slice(start, end)).width * correction
       if (width <= 0) continue
-      marks.push({ left: left - 1, top, width: width + 2, height })
+      marks.push({ left, top, width, height })
     }
   }
 

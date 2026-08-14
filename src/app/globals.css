@@ -176,26 +176,64 @@
 
 /* The page turn.
 
-   Tailwind 3 has no rotate-Y utility and the leaf must keep its 3D transform context, so
-   this is expressed here rather than inline. The hinge is the binding — the centre of a
-   spread, the left edge of a single page — and the leaf swings through it and settles,
-   which is what makes turning a page feel like turning a page rather than a slide
-   changing. Shadow deepens through the swing so the paper reads as lifting. */
-.book-leaf {
-  transform-style: preserve-3d;
-  transition:
-    transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    filter 420ms ease-out;
+   A whole page swings off the spine and away, revealing the next beneath it. The leaf is
+   a snapshot of the outgoing page (see pdf-flip-reader.tsx); its back face is hidden, so
+   at ninety degrees it goes edge-on and disappears rather than showing mirrored type —
+   which is also why the animation only needs to run to 180 degrees to look complete.
+
+   Eased out hard: paper accelerates as it falls past vertical and settles, and a linear
+   sweep reads as a slide transition instead of a page. */
+@keyframes page-turn-next {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-180deg);
+  }
 }
 
-.book-leaf-next {
-  transform: rotateY(-14deg) translateZ(18px);
-  filter: drop-shadow(-18px 12px 22px rgba(0, 0, 0, 0.55));
+@keyframes page-turn-prev {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(180deg);
+  }
 }
 
-.book-leaf-prev {
-  transform: rotateY(14deg) translateZ(18px);
-  filter: drop-shadow(18px 12px 22px rgba(0, 0, 0, 0.55));
+.page-turn-next {
+  animation: page-turn-next 620ms cubic-bezier(0.36, 0.03, 0.28, 1) forwards;
+}
+
+.page-turn-prev {
+  animation: page-turn-prev 620ms cubic-bezier(0.36, 0.03, 0.28, 1) forwards;
+}
+
+/* Light across the lifting leaf. It darkens as the page rises, the way a turning sheet
+   falls into its own shadow. */
+@keyframes page-turn-shade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+
+.page-turn-shade {
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.65) 0%, rgba(0, 0, 0, 0) 55%);
+  animation: page-turn-shade 620ms ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The turn is decoration; the page change is the function. Skip straight to it. */
+  .page-turn-next,
+  .page-turn-prev,
+  .page-turn-shade {
+    animation: none;
+    opacity: 0;
+  }
 }
 
 /* Report watermarking (build spec §7): a repeating diagonal tile carrying the viewing

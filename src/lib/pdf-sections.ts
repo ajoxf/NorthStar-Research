@@ -62,6 +62,14 @@ const MIN_CHART_PX = 300
 const MIN_CHART_COLOURS = 16
 
 /**
+ * Charts plot a series against time, and time runs across the page — every chart in a
+ * research report is landscape. A square image at this size is a mark or a portrait.
+ * Getting this wrong costs one image missing from the chart strip, while the full
+ * document below still shows it, so the assumption is a cheap one to make.
+ */
+const MIN_CHART_ASPECT = 1.3
+
+/**
  * An image appearing on more than this share of pages is page furniture — a logo or a
  * letterhead — not content. This is the general rule; it is what excludes the NorthStar
  * mark that sits on all 22 pages without hard-coding anything about it.
@@ -71,6 +79,21 @@ const FURNITURE_PAGE_SHARE = 0.5
 export async function extractSections(doc: PdfDocument): Promise<ExtractionResult> {
   const pageCount = doc.numPages
   const paintOp = await paintImageOp()
+
+  // Headings first, so a masthead can be told from an instrument. On the cover the
+  // brand is set large and would otherwise read as the page's heading; the same
+  // furniture rule that identifies a repeated logo identifies it — text appearing on
+  // most pages of a document is the document's furniture, not one page's subject.
+  const headings: ({ key: string; title: string } | null)[] = []
+  const titleCounts = new Map<string, number>()
+
+  for (let n = 1; n <= pageCount; n += 1) {
+    const heading = await readHeading(await doc.getPage(n))
+    headings.push(heading)
+    if (heading) titleCounts.set(heading.key, (titleCounts.get(heading.key) ?? 0) + 1)
+  }
+
+  const repeatLimit = Math.max(2, Math.ceil(pageCount * FURNITURE_PAGE_SHARE))
 
   const sections: PdfSection[] = []
   const loose: ChartImage[] = []
@@ -83,7 +106,8 @@ export async function extractSections(doc: PdfDocument): Promise<ExtractionResul
 
   for (let n = 1; n <= pageCount; n += 1) {
     const page = await doc.getPage(n)
-    const heading = await readHeading(page)
+    const candidate = headings[n - 1]
+    const heading = candidate && (titleCounts.get(candidate.key) ?? 0) < repeatLimit ? candidate : null
     const names = await imageNames(page, paintOp)
 
     if (heading) {
@@ -107,6 +131,7 @@ export async function extractSections(doc: PdfDocument): Promise<ExtractionResul
     for (const name of names) {
       const image = await resolveImageObject(page, doc, name)
       if (!image || image.width < MIN_CHART_PX || image.height < MIN_CHART_PX / 3) continue
+      if (image.width / image.height < MIN_CHART_ASPECT) continue
 
       const result = await toChartImage(image, n)
       if (!result) continue
@@ -131,10 +156,8 @@ export async function extractSections(doc: PdfDocument): Promise<ExtractionResul
   // document-wide object once it has seen it reused, so a logo keeps a page-local name on
   // its first appearance and a name-based filter misses exactly one copy of it — the one
   // on the cover. Decoded dimensions plus compressed byte length identify it everywhere.
-  const furnitureLimit = Math.max(2, Math.ceil(pageCount * FURNITURE_PAGE_SHARE))
-
   for (const entry of decoded) {
-    if ((signaturePages.get(entry.signature)?.size ?? 0) >= furnitureLimit) {
+    if ((signaturePages.get(entry.signature)?.size ?? 0) >= repeatLimit) {
       URL.revokeObjectURL(entry.chart.url)
       continue
     }

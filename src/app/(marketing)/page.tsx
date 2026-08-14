@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 
 import { SampleReportForm } from '@/app/(marketing)/sample-report-form'
-import { HeroVideo } from '@/components/hero-video'
+import { HeroMedia } from '@/components/hero-media'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { PLAN } from '@/lib/env'
@@ -29,28 +29,33 @@ export default function LandingPage() {
 function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-line">
-      {/* Supply footage by setting NEXT_PUBLIC_HERO_VIDEO_URL (and optionally
-          NEXT_PUBLIC_HERO_POSTER_URL). Until then the grid backdrop stands in and the
-          hero still looks deliberate. */}
-      <HeroVideo
-        src={process.env.NEXT_PUBLIC_HERO_VIDEO_URL}
-        poster={process.env.NEXT_PUBLIC_HERO_POSTER_URL}
+      {/* The still is the default. Setting NEXT_PUBLIC_HERO_VIDEO_URL replaces it with
+          footage; the still then serves as that video's poster, so the first paint is the
+          same either way. */}
+      <HeroMedia
+        image="/hero-desk.jpg"
+        videoSrc={process.env.NEXT_PUBLIC_HERO_VIDEO_URL}
+        videoPoster={process.env.NEXT_PUBLIC_HERO_POSTER_URL}
       />
-      <div className="grid-backdrop absolute inset-0 opacity-30" aria-hidden />
+      {/* Behind the photograph, so the hero still reads as designed if the image is ever
+          missing rather than collapsing to an empty black band. */}
+      <div className="grid-backdrop absolute inset-0 -z-10 opacity-20" aria-hidden />
       <div
         className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent"
         aria-hidden
       />
 
-      <div className="relative mx-auto max-w-6xl px-5 py-24 sm:py-36">
-        <div className="max-w-2xl animate-fade-up">
+      <div className="relative mx-auto max-w-6xl px-5 py-24 sm:py-36 lg:py-44">
+        <div className="max-w-2xl animate-fade-up lg:max-w-[52%]">
           <Badge tone="accent" className="mb-6">
             Four reports · Every week
           </Badge>
 
           {/* Oversized and tightly tracked, per the reference: the headline is the
-              design, so it runs larger and closer than a default type scale would. */}
-          <h1 className="text-balance font-display text-[2.75rem] font-semibold tracking-[-0.035em] text-ink sm:text-6xl md:text-7xl">
+              design, so it runs larger and closer than a default type scale would. It
+              steps back down at the large breakpoint, where the photograph takes the
+              right of the frame and the headline has half the width to live in. */}
+          <h1 className="text-balance font-display text-[2.75rem] font-semibold tracking-[-0.035em] text-ink sm:text-6xl md:text-7xl lg:text-[3.5rem] xl:text-[4rem]">
             Research written for people who actually take the trade.
           </h1>
 
