@@ -10,3 +10,7 @@ build/
 .vercel
 *.tsbuildinfo
 next-env.d.ts
+
+# Copied from node_modules at build time by scripts/copy-pdf-worker.mjs.
+# Build artifact, not source — see that script for why it is not checked in.
+public/pdf.worker.min.mjs

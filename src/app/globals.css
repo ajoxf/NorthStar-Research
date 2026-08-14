@@ -174,6 +174,22 @@
   font-size: 0.85em;
 }
 
+/* Page-turn transition for the PDF reader. Tailwind 3 has no rotate-Y utility, and the
+   leaf must keep its 3D transform style, so it is expressed here rather than inline. The
+   hinge is the left edge, which is where a bound page turns from. */
+.page-leaf {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.page-leaf-next {
+  transform: rotateY(-12deg);
+}
+
+.page-leaf-prev {
+  transform: rotateY(12deg);
+}
+
 /* Report watermarking (build spec §7): a repeating diagonal tile carrying the viewing
    member's identity. Low-opacity and behind the text so it traces a screenshot back to
    an account without making the research uncomfortable to read. */

@@ -3,17 +3,26 @@
 import * as React from 'react'
 import { Download, FileText, ShieldAlert } from 'lucide-react'
 
-import { InstrumentTable } from '@/components/instrument-table'
+import { InstrumentSections } from '@/components/instrument-sections'
+import { PdfFlipReader } from '@/components/pdf-flip-reader'
 import { Button, Spinner } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
+import { watermarkTile } from '@/lib/watermark'
 import type { ReportInstrument } from '@/lib/report-content'
 
 /**
  * In-app reading view.
  *
- * Deliberately not "an embedded PDF in a frame" (§6): the instrument tables and prose
- * are real, responsive DOM, so the report reads properly on a phone. The original PDF
- * remains available as an explicit, logged download for members who want it offline.
+ * Order matters here. Every edition is authored as a PDF, and the charts in it *are* the
+ * research — so the PDF pages are rendered first, page by page, exactly as drawn. An
+ * earlier build tried to re-typeset the document from its text layer; it dropped every
+ * chart and mangled price tables, which is why nothing on this page derives report
+ * content from the file automatically (see src/lib/pdf.ts).
+ *
+ * The instrument bands and any hand-written reading view sit *below* the document. They
+ * are a structured index over it — quick levels on a phone — not a replacement for it.
+ *
+ * The original PDF is still offered as an explicit, logged download.
  */
 export function ReportReader({
   reportId,
@@ -31,21 +40,14 @@ export function ReportReader({
   const toast = useToast()
   const [downloading, setDownloading] = React.useState(false)
 
-  /**
-   * Repeating diagonal watermark carrying the viewing member's identity, applied as a
-   * CSS background so it sits behind the text and survives a screenshot without
-   * competing with the content (§7).
-   */
-  const watermarkStyle = React.useMemo(() => {
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="340" height="200">
-      <text x="0" y="100" transform="rotate(-24 0 100)" font-family="monospace" font-size="14" fill="%23e9e7dd">${escapeXml(
-        watermarkLabel,
-      )}</text>
-    </svg>`
-    return {
-      '--watermark-image': `url("data:image/svg+xml;utf8,${svg.replace(/\n\s*/g, ' ').replace(/#/g, '%23')}")`,
-    } as React.CSSProperties
-  }, [watermarkLabel])
+  const watermarkStyle = React.useMemo(
+    () => ({ '--watermark-image': watermarkTile(watermarkLabel, '#e9e7dd') }) as React.CSSProperties,
+    [watermarkLabel],
+  )
+  const watermarkStyleLight = React.useMemo(
+    () => ({ '--watermark-image': watermarkTile(watermarkLabel, '#000000') }) as React.CSSProperties,
+    [watermarkLabel],
+  )
 
   async function handleDownload() {
     setDownloading(true)
@@ -69,19 +71,32 @@ export function ReportReader({
     }
   }
 
+  const hasSupplement = instruments.length > 0 || Boolean(htmlContent)
+
   return (
     <div>
+      {hasPdf && (
+        <section className="mb-10" aria-label="Report document">
+          <PdfFlipReader reportId={reportId} watermarkLabel={watermarkLabel} />
+        </section>
+      )}
+
       {instruments.length > 0 && (
         <section className="mb-10">
-          <h2 className="eyebrow mb-3">Instrument levels</h2>
-          <div className="watermarked" style={watermarkStyle}>
-            <InstrumentTable instruments={instruments} />
-          </div>
+          <h2 className="eyebrow mb-4">Instrument levels</h2>
+          <InstrumentSections
+            instruments={instruments}
+            watermarkStyle={watermarkStyle}
+            watermarkStyleLight={watermarkStyleLight}
+          />
         </section>
       )}
 
       {htmlContent && (
-        <section className="watermarked panel px-6 py-8 sm:px-9 sm:py-10" style={watermarkStyle}>
+        <section
+          className="watermarked panel px-5 py-8 sm:px-9 sm:py-10"
+          style={watermarkStyle}
+        >
           <div
             className="report-prose"
             // Author-supplied report body. Sanitised server-side before it is stored;
@@ -91,12 +106,13 @@ export function ReportReader({
         </section>
       )}
 
-      {!htmlContent && instruments.length === 0 && (
+      {!hasPdf && !hasSupplement && (
         <div className="panel flex flex-col items-center px-6 py-14 text-center">
           <FileText className="mb-4 h-6 w-6 text-ink-dim" aria-hidden />
-          <h2 className="font-display text-lg text-ink">This report is available as a PDF</h2>
+          <h2 className="font-display text-lg text-ink">This edition is not ready yet</h2>
           <p className="mt-2.5 max-w-sm text-[14px] leading-relaxed text-ink-dim">
-            A reading view has not been generated for this edition. Download the original below.
+            No document has been attached to this report. It will appear here as soon as the desk
+            publishes it.
           </p>
         </div>
       )}
@@ -111,7 +127,12 @@ export function ReportReader({
             </p>
           </div>
 
-          <Button variant="secondary" onClick={handleDownload} disabled={downloading}>
+          <Button
+            variant="secondary"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="w-full sm:w-auto"
+          >
             {downloading ? (
               <>
                 <Spinner />
@@ -128,12 +149,4 @@ export function ReportReader({
       )}
     </div>
   )
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
 }
