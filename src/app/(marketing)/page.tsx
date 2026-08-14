@@ -10,19 +10,17 @@ import {
   Smartphone,
 } from 'lucide-react'
 
+import { SampleReportForm } from '@/app/(marketing)/sample-report-form'
 import { HeroVideo } from '@/components/hero-video'
-import { InstrumentTable } from '@/components/instrument-table'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { PLAN } from '@/lib/env'
-import { PREVIEW_INSTRUMENTS, REPORT_TYPES } from '@/lib/report-content'
 
 export default function LandingPage() {
   return (
     <>
       <Hero />
-      <ReportsSection />
-      <FormatSection />
+      <SampleReportSection />
       <PricingSection />
     </>
   )
@@ -83,8 +81,8 @@ function Hero() {
               Become a member — ${PLAN.priceUsd}/mo
               <ArrowRight className="h-4 w-4" aria-hidden />
             </ButtonLink>
-            <ButtonLink href="#format" size="lg" variant="secondary">
-              See the report format
+            <ButtonLink href="#sample-report" size="lg" variant="secondary">
+              Request a sample report
             </ButtonLink>
           </div>
         </div>
@@ -93,57 +91,20 @@ function Hero() {
   )
 }
 
-function ReportsSection() {
+function SampleReportSection() {
   return (
-    <section id="reports" className="border-b border-line">
+    <section id="sample-report" className="border-b border-line bg-panel-2/40">
       <div className="mx-auto max-w-6xl px-5 py-20">
-        <span className="eyebrow">The weekly cadence</span>
-        <h2 className="mt-3 max-w-xl text-3xl leading-tight text-ink sm:text-4xl">
-          Four reports, published on a fixed schedule.
-        </h2>
-        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-dim">
-          Every one carries the same three lines — weekly bias, the support and resistance that
-          matter, and the level that invalidates the idea.
-        </p>
-
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {REPORT_TYPES.map((report, index) => (
-            <article
-              key={report.value}
-              className="panel group flex flex-col p-6 transition-colors hover:border-accent/40"
-            >
-              <div className="mb-5 flex items-center justify-between">
-                <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
-                  Report {index + 1}
-                </span>
-                <FileText className="h-4 w-4 text-ink-dim transition-colors group-hover:text-accent" aria-hidden />
-              </div>
-
-              <h3 className="font-display text-xl leading-snug text-ink">{report.shortLabel}</h3>
-              <p className="mt-3 flex-1 text-[15px] leading-relaxed text-ink-dim">{report.blurb}</p>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function FormatSection() {
-  return (
-    <section id="format" className="border-b border-line bg-panel-2/40">
-      <div className="mx-auto max-w-6xl px-5 py-20">
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:items-start">
           <div>
-            <span className="eyebrow">The format</span>
-            <h2 className="mt-3 text-3xl leading-tight text-ink sm:text-4xl">
-              Every instrument, the same structure, every week.
+            <span className="eyebrow">See the work first</span>
+            <h2 className="mt-3 max-w-lg text-3xl leading-tight text-ink sm:text-4xl">
+              Ask for a sample before you subscribe.
             </h2>
-            <p className="mt-5 text-[16px] leading-relaxed text-ink-dim">
-              Each report opens with a tabbed instrument view. Select an instrument and you get the
-              same five lines — weekly bias, the resistance that matters, the support that matters,
-              the level that invalidates the idea, and where positioning sits. Consistent enough to
-              read in two minutes, detailed enough to act on.
+            <p className="mt-5 max-w-lg text-[16px] leading-relaxed text-ink-dim">
+              Tell us what you trade and we will send a recent edition so you can judge the
+              research on its own terms. A person reads every request — nothing is automated,
+              and you will not be added to a mailing list.
             </p>
 
             <ul className="mt-8 space-y-4">
@@ -165,7 +126,7 @@ function FormatSection() {
                 },
               ].map((feature) => (
                 <li key={feature.title} className="flex gap-3.5">
-                  <feature.icon className="mt-0.5 h-4.5 w-4 shrink-0 text-accent" aria-hidden />
+                  <feature.icon className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
                   <div>
                     <h3 className="font-display text-[17px] text-ink">{feature.title}</h3>
                     <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">{feature.body}</p>
@@ -175,12 +136,7 @@ function FormatSection() {
             </ul>
           </div>
 
-          <div>
-            <InstrumentTable instruments={PREVIEW_INSTRUMENTS} locked />
-            <p className="mt-3 text-center font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim/70">
-              Preview — illustrative data, not live research
-            </p>
-          </div>
+          <SampleReportForm />
         </div>
       </div>
     </section>

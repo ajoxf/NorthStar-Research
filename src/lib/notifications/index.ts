@@ -79,6 +79,10 @@ class CompositeProvider implements NotificationProvider {
     return this.email.sendMagicLink(recipient, link, expiresInMinutes)
   }
 
+  sendSampleReportRequest(request: { name: string; email: string; note?: string }) {
+    return this.email.sendSampleReportRequest(request)
+  }
+
   sendRenewalReminder(
     recipient: { email: string; firstName?: string | null },
     daysRemaining: number,

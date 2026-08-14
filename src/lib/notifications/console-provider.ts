@@ -76,6 +76,18 @@ export class ConsoleProvider implements NotificationProvider {
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
 
+  async sendSampleReportRequest(request: {
+    name: string
+    email: string
+    note?: string
+  }): Promise<DeliveryResult> {
+    console.info(
+      `[notifications:console] SAMPLE REQUEST → desk | ${request.name} <${request.email}>` +
+        (request.note ? ` | ${request.note}` : ''),
+    )
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
   async sendRenewalReminder(
     recipient: { email: string; firstName?: string | null },
     daysRemaining: number,

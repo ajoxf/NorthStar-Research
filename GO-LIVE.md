@@ -31,9 +31,22 @@ is a deliberate decision, not a default.
 
 ## 2. Cregis — resolve the IP allowlist
 
-**Confirmed blocker.** Cregis's documentation states: *"The Cregis API only grants access
-to IP addresses in the whitelist"*, configured per project under
-API → IP Whitelist → Create Group.
+**Confirmed by a live failure**, not by reading the docs. A real checkout was attempted
+once the credentials were in:
+
+```
+POST 502 /api/checkout/create
+[checkout] Cregis rejected the checkout (code E0001):
+The IP is not added to the whitelist list 98.81.6.170
+```
+
+**Read that correctly: the credentials are right.** The request authenticated, reached
+Cregis, and was rejected purely on source IP. Nothing about the API key or project ID
+needs changing — the admin panel showing READY is accurate.
+
+`98.81.6.170` was that one invocation's egress address and **will rotate**. Adding that
+single IP to the allowlist may appear to fix it and then fail unpredictably later, which
+is worse than the current clean failure. Do not do that.
 
 Vercel serverless functions have **no static outbound IP** — calls come from a rotating
 pool, so there is no single address to allowlist. Options, cheapest first:

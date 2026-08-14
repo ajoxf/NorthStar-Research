@@ -27,6 +27,13 @@ export type Recipient = Pick<
 
 export type ReportSummary = Pick<Report, 'id' | 'type' | 'title' | 'summary' | 'publishDate'>
 
+/** A sample-report enquiry from the public site. Not a member, not a subscriber. */
+export type SampleReportRequest = {
+  name: string
+  email: string
+  note?: string
+}
+
 export interface NotificationProvider {
   readonly name: string
 
@@ -64,6 +71,14 @@ export interface NotificationProvider {
     link: string,
     expiresInMinutes: number,
   ): Promise<DeliveryResult>
+
+  /**
+   * Internal: tell the desk that a visitor asked for a sample report.
+   *
+   * Goes to US, never to the visitor. An unauthenticated endpoint must not be able to
+   * cause research to be delivered to an arbitrary address (build spec §5.5).
+   */
+  sendSampleReportRequest(request: SampleReportRequest): Promise<DeliveryResult>
 
   /** Transactional: warn a crypto member that their period is about to lapse. */
   sendRenewalReminder(

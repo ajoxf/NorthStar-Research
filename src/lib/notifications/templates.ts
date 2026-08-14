@@ -157,6 +157,32 @@ export function renewalReminderEmail(
   }
 }
 
+/**
+ * Internal notification to the desk. Deliberately plain: it is read by us, and it
+ * contains no link that could deliver research to the enquirer.
+ */
+export function sampleReportRequestEmail(request: {
+  name: string
+  email: string
+  note?: string
+}) {
+  const body = `
+    <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">New sample report request</p>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:22px;line-height:1.3;font-weight:600;color:${INK};">${escapeHtml(request.name)}</h1>
+    <p style="margin:0 0 6px;color:${INK};font-size:15px;">${escapeHtml(request.email)}</p>
+    ${request.note ? `<p style="margin:14px 0 0;color:${INK_DIM};font-size:14px;line-height:1.65;">${escapeHtml(request.note)}</p>` : ''}
+    <p style="margin:20px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Nothing has been sent to this person. Reply directly if you want to follow up.</p>
+  `
+
+  return {
+    subject: `Sample report request — ${request.name}`,
+    html: shell('Sample report request', body),
+    text:
+      `New sample report request\n\n${request.name}\n${request.email}\n\n` +
+      `${request.note ?? ''}\n\nNothing has been sent to this person.`,
+  }
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

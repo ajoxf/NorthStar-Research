@@ -25,18 +25,6 @@ export async function SiteHeader() {
 
         <nav className="flex items-center gap-1 sm:gap-2">
           <Link
-            href="/#reports"
-            className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"
-          >
-            Reports
-          </Link>
-          <Link
-            href="/#format"
-            className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"
-          >
-            Format
-          </Link>
-          <Link
             href="/faqs"
             className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"
           >

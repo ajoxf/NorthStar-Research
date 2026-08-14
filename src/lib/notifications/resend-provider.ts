@@ -6,6 +6,7 @@ import {
   redemptionCodeEmail,
   renewalReminderEmail,
   reportEmail,
+  sampleReportRequestEmail,
 } from '@/lib/notifications/templates'
 import type {
   DeliveryResult,
@@ -79,6 +80,18 @@ export class ResendProvider implements NotificationProvider {
   ): Promise<DeliveryResult> {
     const { subject, html, text } = magicLinkEmail(link, expiresInMinutes, recipient.firstName)
     return this.send(recipient.email, subject, html, text)
+  }
+
+  async sendSampleReportRequest(request: {
+    name: string
+    email: string
+    note?: string
+  }): Promise<DeliveryResult> {
+    // Goes to the desk address, never to request.email — that address is unverified
+    // input from a public form.
+    const to = optionalEnv('SAMPLE_REPORT_REQUEST_TO', this.from())
+    const { subject, html, text } = sampleReportRequestEmail(request)
+    return this.send(to, subject, html, text)
   }
 
   async sendRenewalReminder(
