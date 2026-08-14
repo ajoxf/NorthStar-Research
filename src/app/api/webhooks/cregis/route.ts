@@ -153,6 +153,8 @@ export async function POST(request: Request) {
         cregisOrderId,
         email: order.email,
         status: 'unused',
+        // Bought at list price, so no discount to record.
+        discountPercent: 0,
         expiresAt: codeExpiresAt(),
       },
     })

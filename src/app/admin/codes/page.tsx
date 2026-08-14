@@ -30,6 +30,15 @@ export default async function AdminCodesPage() {
   ).length
   const lapsed = codes.filter((code) => code.status === 'unused' && isCodeExpired(code)).length
 
+  // Grouped by offer so a batch reads back as a campaign rather than a pile of comps.
+  const liveByOffer = new Map<number, number>()
+  for (const code of gifted) {
+    if (code.status !== 'unused' || isCodeExpired(code)) continue
+    const key = code.discountPercent ?? 100
+    liveByOffer.set(key, (liveByOffer.get(key) ?? 0) + 1)
+  }
+  const offers = [...liveByOffer.entries()].sort((a, b) => b[0] - a[0])
+
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
       <div className="mb-8">
@@ -40,6 +49,19 @@ export default async function AdminCodesPage() {
           {lapsed > 0 && ` · ${lapsed} expired unredeemed`}. Codes are valid for{' '}
           {CODE_VALIDITY_DAYS} days from the day they are issued.
         </p>
+
+        {offers.length > 0 && (
+          <ul className="mt-4 flex flex-wrap gap-2">
+            {offers.map(([discount, count]) => (
+              <li
+                key={discount}
+                className="rounded-full border border-line px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-dim"
+              >
+                {count} × {discount === 100 ? 'free' : discount === 0 ? 'full price' : `${discount}% off`}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <CodeGenerator />
@@ -50,6 +72,7 @@ export default async function AdminCodesPage() {
             <tr className="border-b border-line">
               <th className="eyebrow px-4 py-3">Code</th>
               <th className="eyebrow px-4 py-3">Source</th>
+              <th className="eyebrow px-4 py-3">Offer</th>
               <th className="eyebrow px-4 py-3">Status</th>
               <th className="eyebrow px-4 py-3">Created</th>
               <th className="eyebrow px-4 py-3">Expires</th>
@@ -59,7 +82,7 @@ export default async function AdminCodesPage() {
           <tbody>
             {codes.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-[15px] text-ink-dim">
+                <td colSpan={7} className="px-4 py-8 text-center text-[15px] text-ink-dim">
                   No codes yet. Create some above, or they appear here automatically when
                   somebody pays.
                 </td>
@@ -70,6 +93,16 @@ export default async function AdminCodesPage() {
                   <td className="px-4 py-3 font-mono text-[15px] text-ink">{code.code}</td>
                   <td className="px-4 py-3 text-[14px] text-ink-dim">
                     {code.cregisOrderId ? `Paid · ${code.email ?? ''}` : code.note || 'Gifted'}
+                  </td>
+                  {/* A label, never a price: no checkout amount is derived from it. */}
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-[14px] text-ink-dim">
+                    {code.discountPercent === null
+                      ? '—'
+                      : code.discountPercent === 100
+                        ? 'Free'
+                        : code.discountPercent === 0
+                          ? 'Full price'
+                          : `${code.discountPercent}% off`}
                   </td>
                   <td className="px-4 py-3">
                     {code.status === 'redeemed' ? (

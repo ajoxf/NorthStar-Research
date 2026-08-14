@@ -11,6 +11,8 @@ export const dynamic = 'force-dynamic'
 const schema = z.object({
   count: z.number().int().min(1).max(50),
   note: z.string().trim().max(120).optional(),
+  /** 100 = free, 0 = full price. Metadata only — see the note below. */
+  discountPercent: z.number().int().min(0).max(100).default(100),
 })
 
 /**
@@ -25,6 +27,12 @@ const schema = z.object({
  * (`addBillingPeriod`, +1 calendar month), so issuing a code early costs nothing — but
  * the code itself lapses after CODE_VALIDITY_DAYS, so it is not an open-ended liability
  * sitting in an inbox.
+ *
+ * `discountPercent` is **metadata and nothing else**. Every code unlocks the same
+ * membership period however it is labelled, and no checkout amount anywhere is derived
+ * from it: a half-price deal is settled however the operator settled it, off-system. It
+ * exists so a batch can be read back as a campaign — "the 50% launch offer" — instead of
+ * an undifferentiated pile of comps. Do not wire it into pricing without saying so.
  */
 export async function POST(request: Request) {
   try {
@@ -44,7 +52,7 @@ export async function POST(request: Request) {
     )
   }
 
-  const { count, note } = parsed.data
+  const { count, note, discountPercent } = parsed.data
   const created: string[] = []
 
   // `code` is unique. On the astronomically unlikely collision, retry rather than
@@ -63,6 +71,7 @@ export async function POST(request: Request) {
             // The note is a note. It used to be written into `email`, which meant a
             // gifted code carried an operator's scribble where an address belonged.
             note: note || null,
+            discountPercent,
             expiresAt: codeExpiresAt(),
           },
         })

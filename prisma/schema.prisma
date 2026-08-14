@@ -160,19 +160,25 @@ model Member {
 }
 
 model RedemptionCode {
-  id            String     @id @default(cuid())
-  code          String     @unique
-  cregisOrderId String?
+  id              String     @id @default(cuid())
+  code            String     @unique
+  cregisOrderId   String?
   /// Email the code was *issued* to, when checkout captured one. Null for gifted codes.
-  email         String?
+  email           String?
   /// Operator's note on a gifted code — who it went to and why. Never an email address:
   /// it used to be written into `email`, which meant a gifted code carried a note where
   /// an address belonged and no redeemer was ever recorded against it.
-  note          String?
+  note            String?
   /// Email that actually redeemed the code. Always captured, however the code was issued,
   /// so every activation can be traced to a person without joining through Member.
-  redeemedEmail String?
-  status        CodeStatus @default(unused)
+  redeemedEmail   String?
+  /// What this code represented commercially: 100 is free, 25 is a quarter off, 0 is full
+  /// price. **Metadata only.** Redeeming any code grants the same membership period, and
+  /// nothing here changes what a checkout charges — a discounted sale is settled however
+  /// the operator settled it, and this records which offer it was so the codes list can be
+  /// read as a campaign rather than as an undifferentiated pile of comps.
+  discountPercent Int?
+  status          CodeStatus @default(unused)
 
   redeemedByMemberId String?
   redeemedByMember   Member? @relation(fields: [redeemedByMemberId], references: [id])

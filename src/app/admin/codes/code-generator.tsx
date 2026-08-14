@@ -5,15 +5,24 @@ import { useRouter } from 'next/navigation'
 
 import { Button, Spinner } from '@/components/ui/button'
 import { Input, Label } from '@/components/ui/field'
+import { CODE_VALIDITY_DAYS } from '@/lib/codes'
 
 /**
- * Operator-facing code minting. Deliberately two fields and one button — this is used by
- * whoever runs the business, not by a developer.
+ * Operator-facing code minting. Deliberately few fields — this is used by whoever runs
+ * the business, not by a developer.
+ *
+ * The discount is a **label**, not a price. Every code unlocks the same membership period
+ * whatever it says; a discounted sale is settled off-system however the operator settled
+ * it. The field exists so a batch can be read back later as "the 50% launch offer" rather
+ * than as an undifferentiated pile of comps, and the copy says so plainly, because a
+ * percentage next to a button is otherwise a fair thing to mistake for pricing.
  */
 export function CodeGenerator() {
   const router = useRouter()
   const [count, setCount] = React.useState(5)
   const [note, setNote] = React.useState('')
+  // 100% — a free code — is what an operator wants nine times out of ten.
+  const [discountPercent, setDiscountPercent] = React.useState(100)
   const [busy, setBusy] = React.useState(false)
   const [codes, setCodes] = React.useState<string[]>([])
   const [error, setError] = React.useState('')
@@ -28,7 +37,7 @@ export function CodeGenerator() {
       const response = await fetch('/api/admin/codes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ count, note: note.trim() || undefined }),
+        body: JSON.stringify({ count, note: note.trim() || undefined, discountPercent }),
       })
       const data = await response.json()
 
@@ -52,12 +61,12 @@ export function CodeGenerator() {
     <div className="panel p-6">
       <h2 className="font-display text-lg text-ink">Create access codes</h2>
       <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-ink-dim">
-        Each code lets one person activate a membership without paying. Redeeming it gives them
-        one month from the day they use it. Codes do not expire on their own — to stop an offer,
-        simply stop handing them out.
+        Each code lets one person activate a membership without paying here. Redeeming it gives
+        them one month from the day they use it, and the code itself stops working{' '}
+        {CODE_VALIDITY_DAYS} days after you create it.
       </p>
 
-      <div className="mt-5 flex flex-wrap items-end gap-4">
+      <div className="mt-5 grid grid-cols-2 items-end gap-4 sm:flex sm:flex-wrap">
         <div>
           <Label htmlFor="count">How many</Label>
           <Input
@@ -69,11 +78,27 @@ export function CodeGenerator() {
             onChange={(event) =>
               setCount(Math.max(1, Math.min(50, Number(event.target.value) || 1)))
             }
-            className="w-24"
+            className="w-full sm:w-24"
           />
         </div>
 
-        <div className="min-w-[220px] flex-1">
+        <div>
+          <Label htmlFor="discount">Discount</Label>
+          <select
+            id="discount"
+            value={discountPercent}
+            onChange={(event) => setDiscountPercent(Number(event.target.value))}
+            className="h-11 w-full rounded-lg sm:w-36 border border-line bg-panel-2 px-3 text-[15px] text-ink"
+          >
+            <option value={100}>100% — free</option>
+            <option value={75}>75% off</option>
+            <option value={50}>50% off</option>
+            <option value={25}>25% off</option>
+            <option value={0}>Full price</option>
+          </select>
+        </div>
+
+        <div className="col-span-2 min-w-[220px] flex-1">
           <Label htmlFor="note">What for (optional)</Label>
           <Input
             id="note"
@@ -85,7 +110,7 @@ export function CodeGenerator() {
           />
         </div>
 
-        <Button onClick={create} disabled={busy}>
+        <Button onClick={create} disabled={busy} className="col-span-2 w-full sm:w-auto">
           {busy ? (
             <>
               <Spinner />
@@ -96,6 +121,13 @@ export function CodeGenerator() {
           )}
         </Button>
       </div>
+
+      {/* Said next to the control, not only in a doc comment: a percentage beside a
+          "create" button is otherwise a fair thing to read as pricing. */}
+      <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+        The discount is a label for your own records — it does not change what anyone is
+        charged. Every code unlocks the same membership when it is redeemed.
+      </p>
 
       {error ? <p className="mt-4 text-[14px] text-down">{error}</p> : null}
 
