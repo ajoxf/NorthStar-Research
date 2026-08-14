@@ -11,9 +11,10 @@ const base =
   'disabled:pointer-events-none disabled:opacity-50 active:translate-y-px whitespace-nowrap'
 
 const variants: Record<Variant, string> = {
-  primary:
-    'bg-accent text-bg font-semibold hover:bg-[#6BFF4F] shadow-[0_0_20px_-6px_rgba(57,255,20,0.55)] hover:shadow-[0_0_26px_-4px_rgba(57,255,20,0.7)]',
-  secondary: 'border border-line bg-panel text-ink hover:border-accent/50 hover:bg-panel-2',
+  // Flat lime fill, black label. The reference uses no glow — the colour carries it.
+  primary: 'bg-accent text-bg font-semibold hover:bg-[#DDFF63]',
+  // Outlined pill on transparent, the reference's secondary action.
+  secondary: 'border border-ink/25 bg-transparent text-ink hover:border-ink/60 hover:bg-ink/5',
   ghost: 'text-ink-dim hover:text-ink hover:bg-panel',
   danger: 'border border-down/40 bg-transparent text-down hover:bg-down/10',
 }

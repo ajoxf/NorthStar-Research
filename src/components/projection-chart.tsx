@@ -11,11 +11,15 @@ import { formatCompact, formatCurrency, type ProjectionYear } from '@/lib/withdr
  * insight: a portfolio can grow in cash terms while losing purchasing power, and one
  * line alone hides that.
  *
- * Series one is a darker step of the brand green — the neon accent itself is far too
- * light to sit on the panel surface as a data mark. Series two is violet rather than the
- * more obvious amber, because green against amber is the classic red-green colour-blind
- * failure: that pair measures ΔE 2.0 under deuteranopia, i.e. indistinguishable. Green
- * against violet measures 27.3 and passes every check.
+ * Series one is a mid green — the lime accent itself is far too light to sit on the panel
+ * surface as a data mark. Series two is violet rather than the more obvious amber,
+ * because green against amber is the classic red-green colour-blind failure: that pair
+ * measures ΔE 2.0 under deuteranopia, i.e. indistinguishable. Green against violet
+ * measures 27.3 and passes every check.
+ *
+ * These stayed green rather than being re-hued to lime when the accent changed: a lime
+ * step holds a weaker tritan margin (5.8 against this pair's 10.4), and matching the
+ * brand is not worth costing a group of readers the distinction.
  *
  * Both series are direct-labelled at the line end as well as carrying a legend, and the
  * real series is dashed, so identity never depends on colour alone.
@@ -101,7 +105,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionYear[] }) {
                 x2={WIDTH - PAD.right}
                 y1={y(tick)}
                 y2={y(tick)}
-                stroke="#1E2228"
+                stroke="#1F1F1F"
                 strokeWidth={1}
               />
               <text
@@ -109,7 +113,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionYear[] }) {
                 y={y(tick)}
                 textAnchor="end"
                 dominantBaseline="middle"
-                fill="#8A93A0"
+                fill="#A3A3A3"
                 fontSize={11}
                 fontFamily="IBM Plex Mono, monospace"
               >
@@ -124,7 +128,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionYear[] }) {
               x={x(row.year)}
               y={HEIGHT - 12}
               textAnchor="middle"
-              fill="#8A93A0"
+              fill="#A3A3A3"
               fontSize={11}
               fontFamily="IBM Plex Mono, monospace"
             >
@@ -155,7 +159,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionYear[] }) {
             x={x(last.year) + 8}
             y={y(last.closingBalance)}
             dominantBaseline="middle"
-            fill="#8A93A0"
+            fill="#A3A3A3"
             fontSize={11}
             fontFamily="IBM Plex Mono, monospace"
           >
@@ -165,7 +169,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionYear[] }) {
             x={x(last.year) + 8}
             y={y(last.realClosingBalance)}
             dominantBaseline="middle"
-            fill="#8A93A0"
+            fill="#A3A3A3"
             fontSize={11}
             fontFamily="IBM Plex Mono, monospace"
           >
@@ -179,7 +183,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionYear[] }) {
                 x2={x(active.year)}
                 y1={PAD.top}
                 y2={PAD.top + plotHeight}
-                stroke="#8A93A0"
+                stroke="#A3A3A3"
                 strokeWidth={1}
                 strokeDasharray="3 3"
               />
@@ -188,7 +192,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionYear[] }) {
                 cy={y(active.closingBalance)}
                 r={4}
                 fill={SERIES.nominal.color}
-                stroke="#0E1013"
+                stroke="#0B0B0B"
                 strokeWidth={2}
               />
               <circle
@@ -196,7 +200,7 @@ export function ProjectionChart({ rows }: { rows: ProjectionYear[] }) {
                 cy={y(active.realClosingBalance)}
                 r={4}
                 fill={SERIES.real.color}
-                stroke="#0E1013"
+                stroke="#0B0B0B"
                 strokeWidth={2}
               />
             </g>

@@ -1,5 +1,14 @@
 import Link from 'next/link'
-import { ArrowRight, Check, FileText, Lock, MessageCircle, ShieldCheck } from 'lucide-react'
+import {
+  Archive,
+  ArrowRight,
+  Check,
+  FileText,
+  Lock,
+  MessageCircle,
+  ShieldCheck,
+  Smartphone,
+} from 'lucide-react'
 
 import { HeroVideo } from '@/components/hero-video'
 import { InstrumentTable } from '@/components/instrument-table'
@@ -41,15 +50,33 @@ function Hero() {
             Four reports · Every week
           </Badge>
 
-          <h1 className="text-balance font-serif text-4xl leading-[1.1] text-ink sm:text-5xl md:text-6xl">
+          {/* Oversized and tightly tracked, per the reference: the headline is the
+              design, so it runs larger and closer than a default type scale would. */}
+          <h1 className="text-balance font-display text-[2.75rem] font-semibold tracking-[-0.035em] text-ink sm:text-6xl md:text-7xl">
             Research written for people who actually take the trade.
           </h1>
 
-          <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-dim">
+          <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
             NorthStar Research publishes four reports a week — commodities, international markets
             and indices, option, crypto and spread opportunities, and FX. Levels, bias, invalidation
             and positioning notes. No noise, no upsells, one price.
           </p>
+
+          {/* Icon + uppercase meta row, sitting between the copy and the actions. */}
+          <ul className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3">
+            {[
+              { icon: FileText, label: '4 reports / week' },
+              { icon: Archive, label: 'Full archive' },
+              { icon: Smartphone, label: 'Email + WhatsApp' },
+            ].map((item) => (
+              <li key={item.label} className="flex items-center gap-2">
+                <item.icon className="h-3.5 w-3.5 text-accent" aria-hidden />
+                <span className="text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
+                  {item.label}
+                </span>
+              </li>
+            ))}
+          </ul>
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <ButtonLink href="/join" size="lg">
@@ -60,21 +87,6 @@ function Hero() {
               See the report format
             </ButtonLink>
           </div>
-
-          <dl className="mt-14 grid max-w-lg grid-cols-3 gap-6 border-t border-line pt-8">
-            {[
-              { value: '4', label: 'Reports / week' },
-              { value: '100%', label: 'Archive access' },
-              { value: '$199', label: 'Per month' },
-            ].map((stat) => (
-              <div key={stat.label}>
-                <dt className="font-mono text-2xl text-accent">{stat.value}</dt>
-                <dd className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">
-                  {stat.label}
-                </dd>
-              </div>
-            ))}
-          </dl>
         </div>
       </div>
     </section>
@@ -103,7 +115,7 @@ function ReportsSection() {
                 <FileText className="h-4 w-4 text-ink-dim transition-colors group-hover:text-accent" aria-hidden />
               </div>
 
-              <h3 className="font-serif text-xl leading-snug text-ink">{report.shortLabel}</h3>
+              <h3 className="font-display text-xl leading-snug text-ink">{report.shortLabel}</h3>
               <p className="mt-3 flex-1 text-[15px] leading-relaxed text-ink-dim">{report.blurb}</p>
 
               <ul className="mt-6 space-y-2 border-t border-line pt-5">
@@ -160,7 +172,7 @@ function FormatSection() {
                 <li key={feature.title} className="flex gap-3.5">
                   <feature.icon className="mt-0.5 h-4.5 w-4 shrink-0 text-accent" aria-hidden />
                   <div>
-                    <h3 className="font-serif text-[17px] text-ink">{feature.title}</h3>
+                    <h3 className="font-display text-[17px] text-ink">{feature.title}</h3>
                     <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">{feature.body}</p>
                   </div>
                 </li>
@@ -192,7 +204,7 @@ function PricingSection() {
 
           <span className="eyebrow">Membership</span>
           <div className="mt-4 flex items-baseline gap-2">
-            <span className="font-serif text-5xl text-ink">${PLAN.priceUsd}</span>
+            <span className="font-display text-5xl text-ink">${PLAN.priceUsd}</span>
             <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
               per month
             </span>

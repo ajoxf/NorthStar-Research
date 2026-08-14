@@ -104,7 +104,7 @@ function EmptyReports() {
       <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-panel-2">
         <FileQuestion className="h-5 w-5 text-ink-dim" aria-hidden />
       </div>
-      <h2 className="font-serif text-xl text-ink">No reports published yet</h2>
+      <h2 className="font-display text-xl text-ink">No reports published yet</h2>
       <p className="mt-3 max-w-sm text-[15px] leading-relaxed text-ink-dim">
         Your membership is active. The next edition will appear here the moment it is published, and
         we will email you a link — plus WhatsApp, if you have opted in.

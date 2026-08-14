@@ -94,7 +94,7 @@ export function ReportReader({
       {!htmlContent && instruments.length === 0 && (
         <div className="panel flex flex-col items-center px-6 py-14 text-center">
           <FileText className="mb-4 h-6 w-6 text-ink-dim" aria-hidden />
-          <h2 className="font-serif text-lg text-ink">This report is available as a PDF</h2>
+          <h2 className="font-display text-lg text-ink">This report is available as a PDF</h2>
           <p className="mt-2.5 max-w-sm text-[14px] leading-relaxed text-ink-dim">
             A reading view has not been generated for this edition. Download the original below.
           </p>

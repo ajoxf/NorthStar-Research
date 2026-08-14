@@ -37,7 +37,7 @@ export default function JoinPage() {
               <li key={item.step} className="flex gap-4">
                 <span className="font-mono text-[12px] tracking-[0.14em] text-accent">{item.step}</span>
                 <div>
-                  <h2 className="font-serif text-[17px] text-ink">{item.title}</h2>
+                  <h2 className="font-display text-[17px] text-ink">{item.title}</h2>
                   <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">{item.body}</p>
                 </div>
               </li>
@@ -47,7 +47,7 @@ export default function JoinPage() {
 
         <div className="panel h-fit p-7">
           <div className="flex items-baseline gap-2 border-b border-line pb-6">
-            <span className="font-serif text-4xl text-ink">${PLAN.priceUsd}</span>
+            <span className="font-display text-4xl text-ink">${PLAN.priceUsd}</span>
             <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
               per month
             </span>

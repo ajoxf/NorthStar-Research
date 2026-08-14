@@ -7,7 +7,7 @@ import { getCurrentMember } from '@/lib/auth'
 export function Wordmark({ href = '/' }: { href?: string }) {
   return (
     <Link href={href} className="group inline-flex items-baseline gap-2">
-      <span className="font-serif text-[19px] tracking-tight text-ink">NorthStar</span>
+      <span className="font-display text-[19px] tracking-tight text-ink">NorthStar</span>
       <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent transition-colors group-hover:text-ink">
         Research
       </span>
@@ -26,19 +26,19 @@ export async function SiteHeader() {
         <nav className="flex items-center gap-1 sm:gap-2">
           <Link
             href="/#reports"
-            className="hidden px-3 py-2 text-sm text-ink-dim transition-colors hover:text-ink sm:block"
+            className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"
           >
             Reports
           </Link>
           <Link
             href="/#format"
-            className="hidden px-3 py-2 text-sm text-ink-dim transition-colors hover:text-ink sm:block"
+            className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"
           >
             Format
           </Link>
           <Link
             href="/faqs"
-            className="hidden px-3 py-2 text-sm text-ink-dim transition-colors hover:text-ink sm:block"
+            className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"
           >
             FAQs
           </Link>

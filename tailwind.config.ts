@@ -5,23 +5,29 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: '#08090B',
-        panel: '#0E1013',
-        'panel-2': '#0B0C0F',
-        line: '#1E2228',
-        ink: '#F2F4F7',
-        'ink-dim': '#8A93A0',
-        accent: '#39FF14',
+        // True black, not near-black: the reference design runs pure #000 and the
+        // surfaces sit only a few points above it, which is what gives the imagery
+        // its contrast.
+        bg: '#000000',
+        panel: '#0B0B0B',
+        'panel-2': '#060606',
+        line: '#1F1F1F',
+        ink: '#FFFFFF',
+        'ink-dim': '#A3A3A3',
+        // Acid lime, yellow-leaning rather than a pure green.
+        accent: '#D0F53C',
         up: '#00E08A',
         down: '#FF4D5E',
-        // Chart series: darker steps of the same hues, snapped into the dark-mode
-        // lightness band so they pass the CVD and contrast checks. The neon accent
-        // itself is too light to carry data marks.
+        // Chart series. Kept green rather than re-hued to the lime accent: the accent
+        // is far too light for a data mark, and this pair holds better colour-blind
+        // margins than a lime step does (tritan ΔE 10.4 vs 5.8).
         'series-1': '#3FA82F',
         'series-2': '#8B6FE8',
       },
       fontFamily: {
-        serif: ['var(--font-newsreader)', 'Newsreader', 'Georgia', 'serif'],
+        // Headings are a tightly-tracked grotesque, not a serif — the reference design
+        // is sans throughout. `display` replaces the old `serif` token.
+        display: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['var(--font-plex-mono)', 'IBM Plex Mono', 'ui-monospace', 'monospace'],
         sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
       },

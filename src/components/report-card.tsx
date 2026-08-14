@@ -39,7 +39,7 @@ export function ReportCard({ report, index }: { report: ReportCardData; index?: 
         {report.viewed ? <Badge tone="muted">Read</Badge> : <Badge tone="accent">New</Badge>}
       </div>
 
-      <h3 className="font-serif text-xl leading-snug text-ink">{report.title}</h3>
+      <h3 className="font-display text-xl leading-snug text-ink">{report.title}</h3>
 
       {typeof index === 'number' && (
         <p className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">

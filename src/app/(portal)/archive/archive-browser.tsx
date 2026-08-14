@@ -130,7 +130,7 @@ function EmptyResults({ hasReports, onReset }: { hasReports: boolean; onReset: (
       <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-panel-2">
         <SearchX className="h-5 w-5 text-ink-dim" aria-hidden />
       </div>
-      <h2 className="font-serif text-lg text-ink">
+      <h2 className="font-display text-lg text-ink">
         {hasReports ? 'Nothing matches those filters' : 'The archive is empty for now'}
       </h2>
       <p className="mt-2.5 max-w-sm text-[14px] leading-relaxed text-ink-dim">

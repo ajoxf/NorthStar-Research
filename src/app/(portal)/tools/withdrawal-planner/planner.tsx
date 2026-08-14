@@ -129,7 +129,7 @@ export function WithdrawalPlanner() {
           </div>
 
           <section className="panel p-5 sm:p-6">
-            <h2 className="mb-1 font-serif text-lg text-ink">Projected balance</h2>
+            <h2 className="mb-1 font-display text-lg text-ink">Projected balance</h2>
             <p className="mb-4 text-[13px] text-ink-dim">
               Nominal balance against the same balance expressed in today&apos;s money.
             </p>
@@ -139,7 +139,7 @@ export function WithdrawalPlanner() {
       </div>
 
       <section className="panel mt-6 overflow-hidden">
-        <h2 className="border-b border-line px-5 py-4 font-serif text-lg text-ink">
+        <h2 className="border-b border-line px-5 py-4 font-display text-lg text-ink">
           Year by year
         </h2>
         <div className="overflow-x-auto">

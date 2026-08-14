@@ -12,12 +12,12 @@ import type { ReportSummary } from '@/lib/notifications/types'
  * a link that renders without a session (build spec §5.5).
  */
 
-const BG = '#08090B'
-const PANEL = '#0E1013'
-const LINE = '#1E2228'
-const INK = '#F2F4F7'
-const INK_DIM = '#8A93A0'
-const ACCENT = '#39FF14'
+const BG = '#000000'
+const PANEL = '#0B0B0B'
+const LINE = '#1F1F1F'
+const INK = '#FFFFFF'
+const INK_DIM = '#A3A3A3'
+const ACCENT = '#D0F53C'
 
 function shell(title: string, body: string, footerNote?: string): string {
   return `<!doctype html>
@@ -50,7 +50,7 @@ function shell(title: string, body: string, footerNote?: string): string {
 
 function button(href: string, label: string): string {
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 8px;"><tr><td style="background:${ACCENT};border-radius:999px;">
-    <a href="${escapeHtml(href)}" style="display:inline-block;padding:13px 24px;font-weight:600;font-size:14px;color:#08090B;text-decoration:none;">${escapeHtml(label)}</a>
+    <a href="${escapeHtml(href)}" style="display:inline-block;padding:13px 24px;font-weight:600;font-size:14px;color:#000000;text-decoration:none;">${escapeHtml(label)}</a>
   </td></tr></table>`
 }
 
@@ -67,7 +67,7 @@ export function reportEmail(report: ReportSummary, reportUrl: string, firstName?
   const body = `
     <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
     <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:${ACCENT};margin-bottom:8px;">${escapeHtml(typeLabel)}</div>
-    <h1 style="margin:0 0 12px;font-family:Newsreader,Georgia,serif;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">${escapeHtml(report.title)}</h1>
+    <h1 style="margin:0 0 12px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">${escapeHtml(report.title)}</h1>
     <p style="margin:0 0 4px;color:${INK_DIM};font-size:13px;">${escapeHtml(published)}</p>
     ${report.summary ? `<p style="margin:16px 0 0;color:${INK};font-size:15px;line-height:1.65;">${escapeHtml(report.summary)}</p>` : ''}
     ${button(reportUrl, 'Read the report')}
@@ -90,9 +90,9 @@ export function redemptionCodeEmail(code: string, redeemUrl: string, firstName?:
 
   const body = `
     <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
-    <h1 style="margin:0 0 14px;font-family:Newsreader,Georgia,serif;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your membership is confirmed</h1>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your membership is confirmed</h1>
     <p style="margin:0 0 20px;color:${INK};font-size:15px;line-height:1.65;">Payment received. Use the code below to create your account and unlock all four weekly reports plus the full archive.</p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#0B0C0F;border:1px solid ${LINE};border-radius:10px;padding:20px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#060606;border:1px solid ${LINE};border-radius:10px;padding:20px;">
       <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:24px;letter-spacing:.14em;color:${ACCENT};">${escapeHtml(code)}</div>
     </td></tr></table>
     ${button(redeemUrl, 'Activate my membership')}
@@ -113,7 +113,7 @@ export function magicLinkEmail(link: string, expiresInMinutes: number, firstName
 
   const body = `
     <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
-    <h1 style="margin:0 0 14px;font-family:Newsreader,Georgia,serif;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your sign-in link</h1>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your sign-in link</h1>
     <p style="margin:0 0 4px;color:${INK};font-size:15px;line-height:1.65;">Click below to sign in to your NorthStar Research account. The link expires in ${expiresInMinutes} minutes.</p>
     ${button(link, 'Sign in')}
     <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">If you did not ask to sign in, you can ignore this email — nobody can access your account without this link.</p>
@@ -141,7 +141,7 @@ export function renewalReminderEmail(
 
   const body = `
     <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
-    <h1 style="margin:0 0 14px;font-family:Newsreader,Georgia,serif;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your membership ${escapeHtml(when)}</h1>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your membership ${escapeHtml(when)}</h1>
     <p style="margin:0 0 4px;color:${INK};font-size:15px;line-height:1.65;">You pay by crypto, which cannot renew automatically, so your access needs a payment to continue. Renew now and your reports carry on uninterrupted — any time left on your current period is added on top.</p>
     ${button(renewUrl, 'Renew my membership')}
     <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Prefer not to think about it each month? Switching to card billing renews by itself and can be cancelled any time.</p>

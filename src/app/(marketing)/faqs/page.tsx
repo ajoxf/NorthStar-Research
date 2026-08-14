@@ -115,7 +115,7 @@ export default function FaqsPage() {
       <dl className="mt-12 divide-y divide-line border-y border-line">
         {FAQS.map((faq) => (
           <div key={faq.q} className="py-7">
-            <dt className="font-serif text-xl text-ink">{faq.q}</dt>
+            <dt className="font-display text-xl text-ink">{faq.q}</dt>
             <dd className="mt-3 text-[16px] leading-relaxed text-ink-dim">{faq.a}</dd>
           </div>
         ))}

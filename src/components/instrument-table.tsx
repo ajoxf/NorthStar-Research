@@ -68,7 +68,7 @@ export function InstrumentTable({
         >
           <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-line px-5 py-4">
             <div>
-              <div className="font-serif text-lg text-ink">{current.name ?? current.symbol}</div>
+              <div className="font-display text-lg text-ink">{current.name ?? current.symbol}</div>
               <div className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
                 {current.symbol}
               </div>
@@ -136,7 +136,7 @@ function LockedOverlay() {
         <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full border border-accent/40 bg-accent/10">
           <Lock className="h-5 w-5 text-accent" aria-hidden />
         </div>
-        <h3 className="mb-2 font-serif text-xl text-ink">Members only</h3>
+        <h3 className="mb-2 font-display text-xl text-ink">Members only</h3>
         <p className="mb-5 text-[14px] leading-relaxed text-ink-dim">
           Levels, bias and positioning notes for every instrument are published to members three
           times a week. This preview shows the format — the numbers are illustrative.

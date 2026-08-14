@@ -49,7 +49,7 @@ export default async function ToolsPage() {
               className="mb-4 h-5 w-5 text-ink-dim transition-colors group-hover:text-accent"
               aria-hidden
             />
-            <h2 className="font-serif text-xl leading-snug text-ink">{tool.name}</h2>
+            <h2 className="font-display text-xl leading-snug text-ink">{tool.name}</h2>
             <p className="mt-3 flex-1 text-[15px] leading-relaxed text-ink-dim">{tool.blurb}</p>
             <span className="mt-5 flex items-center gap-1 text-[13px] text-accent transition-transform group-hover:translate-x-0.5">
               Open
