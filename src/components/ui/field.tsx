@@ -10,7 +10,7 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
         className={cn(
           'h-11 w-full rounded-lg border border-line bg-panel-2 px-3.5 text-[15px] text-ink',
           'placeholder:text-ink-dim/60 transition-colors',
-          'focus:border-gold/60 focus:outline-none focus:ring-1 focus:ring-gold/40',
+          'focus:border-accent/60 focus:outline-none focus:ring-1 focus:ring-accent/40',
           'disabled:opacity-50',
           className,
         )}
@@ -30,7 +30,7 @@ export const Textarea = React.forwardRef<
       className={cn(
         'w-full rounded-lg border border-line bg-panel-2 px-3.5 py-3 text-[15px] leading-relaxed text-ink',
         'placeholder:text-ink-dim/60 transition-colors',
-        'focus:border-gold/60 focus:outline-none focus:ring-1 focus:ring-gold/40',
+        'focus:border-accent/60 focus:outline-none focus:ring-1 focus:ring-accent/40',
         className,
       )}
       {...props}
@@ -47,7 +47,7 @@ export const Select = React.forwardRef<
       ref={ref}
       className={cn(
         'h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-[15px] text-ink',
-        'focus:border-gold/60 focus:outline-none focus:ring-1 focus:ring-gold/40',
+        'focus:border-accent/60 focus:outline-none focus:ring-1 focus:ring-accent/40',
         className,
       )}
       {...props}

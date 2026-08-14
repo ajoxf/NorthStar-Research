@@ -58,13 +58,13 @@ export default async function AdminReportsPage() {
                   <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-dim">
                     {formatDate(report.publishDate)}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-gold">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-accent">
                     {reportTypeLabel(report.type)}
                   </td>
                   <td className="px-5 py-3.5">
                     <Link
                       href={`/admin/reports/${report.id}`}
-                      className="text-[14px] text-ink hover:text-gold"
+                      className="text-[14px] text-ink hover:text-accent"
                     >
                       {report.title}
                     </Link>

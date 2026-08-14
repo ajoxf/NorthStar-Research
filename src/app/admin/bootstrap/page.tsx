@@ -48,15 +48,15 @@ export default async function AdminBootstrapPage() {
             <strong className="font-medium">The database is not reachable.</strong>
             <p className="mt-2 text-ink-dim">
               Provision Postgres (Storage → Create Database → Neon), then run{' '}
-              <code className="font-mono text-gold">npx prisma db push</code> against it to create
+              <code className="font-mono text-accent">npx prisma db push</code> against it to create
               the tables. Reload this page afterwards.
             </p>
           </div>
         ) : !enabled ? (
-          <div className="mt-7 rounded-lg border border-gold/40 bg-gold/10 p-5 text-[14px] leading-relaxed text-ink">
+          <div className="mt-7 rounded-lg border border-accent/40 bg-accent/10 p-5 text-[14px] leading-relaxed text-ink">
             <strong className="font-medium">Setup is disabled.</strong>
             <p className="mt-2 text-ink-dim">
-              Add an <code className="font-mono text-gold">ADMIN_BOOTSTRAP_SECRET</code> environment
+              Add an <code className="font-mono text-accent">ADMIN_BOOTSTRAP_SECRET</code> environment
               variable in Vercel with a value of your choosing, redeploy, then reload this page.
               Remove it again once your admin account exists.
             </p>

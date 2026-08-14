@@ -5,15 +5,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        bg: '#0a0f1c',
-        panel: '#101828',
-        'panel-2': '#0d1420',
-        line: '#26314a',
-        ink: '#e9e7dd',
-        'ink-dim': '#9aa4bd',
-        gold: '#c9a227',
-        up: '#3fbf7f',
-        down: '#e0575c',
+        bg: '#08090B',
+        panel: '#0E1013',
+        'panel-2': '#0B0C0F',
+        line: '#1E2228',
+        ink: '#F2F4F7',
+        'ink-dim': '#8A93A0',
+        accent: '#00E0FF',
+        up: '#00E08A',
+        down: '#FF4D5E',
+        // Chart series: darker steps of the same hues, snapped into the dark-mode
+        // lightness band so they pass the CVD and contrast checks. The neon accent
+        // itself is too light to carry data marks.
+        'series-1': '#0E93AA',
+        'series-2': '#B87C18',
       },
       fontFamily: {
         serif: ['var(--font-newsreader)', 'Newsreader', 'Georgia', 'serif'],

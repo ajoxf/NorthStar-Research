@@ -20,7 +20,7 @@ export default function JoinPage() {
         <div>
           <span className="eyebrow">Membership</span>
           <h1 className="mt-3 text-balance text-4xl leading-tight text-ink sm:text-[42px]">
-            One plan. Three reports a week.
+            One plan. Four reports a week.
           </h1>
           <p className="mt-5 max-w-md text-[16px] leading-relaxed text-ink-dim">
             Pay by card and your membership renews itself each month. Prefer crypto? You can pay
@@ -35,7 +35,7 @@ export default function JoinPage() {
               { step: '03', title: 'Create your account', body: 'Redeem the code, then sign in with Google, a password, or an email link.' },
             ].map((item) => (
               <li key={item.step} className="flex gap-4">
-                <span className="font-mono text-[12px] tracking-[0.14em] text-gold">{item.step}</span>
+                <span className="font-mono text-[12px] tracking-[0.14em] text-accent">{item.step}</span>
                 <div>
                   <h2 className="font-serif text-[17px] text-ink">{item.title}</h2>
                   <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">{item.body}</p>
@@ -54,7 +54,7 @@ export default function JoinPage() {
           </div>
 
           <ul className="space-y-2.5 py-6">
-            {['3 reports every week', 'Complete archive access', 'Email + optional WhatsApp delivery'].map(
+            {['4 reports every week', 'Complete archive access', 'Email + optional WhatsApp delivery'].map(
               (item) => (
                 <li key={item} className="flex items-center gap-2.5 text-[14px] text-ink-dim">
                   <Check className="h-3.5 w-3.5 shrink-0 text-up" aria-hidden />
@@ -68,7 +68,7 @@ export default function JoinPage() {
 
           <p className="mt-5 text-center text-[13px] text-ink-dim">
             Already have a code?{' '}
-            <Link href="/redeem" className="text-gold underline underline-offset-4">
+            <Link href="/redeem" className="text-accent underline underline-offset-4">
               Redeem it here
             </Link>
           </p>

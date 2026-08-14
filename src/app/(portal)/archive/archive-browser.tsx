@@ -142,7 +142,7 @@ function EmptyResults({ hasReports, onReset }: { hasReports: boolean; onReset: (
         <button
           type="button"
           onClick={onReset}
-          className="mt-6 text-[14px] text-gold underline underline-offset-4"
+          className="mt-6 text-[14px] text-accent underline underline-offset-4"
         >
           Clear filters
         </button>

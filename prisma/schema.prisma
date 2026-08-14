@@ -52,6 +52,7 @@ enum ReportType {
   commodities
   international_markets
   options_crypto_spread
+  fx_currencies
 }
 
 enum CodeStatus {

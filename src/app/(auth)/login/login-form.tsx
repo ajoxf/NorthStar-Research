@@ -92,7 +92,7 @@ export function LoginForm({ next, googleEnabled }: { next: string | null; google
         <button
           type="button"
           onClick={() => setLinkSent(false)}
-          className="mt-4 text-[13px] text-gold underline underline-offset-4"
+          className="mt-4 text-[13px] text-accent underline underline-offset-4"
         >
           Use a different method
         </button>
@@ -106,7 +106,7 @@ export function LoginForm({ next, googleEnabled }: { next: string | null; google
         <>
           <a
             href={`/api/auth/google/start${next ? `?next=${encodeURIComponent(next)}` : ''}`}
-            className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-line bg-panel text-[15px] font-medium text-ink transition-colors hover:border-gold/50 hover:bg-panel-2"
+            className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-line bg-panel text-[15px] font-medium text-ink transition-colors hover:border-accent/50 hover:bg-panel-2"
           >
             <GoogleMark />
             Continue with Google

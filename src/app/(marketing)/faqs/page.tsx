@@ -14,9 +14,9 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     q: 'What do I get for the membership fee?',
     a: (
       <>
-        ${PLAN.priceUsd} per month gives you all three weekly reports — commodities, international
-        markets and indices, and option, crypto and spread opportunities — plus access to the
-        complete archive of everything published previously, including editions from before you
+        ${PLAN.priceUsd} per month gives you all four weekly reports — commodities, international
+        markets and indices, option, crypto and spread opportunities, and FX and currencies — plus
+        access to the complete archive of everything published previously, including editions from before you
         joined.
       </>
     ),
@@ -97,7 +97,7 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     a: (
       <>
         No. Everything we publish is for educational and informational purposes only. Please read the{' '}
-        <Link href="/disclaimer" className="text-gold underline underline-offset-4">
+        <Link href="/disclaimer" className="text-accent underline underline-offset-4">
           full disclaimer
         </Link>{' '}
         before acting on anything in a report.

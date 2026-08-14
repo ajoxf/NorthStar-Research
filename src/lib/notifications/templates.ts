@@ -12,12 +12,12 @@ import type { ReportSummary } from '@/lib/notifications/types'
  * a link that renders without a session (build spec §5.5).
  */
 
-const BG = '#0a0f1c'
-const PANEL = '#101828'
-const LINE = '#26314a'
-const INK = '#e9e7dd'
-const INK_DIM = '#9aa4bd'
-const GOLD = '#c9a227'
+const BG = '#08090B'
+const PANEL = '#0E1013'
+const LINE = '#1E2228'
+const INK = '#F2F4F7'
+const INK_DIM = '#8A93A0'
+const ACCENT = '#00E0FF'
 
 function shell(title: string, body: string, footerNote?: string): string {
   return `<!doctype html>
@@ -33,7 +33,7 @@ function shell(title: string, body: string, footerNote?: string): string {
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${PANEL};border:1px solid ${LINE};border-radius:12px;overflow:hidden;">
         <tr><td style="padding:24px 28px 8px;border-bottom:1px solid ${LINE};">
-          <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:${GOLD};">NorthStar Research</div>
+          <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:${ACCENT};">NorthStar Research</div>
         </td></tr>
         <tr><td style="padding:28px;">${body}</td></tr>
         <tr><td style="padding:18px 28px 26px;border-top:1px solid ${LINE};color:${INK_DIM};font-size:11px;line-height:1.6;">
@@ -49,8 +49,8 @@ function shell(title: string, body: string, footerNote?: string): string {
 }
 
 function button(href: string, label: string): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 8px;"><tr><td style="background:${GOLD};border-radius:8px;">
-    <a href="${escapeHtml(href)}" style="display:inline-block;padding:13px 24px;font-weight:600;font-size:14px;color:#0a0f1c;text-decoration:none;">${escapeHtml(label)}</a>
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 8px;"><tr><td style="background:${ACCENT};border-radius:999px;">
+    <a href="${escapeHtml(href)}" style="display:inline-block;padding:13px 24px;font-weight:600;font-size:14px;color:#08090B;text-decoration:none;">${escapeHtml(label)}</a>
   </td></tr></table>`
 }
 
@@ -66,7 +66,7 @@ export function reportEmail(report: ReportSummary, reportUrl: string, firstName?
 
   const body = `
     <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
-    <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:${GOLD};margin-bottom:8px;">${escapeHtml(typeLabel)}</div>
+    <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:${ACCENT};margin-bottom:8px;">${escapeHtml(typeLabel)}</div>
     <h1 style="margin:0 0 12px;font-family:Newsreader,Georgia,serif;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">${escapeHtml(report.title)}</h1>
     <p style="margin:0 0 4px;color:${INK_DIM};font-size:13px;">${escapeHtml(published)}</p>
     ${report.summary ? `<p style="margin:16px 0 0;color:${INK};font-size:15px;line-height:1.65;">${escapeHtml(report.summary)}</p>` : ''}
@@ -91,9 +91,9 @@ export function redemptionCodeEmail(code: string, redeemUrl: string, firstName?:
   const body = `
     <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
     <h1 style="margin:0 0 14px;font-family:Newsreader,Georgia,serif;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your membership is confirmed</h1>
-    <p style="margin:0 0 20px;color:${INK};font-size:15px;line-height:1.65;">Payment received. Use the code below to create your account and unlock all three weekly reports plus the full archive.</p>
-    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#0d1420;border:1px solid ${LINE};border-radius:10px;padding:20px;">
-      <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:24px;letter-spacing:.14em;color:${GOLD};">${escapeHtml(code)}</div>
+    <p style="margin:0 0 20px;color:${INK};font-size:15px;line-height:1.65;">Payment received. Use the code below to create your account and unlock all four weekly reports plus the full archive.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#0B0C0F;border:1px solid ${LINE};border-radius:10px;padding:20px;">
+      <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:24px;letter-spacing:.14em;color:${ACCENT};">${escapeHtml(code)}</div>
     </td></tr></table>
     ${button(redeemUrl, 'Activate my membership')}
     <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Keep this code private. It can only be redeemed once.</p>

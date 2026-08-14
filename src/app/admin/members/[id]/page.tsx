@@ -106,7 +106,7 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
                 key={code.id}
                 className="flex items-center gap-4 border-b border-line px-5 py-3 last:border-b-0"
               >
-                <span className="font-mono text-[13px] text-gold">{code.code}</span>
+                <span className="font-mono text-[13px] text-accent">{code.code}</span>
                 <Badge tone={code.status === 'redeemed' ? 'up' : 'muted'}>{code.status}</Badge>
                 <span className="ml-auto font-mono text-[11px] text-ink-dim">
                   {code.redeemedAt ? `Redeemed ${formatDate(code.redeemedAt)}` : `Issued ${formatDate(code.createdAt)}`}
@@ -164,11 +164,11 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
                 key={view.id}
                 className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3 last:border-b-0"
               >
-                <span className="font-mono text-[11px] text-gold">
+                <span className="font-mono text-[11px] text-accent">
                   {reportTypeLabel(view.report.type)}
                 </span>
                 <span className="flex-1 truncate text-[13px] text-ink">{view.report.title}</span>
-                {view.downloaded && <Badge tone="gold">Downloaded</Badge>}
+                {view.downloaded && <Badge tone="accent">Downloaded</Badge>}
                 <span className="font-mono text-[11px] text-ink-dim">{view.ipAddress ?? '—'}</span>
                 <span className="font-mono text-[11px] text-ink-dim">
                   {formatDateTime(view.viewedAt)}

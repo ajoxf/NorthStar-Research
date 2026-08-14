@@ -60,10 +60,10 @@ export default async function ReportPage({ params }: { params: { id: string } })
 
       <header className="mb-10 border-b border-line pb-8">
         <div className="mb-3 flex flex-wrap items-center gap-2.5">
-          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-gold">
+          <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
             {meta.shortLabel}
           </span>
-          {!report.published && <Badge tone="gold">Draft preview</Badge>}
+          {!report.published && <Badge tone="accent">Draft preview</Badge>}
         </div>
 
         <h1 className="text-balance text-3xl leading-tight text-ink sm:text-4xl">{report.title}</h1>

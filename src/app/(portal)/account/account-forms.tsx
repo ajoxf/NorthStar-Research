@@ -302,8 +302,8 @@ function WhatsAppSection({ member }: { member: MemberSettings }) {
           {/* Deliberate edge state (§6): opted in, but the number is not confirmed, so
               nothing is being sent there yet. Say so plainly. */}
           {member.whatsappOptIn && !member.whatsappVerified && !challenge && (
-            <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-gold/35 bg-gold/10 px-4 py-3">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden />
+            <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-accent/35 bg-accent/10 px-4 py-3">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
               <p className="text-[13px] leading-relaxed text-ink">
                 You opted in during signup but your number has not been confirmed yet, so we are not
                 sending anything to WhatsApp. Confirm it below to switch delivery on.
@@ -357,7 +357,7 @@ function WhatsAppSection({ member }: { member: MemberSettings }) {
           ) : (
             <form onSubmit={startVerification} noValidate>
               <div className="mb-5 flex items-start gap-2.5">
-                <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden />
+                <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
                 <p className="text-[15px] leading-relaxed text-ink-dim">
                   Get a link to each new report on WhatsApp as well as by email. We will send a code
                   to confirm the number is yours.

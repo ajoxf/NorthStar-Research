@@ -52,6 +52,8 @@ Development unless noted.
 | `STRIPE_PRICE_ID` | `REPLACE_ME_STRIPE_PRICE_ID` — must be a **recurring monthly $199** price |
 | `STRIPE_WEBHOOK_SECRET` | `REPLACE_ME_STRIPE_WEBHOOK_SECRET` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Leave unset to hide the Google button |
+| `NEXT_PUBLIC_HERO_VIDEO_URL` | Optional. Unset = the hero shows its poster/grid backdrop |
+| `NEXT_PUBLIC_HERO_POSTER_URL` | Optional still shown before and behind the video |
 
 `DATABASE_URL`, `DATABASE_URL_UNPOOLED` and `BLOB_READ_WRITE_TOKEN` come from step 2 — do
 not add them by hand.

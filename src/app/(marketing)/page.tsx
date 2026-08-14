@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowRight, Check, FileText, Lock, MessageCircle, ShieldCheck } from 'lucide-react'
 
+import { HeroVideo } from '@/components/hero-video'
 import { InstrumentTable } from '@/components/instrument-table'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -21,16 +22,23 @@ export default function LandingPage() {
 function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-line">
-      <div className="grid-backdrop absolute inset-0 opacity-40" aria-hidden />
+      {/* Supply footage by setting NEXT_PUBLIC_HERO_VIDEO_URL (and optionally
+          NEXT_PUBLIC_HERO_POSTER_URL). Until then the grid backdrop stands in and the
+          hero still looks deliberate. */}
+      <HeroVideo
+        src={process.env.NEXT_PUBLIC_HERO_VIDEO_URL}
+        poster={process.env.NEXT_PUBLIC_HERO_POSTER_URL}
+      />
+      <div className="grid-backdrop absolute inset-0 opacity-30" aria-hidden />
       <div
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/60 to-transparent"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent"
         aria-hidden
       />
 
-      <div className="relative mx-auto max-w-6xl px-5 py-20 sm:py-28">
+      <div className="relative mx-auto max-w-6xl px-5 py-24 sm:py-36">
         <div className="max-w-2xl animate-fade-up">
-          <Badge tone="gold" className="mb-6">
-            Three reports · Every week
+          <Badge tone="accent" className="mb-6">
+            Four reports · Every week
           </Badge>
 
           <h1 className="text-balance font-serif text-4xl leading-[1.1] text-ink sm:text-5xl md:text-6xl">
@@ -38,8 +46,8 @@ function Hero() {
           </h1>
 
           <p className="mt-6 max-w-xl text-[17px] leading-relaxed text-ink-dim">
-            NorthStar Research publishes three reports a week — commodities, international markets
-            and indices, and option, crypto and spread opportunities. Levels, bias, invalidation
+            NorthStar Research publishes four reports a week — commodities, international markets
+            and indices, option, crypto and spread opportunities, and FX. Levels, bias, invalidation
             and positioning notes. No noise, no upsells, one price.
           </p>
 
@@ -55,12 +63,12 @@ function Hero() {
 
           <dl className="mt-14 grid max-w-lg grid-cols-3 gap-6 border-t border-line pt-8">
             {[
-              { value: '3', label: 'Reports / week' },
+              { value: '4', label: 'Reports / week' },
               { value: '100%', label: 'Archive access' },
               { value: '$199', label: 'Per month' },
             ].map((stat) => (
               <div key={stat.label}>
-                <dt className="font-mono text-2xl text-gold">{stat.value}</dt>
+                <dt className="font-mono text-2xl text-accent">{stat.value}</dt>
                 <dd className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">
                   {stat.label}
                 </dd>
@@ -79,20 +87,20 @@ function ReportsSection() {
       <div className="mx-auto max-w-6xl px-5 py-20">
         <span className="eyebrow">The weekly cadence</span>
         <h2 className="mt-3 max-w-xl text-3xl leading-tight text-ink sm:text-4xl">
-          Three reports, published on a fixed schedule.
+          Four reports, published on a fixed schedule.
         </h2>
 
-        <div className="mt-12 grid gap-4 md:grid-cols-3">
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {REPORT_TYPES.map((report, index) => (
             <article
               key={report.value}
-              className="panel group flex flex-col p-6 transition-colors hover:border-gold/40"
+              className="panel group flex flex-col p-6 transition-colors hover:border-accent/40"
             >
               <div className="mb-5 flex items-center justify-between">
-                <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-gold">
+                <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
                   Report {index + 1}
                 </span>
-                <FileText className="h-4 w-4 text-ink-dim transition-colors group-hover:text-gold" aria-hidden />
+                <FileText className="h-4 w-4 text-ink-dim transition-colors group-hover:text-accent" aria-hidden />
               </div>
 
               <h3 className="font-serif text-xl leading-snug text-ink">{report.shortLabel}</h3>
@@ -150,7 +158,7 @@ function FormatSection() {
                 },
               ].map((feature) => (
                 <li key={feature.title} className="flex gap-3.5">
-                  <feature.icon className="mt-0.5 h-4.5 w-4 shrink-0 text-gold" aria-hidden />
+                  <feature.icon className="mt-0.5 h-4.5 w-4 shrink-0 text-accent" aria-hidden />
                   <div>
                     <h3 className="font-serif text-[17px] text-ink">{feature.title}</h3>
                     <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">{feature.body}</p>
@@ -178,7 +186,7 @@ function PricingSection() {
       <div className="mx-auto max-w-6xl px-5 py-20">
         <div className="panel relative mx-auto max-w-xl overflow-hidden p-8 sm:p-10">
           <div
-            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold to-transparent"
+            className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent"
             aria-hidden
           />
 
@@ -190,14 +198,14 @@ function PricingSection() {
             </span>
           </div>
           <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
-            One plan. Three reports a week, the complete archive of everything published, and
+            One plan. Four reports a week, the complete archive of everything published, and
             delivery by email or WhatsApp. Pay by card and it renews itself — cancel any time — or
             pay in crypto and renew whenever you choose.
           </p>
 
           <ul className="mt-8 space-y-3 border-t border-line pt-7">
             {[
-              'All three weekly reports',
+              'All four weekly reports',
               'Full archive of every past report',
               'Mobile-ready reading view',
               'Optional WhatsApp delivery',
@@ -217,7 +225,7 @@ function PricingSection() {
 
           <p className="mt-4 text-center text-[13px] text-ink-dim">
             Already paid?{' '}
-            <Link href="/redeem" className="text-gold underline underline-offset-4">
+            <Link href="/redeem" className="text-accent underline underline-offset-4">
               Redeem your code
             </Link>
           </p>

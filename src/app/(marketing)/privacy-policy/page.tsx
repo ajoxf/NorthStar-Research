@@ -18,7 +18,7 @@ export default function PrivacyPolicyPage() {
       <span className="eyebrow">Legal</span>
       <h1 className="mt-3 text-4xl text-ink">Privacy Policy</h1>
 
-      <div className="mt-8 rounded-lg border border-gold/40 bg-gold/10 px-5 py-4 text-[14px] leading-relaxed text-ink">
+      <div className="mt-8 rounded-lg border border-accent/40 bg-accent/10 px-5 py-4 text-[14px] leading-relaxed text-ink">
         <strong className="font-medium">Placeholder pending review.</strong> This describes the data
         the platform handles today and is provided as a drafting brief. It is not legal advice and
         must be replaced with an approved privacy policy before launch.

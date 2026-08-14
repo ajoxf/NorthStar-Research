@@ -1,6 +1,6 @@
 import type { ReportType } from '@prisma/client'
 
-/** The three fixed weekly reports. There are no other types and none are configurable. */
+/** The four fixed weekly reports. There are no other types and none are configurable. */
 export const REPORT_TYPES: {
   value: ReportType
   label: string
@@ -29,6 +29,14 @@ export const REPORT_TYPES: {
     shortLabel: 'Options, Crypto & Spreads',
     blurb: 'Defined-risk option structures, digital-asset levels and relative-value spreads.',
     defaultInstruments: ['BTCUSD', 'ETHUSD', 'SPX', 'VIX', 'EURUSD'],
+  },
+  {
+    value: 'fx_currencies',
+    label: 'Report 4 — FX & Currencies',
+    shortLabel: 'FX & Currencies',
+    blurb:
+      'Major and cross pairs with rate-differential context, carry positioning and the levels that matter into the week.',
+    defaultInstruments: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'EURGBP'],
   },
 ]
 

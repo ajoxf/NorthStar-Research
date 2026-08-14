@@ -56,7 +56,7 @@ export default async function LoginPage({
 
       <p className="mt-7 border-t border-line pt-6 text-[14px] text-ink-dim">
         Have an access code but no account yet?{' '}
-        <Link href="/redeem" className="text-gold underline underline-offset-4">
+        <Link href="/redeem" className="text-accent underline underline-offset-4">
           Redeem it
         </Link>
       </p>

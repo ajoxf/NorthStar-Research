@@ -223,7 +223,7 @@ export function RedeemWizard({ initialCode }: { initialCode: string }) {
                 type="checkbox"
                 checked={whatsappOptIn}
                 onChange={(event) => setWhatsappOptIn(event.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[#c9a227]"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#00E0FF]"
               />
               <span>
                 <span className="text-[15px] text-ink">Also send report links to WhatsApp</span>
@@ -285,7 +285,7 @@ export function RedeemWizard({ initialCode }: { initialCode: string }) {
             Your membership is active. Taking you to this week&apos;s reports…
           </p>
           <div className="mt-6 flex justify-center">
-            <Spinner className="text-gold" />
+            <Spinner className="text-accent" />
           </div>
         </div>
       )}
@@ -302,13 +302,13 @@ function Stepper({ current }: { current: number }) {
             <div
               className={cn(
                 'h-0.5 rounded-full transition-colors duration-300',
-                index <= current ? 'bg-gold' : 'bg-line',
+                index <= current ? 'bg-accent' : 'bg-line',
               )}
             />
             <span
               className={cn(
                 'mt-2 block font-mono text-[10px] uppercase tracking-[0.14em] transition-colors',
-                index <= current ? 'text-gold' : 'text-ink-dim/60',
+                index <= current ? 'text-accent' : 'text-ink-dim/60',
               )}
             >
               {label}

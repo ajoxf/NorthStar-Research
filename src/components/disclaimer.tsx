@@ -51,11 +51,11 @@ export function DisclaimerText({ className }: { className?: string }) {
       <p>
         NorthStar Research, its employees, and associates are not liable for your trading outcomes.
         For more details, read our{' '}
-        <Link href="/privacy-policy" className="text-gold underline underline-offset-4">
+        <Link href="/privacy-policy" className="text-accent underline underline-offset-4">
           Privacy Policy
         </Link>{' '}
         and{' '}
-        <Link href="/faqs" className="text-gold underline underline-offset-4">
+        <Link href="/faqs" className="text-accent underline underline-offset-4">
           FAQs
         </Link>
         .

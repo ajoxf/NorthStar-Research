@@ -35,7 +35,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-5">
             <div className="flex items-center gap-6">
               <Link href="/admin" className="font-mono text-[13px] text-ink">
-                NorthStar <span className="text-gold">admin</span>
+                NorthStar <span className="text-accent">admin</span>
               </Link>
               <AdminNav />
             </div>

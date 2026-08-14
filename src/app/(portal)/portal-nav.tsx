@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 const LINKS = [
   { href: '/dashboard', label: 'Reports' },
   { href: '/archive', label: 'Archive' },
+  { href: '/tools', label: 'Tools' },
   { href: '/account', label: 'Account' },
 ]
 
@@ -35,7 +36,7 @@ export function PortalNav({ isAdmin }: { isAdmin: boolean }) {
       {isAdmin && (
         <Link
           href="/admin"
-          className="ml-1 rounded-md px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-gold transition-colors hover:text-ink"
+          className="ml-1 rounded-md px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-accent transition-colors hover:text-ink"
         >
           Admin
         </Link>

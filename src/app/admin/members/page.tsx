@@ -96,7 +96,7 @@ export default async function AdminMembersPage({
               members.map((member) => (
                 <tr key={member.id} className="border-b border-line last:border-b-0 hover:bg-panel-2">
                   <td className="px-5 py-3.5">
-                    <Link href={`/admin/members/${member.id}`} className="block hover:text-gold">
+                    <Link href={`/admin/members/${member.id}`} className="block hover:text-accent">
                       <span className="block text-[14px] text-ink">{member.email}</span>
                       {fullName(member) && (
                         <span className="block font-mono text-[11px] text-ink-dim">
@@ -114,7 +114,7 @@ export default async function AdminMembersPage({
                     <div className="flex flex-wrap gap-1.5">
                       <Badge tone="muted">Email</Badge>
                       {member.whatsappOptIn && (
-                        <Badge tone={member.whatsappVerified ? 'up' : 'gold'}>
+                        <Badge tone={member.whatsappVerified ? 'up' : 'accent'}>
                           {member.whatsappVerified ? 'WhatsApp' : 'WA unverified'}
                         </Badge>
                       )}

@@ -123,7 +123,7 @@ export function ReportUploadForm() {
         <Label htmlFor="pdf">PDF</Label>
         <label
           htmlFor="pdf"
-          className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-line bg-panel-2 px-5 py-8 text-center transition-colors hover:border-gold/50"
+          className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-line bg-panel-2 px-5 py-8 text-center transition-colors hover:border-accent/50"
         >
           <Upload className="mb-3 h-5 w-5 text-ink-dim" aria-hidden />
           <span className="text-[14px] text-ink">
@@ -169,7 +169,7 @@ export function ReportUploadForm() {
             <button
               type="button"
               onClick={() => setInstruments(INSTRUMENT_TEMPLATE)}
-              className="font-mono text-[11px] text-gold hover:underline"
+              className="font-mono text-[11px] text-accent hover:underline"
             >
               Insert template
             </button>

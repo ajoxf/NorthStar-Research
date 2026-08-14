@@ -73,7 +73,7 @@ export default async function AdminDashboard() {
           <h2 className="font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
             Recent uploads
           </h2>
-          <Link href="/admin/reports" className="font-mono text-[12px] text-gold hover:underline">
+          <Link href="/admin/reports" className="font-mono text-[12px] text-accent hover:underline">
             All {reportCount} reports
           </Link>
         </div>
@@ -93,7 +93,7 @@ export default async function AdminDashboard() {
                 <span className="w-28 shrink-0 font-mono text-[12px] text-ink-dim">
                   {formatDate(report.publishDate)}
                 </span>
-                <span className="w-40 shrink-0 truncate font-mono text-[12px] text-gold">
+                <span className="w-40 shrink-0 truncate font-mono text-[12px] text-accent">
                   {reportTypeLabel(report.type)}
                 </span>
                 <span className="flex-1 truncate text-[14px] text-ink">{report.title}</span>
@@ -193,7 +193,7 @@ function ConfigurationPanel({ providers }: { providers: { email: string; whatsap
             key={row.label}
             className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3.5 last:border-b-0"
           >
-            <Badge tone={row.ready ? 'up' : 'gold'}>{row.ready ? 'Ready' : 'Not configured'}</Badge>
+            <Badge tone={row.ready ? 'up' : 'accent'}>{row.ready ? 'Ready' : 'Not configured'}</Badge>
             <span className="text-[14px] text-ink">{row.label}</span>
             <span className="ml-auto font-mono text-[12px] text-ink-dim">{row.detail}</span>
           </div>

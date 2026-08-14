@@ -104,7 +104,7 @@ export function ReportReader({
       {hasPdf && (
         <div className="mt-8 flex flex-col gap-4 border-t border-line pt-7 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2.5">
-            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden />
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
             <p className="max-w-md text-[13px] leading-relaxed text-ink-dim">
               Downloads are watermarked with your account and recorded. Your access is personal —
               please do not share this file.

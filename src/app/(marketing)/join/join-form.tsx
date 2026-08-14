@@ -89,7 +89,7 @@ export function JoinForm({
       </div>
 
       {!ready && (
-        <div className="mb-5 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-[13px] leading-relaxed text-ink">
+        <div className="mb-5 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-[13px] leading-relaxed text-ink">
           <strong className="font-medium">
             {method === 'card' ? 'Card payments' : 'Crypto payments'} are not live yet.
           </strong>{' '}
@@ -174,11 +174,11 @@ function MethodOption({
       className={cn(
         'flex flex-col items-start gap-1 rounded-lg border p-3.5 text-left transition-colors',
         selected
-          ? 'border-gold/60 bg-gold/10'
+          ? 'border-accent/60 bg-accent/10'
           : 'border-line bg-panel-2 hover:border-ink-dim/40',
       )}
     >
-      <Icon className={cn('h-4 w-4', selected ? 'text-gold' : 'text-ink-dim')} aria-hidden />
+      <Icon className={cn('h-4 w-4', selected ? 'text-accent' : 'text-ink-dim')} aria-hidden />
       <span className="text-[14px] text-ink">{label}</span>
       <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-dim">{detail}</span>
     </button>

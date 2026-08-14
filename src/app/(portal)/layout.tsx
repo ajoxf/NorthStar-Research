@@ -28,7 +28,7 @@ export default async function PortalLayout({ children }: { children: React.React
               {!active && <Badge tone="down">Inactive</Badge>}
               <Link
                 href="/account"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel font-mono text-[11px] text-ink-dim transition-colors hover:border-gold/50 hover:text-ink"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel font-mono text-[11px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
                 title={member.email}
               >
                 {initials(member)}

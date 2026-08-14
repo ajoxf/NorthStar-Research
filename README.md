@@ -1,8 +1,9 @@
 # NorthStar Research — Member Portal
 
 A membership portal for a financial research firm. Members subscribe at **$199/month** by
-card or crypto, receive a one-time access code, create an account with it, and get three
-weekly research reports plus the full archive. The member database doubles as a lightweight
+card or crypto, receive a one-time access code, create an account with it, and get four
+weekly research reports — commodities, international markets and indices, options/crypto and
+spreads, and FX — plus the full archive. The member database doubles as a lightweight
 CRM, and the weekly report drop is a triggered send to that list rather than a manual
 per-person task.
 
@@ -38,7 +39,7 @@ npm install
 cp .env.example .env.local        # then fill in DATABASE_URL and AUTH_SECRET
 npm run db:push                   # create the schema
 npm run create-admin -- --email=you@example.com
-npm run seed-demo                 # optional: a demo member + three published reports
+npm run seed-demo                 # optional: a demo member + published reports
 npm run dev
 ```
 
@@ -55,6 +56,7 @@ so nobody mistakes it for real delivery, and the admin overview shows the integr
 | `/` | Marketing page with the locked report-format preview |
 | `/join` → `/redeem` | Checkout, then the three-step activation wizard |
 | `/dashboard`, `/archive`, `/reports/[id]` | Member portal and report reader |
+| `/tools`, `/tools/withdrawal-planner` | Member analysis tools (client-side only) |
 | `/account` | Profile, password, WhatsApp opt-in and verification |
 | `/admin/login` → `/admin` | Admin console (report upload + member CRM) |
 
@@ -89,7 +91,7 @@ working integration.
 ### Payment → code → account
 
 1. `POST /api/checkout/create` records a `CheckoutOrder` as `pending`, then signs and calls
-   Cregis to create a $249 order.
+   Cregis to create a $199 order.
 2. Cregis calls `POST /api/webhooks/cregis` server-to-server. The signature is verified
    (MD5 of the API key + sorted `key=value` pairs) **before anything in the payload is
    trusted**.

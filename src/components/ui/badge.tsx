@@ -1,10 +1,10 @@
 import { cn } from '@/lib/utils'
 
-type Tone = 'neutral' | 'gold' | 'up' | 'down' | 'muted'
+type Tone = 'neutral' | 'accent' | 'up' | 'down' | 'muted'
 
 const tones: Record<Tone, string> = {
   neutral: 'border-line bg-panel-2 text-ink-dim',
-  gold: 'border-gold/35 bg-gold/10 text-gold',
+  accent: 'border-accent/35 bg-accent/10 text-accent',
   up: 'border-up/35 bg-up/10 text-up',
   down: 'border-down/35 bg-down/10 text-down',
   muted: 'border-line bg-transparent text-ink-dim/70',
@@ -47,7 +47,7 @@ export function statusTone(status: string): Tone {
       return 'down'
     case 'pending':
     case 'queued':
-      return 'gold'
+      return 'accent'
     default:
       return 'neutral'
   }

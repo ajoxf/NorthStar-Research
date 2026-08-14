@@ -12,7 +12,7 @@ export default function RedeemPage({ searchParams }: { searchParams: { code?: st
 
       <p className="mt-7 border-t border-line pt-6 text-center text-[14px] text-ink-dim">
         Already activated?{' '}
-        <Link href="/login" className="text-gold underline underline-offset-4">
+        <Link href="/login" className="text-accent underline underline-offset-4">
           Sign in
         </Link>
       </p>

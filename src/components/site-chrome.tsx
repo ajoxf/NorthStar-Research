@@ -8,7 +8,7 @@ export function Wordmark({ href = '/' }: { href?: string }) {
   return (
     <Link href={href} className="group inline-flex items-baseline gap-2">
       <span className="font-serif text-[19px] tracking-tight text-ink">NorthStar</span>
-      <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-gold transition-colors group-hover:text-ink">
+      <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent transition-colors group-hover:text-ink">
         Research
       </span>
     </Link>

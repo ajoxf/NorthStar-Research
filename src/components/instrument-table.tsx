@@ -47,12 +47,12 @@ export function InstrumentTable({
             onClick={() => setActive(index)}
             className={cn(
               'relative shrink-0 px-4 py-3 font-mono text-[12px] uppercase tracking-[0.12em] transition-colors',
-              index === active ? 'text-gold' : 'text-ink-dim hover:text-ink',
+              index === active ? 'text-accent' : 'text-ink-dim hover:text-ink',
             )}
           >
             {instrument.symbol}
             {index === active && (
-              <span className="absolute inset-x-2 bottom-0 h-px bg-gold" aria-hidden />
+              <span className="absolute inset-x-2 bottom-0 h-px bg-accent" aria-hidden />
             )}
           </button>
         ))}
@@ -133,8 +133,8 @@ function LockedOverlay() {
   return (
     <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-bg/70 via-bg/85 to-bg/95 px-6">
       <div className="max-w-sm text-center">
-        <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full border border-gold/40 bg-gold/10">
-          <Lock className="h-5 w-5 text-gold" aria-hidden />
+        <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-full border border-accent/40 bg-accent/10">
+          <Lock className="h-5 w-5 text-accent" aria-hidden />
         </div>
         <h3 className="mb-2 font-serif text-xl text-ink">Members only</h3>
         <p className="mb-5 text-[14px] leading-relaxed text-ink-dim">

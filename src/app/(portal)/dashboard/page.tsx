@@ -60,14 +60,14 @@ export default async function DashboardPage() {
           {name ? `Welcome back, ${name}.` : 'Welcome back.'}
         </h1>
         <p className="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-dim">
-          The latest edition of each report. Everything published before is in the archive.
+          The latest edition of all four reports. Everything published before is in the archive.
         </p>
       </div>
 
       {current.length === 0 ? (
         <EmptyReports />
       ) : (
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {current.map((report) => (
             <ReportCard
               key={report.id}
@@ -82,7 +82,7 @@ export default async function DashboardPage() {
         <section className="mt-16">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="text-2xl text-ink">Recently published</h2>
-            <Link href="/archive" className="text-[14px] text-gold underline underline-offset-4">
+            <Link href="/archive" className="text-[14px] text-accent underline underline-offset-4">
               Browse the full archive
             </Link>
           </div>

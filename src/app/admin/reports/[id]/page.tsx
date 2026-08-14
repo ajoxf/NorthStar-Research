@@ -39,7 +39,7 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
       </Link>
 
       <div className="mb-2 flex flex-wrap items-center gap-3">
-        <span className="font-mono text-[12px] text-gold">{reportTypeLabel(report.type)}</span>
+        <span className="font-mono text-[12px] text-accent">{reportTypeLabel(report.type)}</span>
         <Badge tone={report.published ? 'up' : 'muted'}>
           {report.published ? 'Published' : 'Draft'}
         </Badge>

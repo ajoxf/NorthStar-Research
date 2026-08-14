@@ -116,7 +116,7 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
         </p>
 
         {confirmPublish ? (
-          <div className="rounded-lg border border-gold/40 bg-gold/10 p-4">
+          <div className="rounded-lg border border-accent/40 bg-accent/10 p-4">
             <p className="mb-4 text-[14px] text-ink">
               This sends to your entire active member list. Continue?
             </p>
@@ -145,7 +145,7 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
 
             <Link
               href={`/reports/${report.id}`}
-              className="font-mono text-[12px] text-gold hover:underline"
+              className="font-mono text-[12px] text-accent hover:underline"
             >
               Preview as a member
             </Link>
