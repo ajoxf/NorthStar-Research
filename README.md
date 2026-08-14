@@ -1,9 +1,19 @@
 # NorthStar Research — Member Portal
 
-A membership portal for a financial research firm. Members pay once in crypto, receive a
-one-time access code, create an account with it, and get three weekly research reports plus
-the full archive. The member database doubles as a lightweight CRM, and the weekly report
-drop is a triggered send to that list rather than a manual per-person task.
+A membership portal for a financial research firm. Members subscribe at **$199/month** by
+card or crypto, receive a one-time access code, create an account with it, and get three
+weekly research reports plus the full archive. The member database doubles as a lightweight
+CRM, and the weekly report drop is a triggered send to that list rather than a manual
+per-person task.
+
+**Billing works two ways, and the difference is real.** Stripe card subscriptions renew
+themselves. Cregis crypto payments cannot — a crypto payment is a push with no stored
+mandate to charge against — so those members renew manually and get a reminder before their
+period ends. Both settle to the same `Member.subscriptionRenewsAt`, which is the single
+field that gates access.
+
+**Sign-in** is Google, email + password, or a magic link — all reaching one account.
+Signing in is identity only; it never grants entitlement, which is checked separately.
 
 Next.js 14 (App Router) · TypeScript · Postgres/Prisma · Tailwind · Vercel Blob · Vercel Cron
 

@@ -45,7 +45,7 @@ function Hero() {
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <ButtonLink href="/join" size="lg">
-              Become a member — ${PLAN.priceUsd}
+              Become a member — ${PLAN.priceUsd}/mo
               <ArrowRight className="h-4 w-4" aria-hidden />
             </ButtonLink>
             <ButtonLink href="#format" size="lg" variant="secondary">
@@ -57,7 +57,7 @@ function Hero() {
             {[
               { value: '3', label: 'Reports / week' },
               { value: '100%', label: 'Archive access' },
-              { value: '1', label: 'Plan, one price' },
+              { value: '$199', label: 'Per month' },
             ].map((stat) => (
               <div key={stat.label}>
                 <dt className="font-mono text-2xl text-gold">{stat.value}</dt>
@@ -186,13 +186,13 @@ function PricingSection() {
           <div className="mt-4 flex items-baseline gap-2">
             <span className="font-serif text-5xl text-ink">${PLAN.priceUsd}</span>
             <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
-              one payment
+              per month
             </span>
           </div>
           <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
             One plan. Three reports a week, the complete archive of everything published, and
-            delivery by email or WhatsApp. Paid in crypto — you receive an access code and set up
-            your account with it.
+            delivery by email or WhatsApp. Pay by card and it renews itself — cancel any time — or
+            pay in crypto and renew whenever you choose.
           </p>
 
           <ul className="mt-8 space-y-3 border-t border-line pt-7">
@@ -201,7 +201,7 @@ function PricingSection() {
               'Full archive of every past report',
               'Mobile-ready reading view',
               'Optional WhatsApp delivery',
-              'Watermarked offline downloads',
+              'Card or crypto — cancel any time',
             ].map((item) => (
               <li key={item} className="flex items-center gap-2.5 text-[15px] text-ink">
                 <Check className="h-4 w-4 shrink-0 text-up" aria-hidden />

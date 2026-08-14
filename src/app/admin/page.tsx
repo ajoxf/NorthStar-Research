@@ -6,6 +6,8 @@ import { ButtonLink } from '@/components/ui/button'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { cregisConfigured } from '@/lib/cregis'
+import { stripeConfigured } from '@/lib/stripe'
+import { googleConfigured } from '@/lib/oauth'
 import { providerNames } from '@/lib/notifications'
 import { isConfigured } from '@/lib/env'
 import { reportTypeLabel } from '@/lib/report-content'
@@ -127,11 +129,25 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
 function ConfigurationPanel({ providers }: { providers: { email: string; whatsapp: string } }) {
   const rows = [
     {
+      label: 'Card billing (Stripe)',
+      ready: stripeConfigured(),
+      detail: stripeConfigured()
+        ? 'Subscriptions renew automatically'
+        : 'Not configured — card checkout will refuse to run',
+    },
+    {
       label: 'Crypto checkout (Cregis)',
       ready: cregisConfigured(),
       detail: cregisConfigured()
-        ? 'Credentials set'
+        ? 'Credentials set — renewals are manual'
         : 'Placeholder credentials — checkout will refuse to run',
+    },
+    {
+      label: 'Google sign-in',
+      ready: googleConfigured(),
+      detail: googleConfigured()
+        ? 'Enabled on the sign-in page'
+        : 'Not configured — the Google button is hidden',
     },
     {
       label: 'Email delivery',

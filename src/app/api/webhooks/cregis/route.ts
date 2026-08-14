@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
-import { appBaseUrl, MissingConfigError } from '@/lib/env'
+import { addBillingPeriod, appBaseUrl, MissingConfigError } from '@/lib/env'
 import { verifyCregisCallback } from '@/lib/cregis'
 import { generateRedemptionCode } from '@/lib/codes'
 import { getNotificationProvider } from '@/lib/notifications'
@@ -78,6 +78,36 @@ export async function POST(request: Request) {
       },
     })
     return NextResponse.json({ ok: true })
+  }
+
+  // Crypto cannot auto-renew, so an existing member paying again is a manual renewal:
+  // extend their period rather than minting a second code they do not need.
+  const existingMember = await db.member.findUnique({ where: { email: order.email } })
+
+  if (existingMember?.passwordHash) {
+    const from =
+      existingMember.subscriptionRenewsAt && existingMember.subscriptionRenewsAt > new Date()
+        ? existingMember.subscriptionRenewsAt // stack onto unused time rather than truncating it
+        : new Date()
+
+    await db.$transaction(async (tx) => {
+      await tx.checkoutOrder.update({
+        where: { id: order.id },
+        data: { status: 'paid', paidAt: new Date(), cregisOrderId, rawCallback: payload as never },
+      })
+      await tx.member.update({
+        where: { id: existingMember.id },
+        data: {
+          subscriptionStatus: 'active',
+          subscriptionRenewsAt: addBillingPeriod(from),
+          billingProvider: 'cregis',
+          renewalReminderSentAt: null,
+        },
+      })
+    })
+
+    console.info(`[cregis:webhook] renewal for ${order.email} — period extended`)
+    return NextResponse.json({ ok: true, renewal: true })
   }
 
   const code = generateRedemptionCode()

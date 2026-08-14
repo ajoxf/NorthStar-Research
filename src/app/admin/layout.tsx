@@ -16,12 +16,15 @@ export const metadata: Metadata = { robots: { index: false, follow: false } }
  * independently — a layout guard alone would not protect the routes (build spec §5.2).
  */
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  // The login page lives under /admin but must stay reachable while signed out.
+  // Login and first-time setup live under /admin but must stay reachable while signed out.
   const pathname = headers().get('x-pathname') ?? ''
+  const isPublicAdminRoute =
+    pathname.startsWith('/admin/login') || pathname.startsWith('/admin/bootstrap')
+
   const member = await getCurrentMember()
 
   if (!member || member.role !== 'admin') {
-    if (!pathname.startsWith('/admin/login')) redirect('/admin/login')
+    if (!isPublicAdminRoute) redirect('/admin/login')
     return <>{children}</>
   }
 

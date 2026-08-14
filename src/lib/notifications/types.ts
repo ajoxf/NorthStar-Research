@@ -57,4 +57,18 @@ export interface NotificationProvider {
     code: string,
     redeemUrl: string,
   ): Promise<DeliveryResult>
+
+  /** Transactional: a passwordless sign-in link. */
+  sendMagicLink(
+    recipient: { email: string; firstName?: string | null },
+    link: string,
+    expiresInMinutes: number,
+  ): Promise<DeliveryResult>
+
+  /** Transactional: warn a crypto member that their period is about to lapse. */
+  sendRenewalReminder(
+    recipient: { email: string; firstName?: string | null },
+    daysRemaining: number,
+    renewUrl: string,
+  ): Promise<DeliveryResult>
 }

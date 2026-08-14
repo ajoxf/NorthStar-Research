@@ -1,19 +1,38 @@
 'use client'
 
 import * as React from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Bitcoin, CreditCard } from 'lucide-react'
 
 import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
-import { isValidEmail } from '@/lib/utils'
+import { cn, isValidEmail } from '@/lib/utils'
 
-export function JoinForm({ paymentReady }: { paymentReady: boolean }) {
+type Method = 'card' | 'crypto'
+
+/**
+ * Both payment paths, side by side.
+ *
+ * They are genuinely different products, so the difference is stated plainly rather than
+ * hidden: card subscriptions renew themselves, crypto ones cannot and must be renewed by
+ * hand each month. Letting someone pick crypto while assuming it auto-renews would just
+ * produce a lapsed membership and a support ticket.
+ */
+export function JoinForm({
+  cardReady,
+  cryptoReady,
+}: {
+  cardReady: boolean
+  cryptoReady: boolean
+}) {
   const toast = useToast()
+  const [method, setMethod] = React.useState<Method>(cardReady ? 'card' : 'crypto')
   const [email, setEmail] = React.useState('')
   const [phone, setPhone] = React.useState('')
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
+
+  const ready = method === 'card' ? cardReady : cryptoReady
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -26,7 +45,8 @@ export function JoinForm({ paymentReady }: { paymentReady: boolean }) {
 
     setPending(true)
     try {
-      const response = await fetch('/api/checkout/create', {
+      const endpoint = method === 'card' ? '/api/checkout/stripe' : '/api/checkout/create'
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, phoneNumber: phone || undefined }),
@@ -51,12 +71,31 @@ export function JoinForm({ paymentReady }: { paymentReady: boolean }) {
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      {!paymentReady && (
+      <div className="mb-5 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Payment method">
+        <MethodOption
+          icon={CreditCard}
+          label="Card"
+          detail="Renews monthly"
+          selected={method === 'card'}
+          onSelect={() => setMethod('card')}
+        />
+        <MethodOption
+          icon={Bitcoin}
+          label="Crypto"
+          detail="Renew manually"
+          selected={method === 'crypto'}
+          onSelect={() => setMethod('crypto')}
+        />
+      </div>
+
+      {!ready && (
         <div className="mb-5 rounded-lg border border-gold/40 bg-gold/10 px-4 py-3 text-[13px] leading-relaxed text-ink">
-          <strong className="font-medium">Payments are not live yet.</strong> The crypto checkout
-          credentials have not been configured for this deployment, so this form cannot take a
-          payment. Everything else in the portal works — codes can be issued manually from the admin
-          console in the meantime.
+          <strong className="font-medium">
+            {method === 'card' ? 'Card payments' : 'Crypto payments'} are not live yet.
+          </strong>{' '}
+          Those credentials have not been configured for this deployment, so this option cannot take
+          a payment. {method === 'card' && cryptoReady && 'Crypto is available in the meantime.'}
+          {method === 'crypto' && cardReady && 'Card payment is available in the meantime.'}
         </div>
       )}
 
@@ -75,20 +114,22 @@ export function JoinForm({ paymentReady }: { paymentReady: boolean }) {
         <FieldError>{error}</FieldError>
       </div>
 
-      <div className="mb-6">
-        <Label htmlFor="phone">Phone number — optional</Label>
-        <Input
-          id="phone"
-          type="tel"
-          value={phone}
-          autoComplete="tel"
-          placeholder="+1 555 000 0000"
-          onChange={(event) => setPhone(event.target.value)}
-        />
-        <Hint>Only used if you want your report links on WhatsApp. You can add it later.</Hint>
-      </div>
+      {method === 'crypto' && (
+        <div className="mb-6 animate-fade-up">
+          <Label htmlFor="phone">Phone number — optional</Label>
+          <Input
+            id="phone"
+            type="tel"
+            value={phone}
+            autoComplete="tel"
+            placeholder="+1 555 000 0000"
+            onChange={(event) => setPhone(event.target.value)}
+          />
+          <Hint>Only used if you want your report links on WhatsApp. You can add it later.</Hint>
+        </div>
+      )}
 
-      <Button type="submit" size="lg" className="w-full" disabled={pending || !paymentReady}>
+      <Button type="submit" size="lg" className="w-full" disabled={pending || !ready}>
         {pending ? (
           <>
             <Spinner />
@@ -96,16 +137,50 @@ export function JoinForm({ paymentReady }: { paymentReady: boolean }) {
           </>
         ) : (
           <>
-            Continue to payment
+            {method === 'card' ? 'Subscribe — $199/month' : 'Pay $199 in crypto'}
             <ArrowRight className="h-4 w-4" aria-hidden />
           </>
         )}
       </Button>
 
       <p className="mt-4 text-center text-[12px] leading-relaxed text-ink-dim">
-        You will be taken to our payment processor. NorthStar Research never sees or stores your
-        payment details.
+        {method === 'card'
+          ? 'Billed monthly. Cancel any time from your account. NorthStar Research never sees your card details.'
+          : 'One month of access per payment. Crypto cannot renew automatically, so we will remind you before it ends.'}
       </p>
     </form>
+  )
+}
+
+function MethodOption({
+  icon: Icon,
+  label,
+  detail,
+  selected,
+  onSelect,
+}: {
+  icon: typeof CreditCard
+  label: string
+  detail: string
+  selected: boolean
+  onSelect: () => void
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+      className={cn(
+        'flex flex-col items-start gap-1 rounded-lg border p-3.5 text-left transition-colors',
+        selected
+          ? 'border-gold/60 bg-gold/10'
+          : 'border-line bg-panel-2 hover:border-ink-dim/40',
+      )}
+    >
+      <Icon className={cn('h-4 w-4', selected ? 'text-gold' : 'text-ink-dim')} aria-hidden />
+      <span className="text-[14px] text-ink">{label}</span>
+      <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-dim">{detail}</span>
+    </button>
   )
 }

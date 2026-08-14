@@ -4,13 +4,23 @@ import { redirect } from 'next/navigation'
 
 import { LoginForm } from '@/app/(auth)/login/login-form'
 import { getCurrentMember } from '@/lib/auth'
+import { googleConfigured } from '@/lib/oauth'
 
 export const metadata: Metadata = { title: 'Sign in' }
+
+const ERRORS: Record<string, string> = {
+  google_failed: 'Google sign-in did not complete. Please try again.',
+  google_cancelled: 'Google sign-in was cancelled.',
+  google_unverified: 'That Google account has no verified email address.',
+  google_unavailable: 'Google sign-in is not available on this deployment yet.',
+  link_expired: 'That sign-in link has expired. Request a new one.',
+  link_invalid: 'That sign-in link is not valid.',
+}
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { next?: string }
+  searchParams: { next?: string; error?: string }
 }) {
   const member = await getCurrentMember()
 
@@ -33,7 +43,16 @@ export default async function LoginPage({
           : 'Access this week’s reports and the full archive.'}
       </p>
 
-      <LoginForm next={next} />
+      {searchParams.error && ERRORS[searchParams.error] && (
+        <p
+          role="alert"
+          className="mt-5 rounded-lg border border-down/40 bg-down/10 px-4 py-3 text-[14px] text-ink"
+        >
+          {ERRORS[searchParams.error]}
+        </p>
+      )}
+
+      <LoginForm next={next} googleEnabled={googleConfigured()} />
 
       <p className="mt-7 border-t border-line pt-6 text-[14px] text-ink-dim">
         Have an access code but no account yet?{' '}

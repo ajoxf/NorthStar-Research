@@ -114,10 +114,27 @@ export async function requireAdmin(): Promise<Member> {
   return member
 }
 
-/** An active subscription is what gates report content, separately from being logged in. */
-export function hasActiveSubscription(member: Pick<Member, 'role' | 'subscriptionStatus'>): boolean {
+/**
+ * An active subscription is what gates report content, separately from being logged in.
+ *
+ * The renewal date is checked here, not just the status column. The nightly expiry job
+ * flips lapsed members to `expired`, but access must not depend on that job having run —
+ * a member whose paid period ended an hour ago loses access immediately, not tomorrow.
+ */
+export function hasActiveSubscription(
+  member: Pick<Member, 'role' | 'subscriptionStatus' | 'subscriptionRenewsAt'>,
+): boolean {
   if (member.role === 'admin') return true
-  return member.subscriptionStatus === 'active'
+  if (member.subscriptionStatus !== 'active') return false
+  // A null renewal date means a legacy or comped account with no expiry.
+  if (!member.subscriptionRenewsAt) return true
+  return member.subscriptionRenewsAt.getTime() > Date.now()
+}
+
+/** Days left in the current paid period; negative once lapsed. Null when open-ended. */
+export function daysUntilRenewal(member: Pick<Member, 'subscriptionRenewsAt'>): number | null {
+  if (!member.subscriptionRenewsAt) return null
+  return Math.ceil((member.subscriptionRenewsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
 }
 
 export class UnauthorizedError extends Error {

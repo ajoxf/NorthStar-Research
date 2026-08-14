@@ -47,6 +47,11 @@ Development unless noted.
 | `CREGIS_ALLOWLISTED_IP` | `REPLACE_ME` |
 | `EMAIL_PROVIDER` | `console` until an email account exists, then `resend` |
 | `WHATSAPP_PROVIDER` | `console` until a WhatsApp sender exists, then `twilio` |
+| `ADMIN_BOOTSTRAP_SECRET` | Any value you choose. Enables `/admin/bootstrap`. **Delete after use.** |
+| `STRIPE_SECRET_KEY` | `REPLACE_ME_STRIPE_SECRET_KEY` until you set Stripe up |
+| `STRIPE_PRICE_ID` | `REPLACE_ME_STRIPE_PRICE_ID` — must be a **recurring monthly $199** price |
+| `STRIPE_WEBHOOK_SECRET` | `REPLACE_ME_STRIPE_WEBHOOK_SECRET` |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Leave unset to hide the Google button |
 
 `DATABASE_URL`, `DATABASE_URL_UNPOOLED` and `BLOB_READ_WRITE_TOKEN` come from step 2 — do
 not add them by hand.
@@ -62,16 +67,38 @@ deliberately.
 
 ## 4. Deploy, then initialise the database
 
-Deploy from the dashboard, then from a local checkout with the same `DATABASE_URL`:
+Deploy from the dashboard. The schema still has to be created once — from a local checkout
+with the same `DATABASE_URL`:
 
 ```bash
 npm install
-npx prisma db push           # create the schema
-npm run create-admin -- --email=you@example.com
+npx prisma db push
 ```
 
-`create-admin` prints a generated password once and never again. Sign in at
-`/admin/login`.
+Then create the first administrator. Either:
+
+**From the browser** (no local setup): set `ADMIN_BOOTSTRAP_SECRET` in Vercel, redeploy,
+and visit `/admin/bootstrap`. It creates the admin, signs you in, and refuses to run ever
+again once an admin exists. Delete the variable afterwards.
+
+**Or from the CLI:** `npm run create-admin -- --email=you@example.com`, which prints a
+generated password once.
+
+Either way you then sign in at `/admin/login`.
+
+## 4b. Payment providers
+
+**Stripe** (card subscriptions, auto-renewing):
+
+1. Create a **recurring monthly** price of $199 in the Stripe product catalogue and copy
+   its `price_...` id into `STRIPE_PRICE_ID`. A one-off price will not subscribe anyone.
+2. Add a webhook endpoint at `{APP_BASE_URL}/api/webhooks/stripe` subscribed to
+   `checkout.session.completed`, `invoice.paid`, `customer.subscription.updated` and
+   `customer.subscription.deleted`. Copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+
+**Google sign-in** (optional): create an OAuth client (Web) in the Google Cloud Console
+with the authorised redirect URI `{APP_BASE_URL}/api/auth/google/callback`. Only
+openid/email/profile scopes are used, so no app review is required.
 
 Optionally `npm run seed-demo` for three published reports and a demo member, so the
 dashboard and archive have something in them for a walkthrough. Do not run it against real

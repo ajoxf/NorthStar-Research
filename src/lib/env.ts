@@ -54,11 +54,26 @@ export function optionalEnv(key: string, fallback: string): string {
 export const appBaseUrl = (): string =>
   optionalEnv('APP_BASE_URL', 'http://localhost:3000').replace(/\/$/, '')
 
-/** The single plan. There is exactly one price and it is not configurable. */
+/**
+ * The single plan: $199 per month. There is exactly one price and no tiers.
+ *
+ * Card members (Stripe) renew automatically. Crypto members (Cregis) pay per period by
+ * hand, because crypto payments are push-based — there is no stored mandate to charge
+ * against, so nothing can auto-renew. Both settle to the same `subscriptionRenewsAt`
+ * date, which is what actually gates access.
+ */
 export const PLAN = {
-  priceUsd: 249,
-  amount: '249.00',
+  priceUsd: 199,
+  amount: '199.00',
   currency: 'USD',
+  interval: 'month',
   name: 'NorthStar Research Membership',
   description: '3 research reports per week',
 } as const
+
+/** One billing period. Used to extend `subscriptionRenewsAt` on payment. */
+export function addBillingPeriod(from: Date = new Date()): Date {
+  const next = new Date(from)
+  next.setMonth(next.getMonth() + 1)
+  return next
+}

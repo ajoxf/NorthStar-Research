@@ -62,4 +62,28 @@ export class ConsoleProvider implements NotificationProvider {
     )
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
+
+  async sendMagicLink(
+    recipient: { email: string; firstName?: string | null },
+    link: string,
+    expiresInMinutes: number,
+  ): Promise<DeliveryResult> {
+    // Printed in full so magic-link sign-in is testable locally with no email provider:
+    // copy the URL out of the server log and paste it into the browser.
+    console.info(
+      `[notifications:console] MAGIC LINK → ${recipient.email} | expires in ${expiresInMinutes}m | ${link}`,
+    )
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
+  async sendRenewalReminder(
+    recipient: { email: string; firstName?: string | null },
+    daysRemaining: number,
+    renewUrl: string,
+  ): Promise<DeliveryResult> {
+    console.info(
+      `[notifications:console] RENEWAL → ${recipient.email} | ${daysRemaining}d left | ${renewUrl}`,
+    )
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
 }

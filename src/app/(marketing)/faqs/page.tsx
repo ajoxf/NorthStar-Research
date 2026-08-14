@@ -14,19 +14,41 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     q: 'What do I get for the membership fee?',
     a: (
       <>
-        One payment of ${PLAN.priceUsd} gives you all three weekly reports — commodities,
-        international markets and indices, and option, crypto and spread opportunities — plus access
-        to the complete archive of everything published previously.
+        ${PLAN.priceUsd} per month gives you all three weekly reports — commodities, international
+        markets and indices, and option, crypto and spread opportunities — plus access to the
+        complete archive of everything published previously, including editions from before you
+        joined.
       </>
     ),
   },
   {
-    q: 'How do I pay?',
+    q: 'How do I pay, and does it renew?',
     a: (
       <>
-        Payment is made in crypto through our payment processor. NorthStar Research never handles
-        your payment details. Once payment confirms, you receive a one-time access code by email
-        that you use to create your account.
+        You can pay by card or in crypto. Card subscriptions renew automatically each month and can
+        be cancelled any time from your account. Crypto cannot renew automatically — there is no
+        card on file for us to charge — so you pay again whenever you want another month, and we
+        email you a few days before your access ends. Either way, NorthStar Research never handles
+        your payment details, and you receive an access code once payment confirms.
+      </>
+    ),
+  },
+  {
+    q: 'How do I cancel?',
+    a: (
+      <>
+        If you pay by card, open your account settings and choose Manage billing — you can cancel
+        there in a couple of clicks and keep full access until the end of the period you have
+        already paid for. If you pay in crypto there is nothing to cancel: simply do not renew.
+      </>
+    ),
+  },
+  {
+    q: 'How do I sign in?',
+    a: (
+      <>
+        However you prefer: continue with Google, use an email and password, or have us email you a
+        sign-in link. They all reach the same account, so you can switch between them freely.
       </>
     ),
   },

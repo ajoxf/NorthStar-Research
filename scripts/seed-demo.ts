@@ -133,10 +133,17 @@ async function main() {
       role: 'member',
       subscriptionStatus: 'active',
       subscriptionStartedAt: new Date(),
+      // Demo member sits mid-period so the account page shows a real renewal date.
+      subscriptionRenewsAt: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+      billingProvider: 'stripe',
       source: 'admin_manual',
       tags: ['demo'],
     },
-    update: { passwordHash, subscriptionStatus: 'active' },
+    update: {
+      passwordHash,
+      subscriptionStatus: 'active',
+      subscriptionRenewsAt: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+    },
   })
 
   await db.redemptionCode.upsert({

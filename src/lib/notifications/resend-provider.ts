@@ -1,7 +1,12 @@
 import { Resend } from 'resend'
 
 import { optionalEnv, requireEnv } from '@/lib/env'
-import { redemptionCodeEmail, reportEmail } from '@/lib/notifications/templates'
+import {
+  magicLinkEmail,
+  redemptionCodeEmail,
+  renewalReminderEmail,
+  reportEmail,
+} from '@/lib/notifications/templates'
 import type {
   DeliveryResult,
   NotificationProvider,
@@ -64,6 +69,24 @@ export class ResendProvider implements NotificationProvider {
     redeemUrl: string,
   ): Promise<DeliveryResult> {
     const { subject, html, text } = redemptionCodeEmail(code, redeemUrl, recipient.firstName)
+    return this.send(recipient.email, subject, html, text)
+  }
+
+  async sendMagicLink(
+    recipient: { email: string; firstName?: string | null },
+    link: string,
+    expiresInMinutes: number,
+  ): Promise<DeliveryResult> {
+    const { subject, html, text } = magicLinkEmail(link, expiresInMinutes, recipient.firstName)
+    return this.send(recipient.email, subject, html, text)
+  }
+
+  async sendRenewalReminder(
+    recipient: { email: string; firstName?: string | null },
+    daysRemaining: number,
+    renewUrl: string,
+  ): Promise<DeliveryResult> {
+    const { subject, html, text } = renewalReminderEmail(daysRemaining, renewUrl, recipient.firstName)
     return this.send(recipient.email, subject, html, text)
   }
 

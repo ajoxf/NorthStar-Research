@@ -70,6 +70,22 @@ class CompositeProvider implements NotificationProvider {
   sendRedemptionCodeWhatsApp(recipient: { phoneNumber: string }, code: string, url: string) {
     return this.whatsapp.sendRedemptionCodeWhatsApp(recipient, code, url)
   }
+
+  sendMagicLink(
+    recipient: { email: string; firstName?: string | null },
+    link: string,
+    expiresInMinutes: number,
+  ) {
+    return this.email.sendMagicLink(recipient, link, expiresInMinutes)
+  }
+
+  sendRenewalReminder(
+    recipient: { email: string; firstName?: string | null },
+    daysRemaining: number,
+    renewUrl: string,
+  ) {
+    return this.email.sendRenewalReminder(recipient, daysRemaining, renewUrl)
+  }
 }
 
 export function getNotificationProvider(): NotificationProvider {

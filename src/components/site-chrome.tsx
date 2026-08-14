@@ -56,7 +56,7 @@ export async function SiteHeader() {
                 Sign in
               </Link>
               <ButtonLink href="/join" size="sm">
-                Join — $249
+                Join — $199/mo
               </ButtonLink>
             </>
           )}

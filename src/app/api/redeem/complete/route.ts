@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { db } from '@/lib/db'
+import { addBillingPeriod } from '@/lib/env'
 import { hashPassword, startSession } from '@/lib/auth'
 import { normaliseCode } from '@/lib/codes'
 import { normalisePhone } from '@/lib/utils'
@@ -63,6 +64,10 @@ export async function POST(request: Request) {
       }
 
       const now = new Date()
+      // First paid period starts now. Stripe members then have this extended
+      // automatically by each `invoice.paid`; Cregis members extend it by paying again.
+      const renewsAt = addBillingPeriod(now)
+
       const created = await tx.member.upsert({
         where: { email },
         create: {
@@ -77,6 +82,8 @@ export async function POST(request: Request) {
           role: 'member',
           subscriptionStatus: 'active',
           subscriptionStartedAt: now,
+          subscriptionRenewsAt: renewsAt,
+          billingProvider: 'cregis',
           source: 'cregis_checkout',
         },
         update: {
@@ -87,6 +94,7 @@ export async function POST(request: Request) {
           whatsappOptIn: wantsWhatsApp,
           subscriptionStatus: 'active',
           subscriptionStartedAt: now,
+          subscriptionRenewsAt: renewsAt,
         },
       })
 

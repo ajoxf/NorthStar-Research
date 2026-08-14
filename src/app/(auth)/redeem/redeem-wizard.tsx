@@ -12,7 +12,7 @@ import { cn, isValidEmail } from '@/lib/utils'
 /**
  * Three-step guided activation (build spec §6): code → account details → done.
  *
- * The middle step is where a new member forms their first impression of a $249 product,
+ * The middle step is where a new member forms their first impression of a $199/month product,
  * so it validates inline, keeps state between steps, and confirms the accepted code
  * visibly rather than silently moving on.
  */

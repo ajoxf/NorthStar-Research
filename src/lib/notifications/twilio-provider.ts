@@ -100,4 +100,12 @@ export class TwilioWhatsAppProvider implements NotificationProvider {
   async sendRedemptionCodeEmail(): Promise<DeliveryResult> {
     return { status: 'failed', provider: this.name, error: 'Twilio provider does not send email.' }
   }
+
+  async sendMagicLink(): Promise<DeliveryResult> {
+    return { status: 'failed', provider: this.name, error: 'Twilio provider does not send email.' }
+  }
+
+  async sendRenewalReminder(): Promise<DeliveryResult> {
+    return { status: 'failed', provider: this.name, error: 'Twilio provider does not send email.' }
+  }
 }

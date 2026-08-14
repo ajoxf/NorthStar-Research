@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 
 import { AccountForms } from '@/app/(portal)/account/account-forms'
 import { Badge, statusTone } from '@/components/ui/badge'
-import { getCurrentMember } from '@/lib/auth'
+import { daysUntilRenewal, getCurrentMember } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { formatDate } from '@/lib/utils'
 
@@ -13,6 +13,8 @@ export const dynamic = 'force-dynamic'
 export default async function AccountPage() {
   const member = await getCurrentMember()
   if (!member) redirect('/login')
+
+  const daysLeft = daysUntilRenewal(member)
 
   const reportsRead = await db.reportView.findMany({
     where: { memberId: member.id },
@@ -41,6 +43,29 @@ export default async function AccountPage() {
             </dd>
           </div>
           <div>
+            <dt className="text-[13px] text-ink-dim">
+              {member.cancelAtPeriodEnd ? 'Access ends' : 'Renews'}
+            </dt>
+            <dd className="mt-1.5 font-mono text-[13px] text-ink">
+              {member.subscriptionRenewsAt ? formatDate(member.subscriptionRenewsAt) : '—'}
+              {daysLeft !== null && daysLeft >= 0 && (
+                <span className="ml-2 text-ink-dim">
+                  ({daysLeft} {daysLeft === 1 ? 'day' : 'days'})
+                </span>
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-[13px] text-ink-dim">Billing</dt>
+            <dd className="mt-1.5 font-mono text-[13px] text-ink">
+              {member.billingProvider === 'stripe'
+                ? 'Card — renews automatically'
+                : member.billingProvider === 'cregis'
+                  ? 'Crypto — renew manually'
+                  : '—'}
+            </dd>
+          </div>
+          <div>
             <dt className="text-[13px] text-ink-dim">Email</dt>
             <dd className="mt-1.5 break-all font-mono text-[13px] text-ink">{member.email}</dd>
           </div>
@@ -53,6 +78,8 @@ export default async function AccountPage() {
 
       <AccountForms
         member={{
+          billingProvider: member.billingProvider,
+          cancelAtPeriodEnd: member.cancelAtPeriodEnd,
           firstName: member.firstName,
           lastName: member.lastName,
           phoneNumber: member.phoneNumber,

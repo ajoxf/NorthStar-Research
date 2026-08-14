@@ -9,9 +9,10 @@ import { PLAN, isConfigured } from '@/lib/env'
 export const metadata: Metadata = { title: 'Join' }
 
 export default function JoinPage() {
-  // Rendered server-side so the page can say plainly that payment is not wired up yet,
-  // rather than presenting a button that fails at the last step.
-  const paymentReady = isConfigured('CREGIS_PROJECT_ID', 'CREGIS_API_KEY', 'CREGIS_BASE_URL')
+  // Resolved server-side so the page can say plainly which payment methods are actually
+  // wired up, rather than presenting a button that fails at the last step.
+  const cryptoReady = isConfigured('CREGIS_PROJECT_ID', 'CREGIS_API_KEY', 'CREGIS_BASE_URL')
+  const cardReady = isConfigured('STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID')
 
   return (
     <ToastProvider>
@@ -22,16 +23,16 @@ export default function JoinPage() {
             One plan. Three reports a week.
           </h1>
           <p className="mt-5 max-w-md text-[16px] leading-relaxed text-ink-dim">
-            Pay once in crypto and we will email you a one-time access code. Use it to create your
-            account and everything unlocks immediately — this week&apos;s reports and the full
-            archive.
+            Pay by card and your membership renews itself each month. Prefer crypto? You can pay
+            that way too — it just needs renewing by hand each period. Either way we email you an
+            access code to set up your account.
           </p>
 
           <ol className="mt-10 space-y-5 border-t border-line pt-8">
             {[
-              { step: '01', title: 'Pay in crypto', body: `A single payment of $${PLAN.priceUsd} through our payment processor.` },
-              { step: '02', title: 'Receive your code', body: 'We email your access code as soon as the payment confirms on-chain.' },
-              { step: '03', title: 'Create your account', body: 'Redeem the code, pick a password, and start reading.' },
+              { step: '01', title: 'Choose card or crypto', body: `$${PLAN.priceUsd} per month. Card renews automatically; crypto you renew yourself.` },
+              { step: '02', title: 'Receive your code', body: 'We email your access code as soon as the payment confirms.' },
+              { step: '03', title: 'Create your account', body: 'Redeem the code, then sign in with Google, a password, or an email link.' },
             ].map((item) => (
               <li key={item.step} className="flex gap-4">
                 <span className="font-mono text-[12px] tracking-[0.14em] text-gold">{item.step}</span>
@@ -48,7 +49,7 @@ export default function JoinPage() {
           <div className="flex items-baseline gap-2 border-b border-line pb-6">
             <span className="font-serif text-4xl text-ink">${PLAN.priceUsd}</span>
             <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
-              one payment
+              per month
             </span>
           </div>
 
@@ -63,7 +64,7 @@ export default function JoinPage() {
             )}
           </ul>
 
-          <JoinForm paymentReady={paymentReady} />
+          <JoinForm cardReady={cardReady} cryptoReady={cryptoReady} />
 
           <p className="mt-5 text-center text-[13px] text-ink-dim">
             Already have a code?{' '}

@@ -35,8 +35,17 @@ enum SubscriptionStatus {
 
 enum MemberSource {
   cregis_checkout
+  stripe_checkout
   admin_manual
   import
+}
+
+/// How a member's recurring $199/month subscription is actually paid.
+/// `stripe` renews itself; `cregis` is crypto and must be renewed by hand each period.
+enum BillingProvider {
+  stripe
+  cregis
+  manual
 }
 
 enum ReportType {
@@ -83,11 +92,24 @@ model Member {
   whatsappOptIn    Boolean @default(false)
   whatsappVerified Boolean @default(false)
 
+  /// Set when the member signs in with Google. Null for password/magic-link accounts.
+  googleId String? @unique
+
   role Role @default(member)
 
-  subscriptionStatus    SubscriptionStatus @default(pending)
+  subscriptionStatus SubscriptionStatus @default(pending)
   subscriptionStartedAt DateTime?
-  subscriptionRenewsAt  DateTime?
+  /// End of the paid period. Access is denied once this passes, whichever provider
+  /// billed it — Stripe extends it automatically, Cregis renewals extend it by hand.
+  subscriptionRenewsAt DateTime?
+
+  billingProvider   BillingProvider?
+  stripeCustomerId  String?          @unique
+  stripeSubscriptionId String?
+  /// Stripe subscription set to stop at period end; access continues until then.
+  cancelAtPeriodEnd Boolean          @default(false)
+  /// Guards against sending the same renewal reminder repeatedly.
+  renewalReminderSentAt DateTime?
 
   source MemberSource @default(cregis_checkout)
 
@@ -126,16 +148,19 @@ model RedemptionCode {
   @@index([status])
 }
 
-/// Mirrors a Cregis checkout order. A code is only ever minted from a *verified*
-/// webhook transition of one of these rows to `paid` — never from a success redirect.
+/// Mirrors a checkout order from either processor. Access is only ever granted from a
+/// *verified* webhook transition of one of these rows to `paid` — never from a success
+/// redirect, which anyone can visit without paying.
 model CheckoutOrder {
-  id            String      @id @default(cuid())
-  cregisOrderId String      @unique
+  id String @id @default(cuid())
+  /// Processor's own identifier: a Cregis order id, or a Stripe Checkout Session id.
+  cregisOrderId String          @unique
+  provider      BillingProvider @default(cregis)
   email         String
   phoneNumber   String?
   amount        String
-  currency      String      @default("USD")
-  status        OrderStatus @default(pending)
+  currency      String          @default("USD")
+  status        OrderStatus     @default(pending)
 
   rawCallback Json?
 

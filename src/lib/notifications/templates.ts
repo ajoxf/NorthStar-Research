@@ -108,6 +108,55 @@ export function redemptionCodeEmail(code: string, redeemUrl: string, firstName?:
   }
 }
 
+export function magicLinkEmail(link: string, expiresInMinutes: number, firstName?: string | null) {
+  const greeting = firstName ? `${escapeHtml(firstName)},` : 'Hello,'
+
+  const body = `
+    <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
+    <h1 style="margin:0 0 14px;font-family:Newsreader,Georgia,serif;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your sign-in link</h1>
+    <p style="margin:0 0 4px;color:${INK};font-size:15px;line-height:1.65;">Click below to sign in to your NorthStar Research account. The link expires in ${expiresInMinutes} minutes.</p>
+    ${button(link, 'Sign in')}
+    <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">If you did not ask to sign in, you can ignore this email — nobody can access your account without this link.</p>
+  `
+
+  return {
+    subject: 'Your NorthStar Research sign-in link',
+    html: shell('Your sign-in link', body),
+    text: `Sign in to NorthStar Research:\n${link}\n\nThis link expires in ${expiresInMinutes} minutes.`,
+  }
+}
+
+export function renewalReminderEmail(
+  daysRemaining: number,
+  renewUrl: string,
+  firstName?: string | null,
+) {
+  const greeting = firstName ? `${escapeHtml(firstName)},` : 'Hello,'
+  const when =
+    daysRemaining <= 0
+      ? 'has ended'
+      : daysRemaining === 1
+        ? 'ends tomorrow'
+        : `ends in ${daysRemaining} days`
+
+  const body = `
+    <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
+    <h1 style="margin:0 0 14px;font-family:Newsreader,Georgia,serif;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your membership ${escapeHtml(when)}</h1>
+    <p style="margin:0 0 4px;color:${INK};font-size:15px;line-height:1.65;">You pay by crypto, which cannot renew automatically, so your access needs a payment to continue. Renew now and your reports carry on uninterrupted — any time left on your current period is added on top.</p>
+    ${button(renewUrl, 'Renew my membership')}
+    <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Prefer not to think about it each month? Switching to card billing renews by itself and can be cancelled any time.</p>
+  `
+
+  return {
+    subject:
+      daysRemaining <= 0
+        ? 'Your NorthStar Research membership has ended'
+        : `Your NorthStar Research membership ${when}`,
+    html: shell('Membership renewal', body),
+    text: `Your NorthStar Research membership ${when}.\n\nRenew: ${renewUrl}`,
+  }
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
