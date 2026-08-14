@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { MissingConfigError, requireEnv } from '@/lib/env'
-import { extractPdfHtml, sanitiseReportHtml } from '@/lib/pdf'
+import { sanitiseReportHtml } from '@/lib/pdf'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   const file = form.get('pdf')
   let pdfBlobUrl: string | null = null
   let pdfBlobPathname: string | null = null
-  let generatedHtml: string | null = null
+  // Surfaced to the operator when a PDF is stored with no reading view written for it.
   let warning: string | null = null
 
   if (file instanceof File && file.size > 0) {
@@ -124,18 +124,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'The PDF could not be uploaded.' }, { status: 502 })
     }
 
-    // Requirement 12: a PDF alone is not an acceptable delivery format, so derive a
-    // responsive reading view from it unless the admin supplied their own.
+    // Reading views are hand-authored — see the note at the top of src/lib/pdf.ts.
+    // A PDF alone is not an acceptable delivery format (build spec §12), so say so
+    // plainly rather than generating something unreliable to fill the gap.
     if (!parsed.data.htmlContent?.trim()) {
-      const extracted = await extractPdfHtml(buffer)
-      generatedHtml = extracted.html
-      warning = extracted.warning
+      warning =
+        'The PDF was saved, but this report has no reading view yet. Members on a phone ' +
+        'would see only a download link. Add the reading view content before publishing.'
     }
   }
 
   const htmlContent = parsed.data.htmlContent?.trim()
     ? sanitiseReportHtml(parsed.data.htmlContent)
-    : generatedHtml
+    : null
 
   const report = await db.report.create({
     data: {

@@ -2,8 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: {
-    // pdfjs-dist is only ever loaded inside server routes (PDF text extraction).
-    serverComponentsExternalPackages: ['pdfjs-dist', '@prisma/client', 'bcryptjs', 'twilio'],
+    serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs', 'twilio'],
   },
   async headers() {
     return [

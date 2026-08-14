@@ -1,103 +1,30 @@
-import 'server-only'
-
-import { escapeHtml } from '@/lib/notifications/templates'
-
 /**
- * Build a responsive HTML rendering from an uploaded PDF.
+ * Report HTML handling.
  *
- * Requirement 12 rules out "a raw PDF is the only format" — a PDF page does not reflow
- * on a phone and cannot be shown inside an email. So on upload we extract the text layer
- * and store it as semantic HTML, which the reader and the (link-only) email view can both
- * lay out responsively. The original PDF is kept untouched in Blob storage for download.
+ * ---------------------------------------------------------------------------
+ * AUTOMATIC PDF TEXT EXTRACTION HAS BEEN REMOVED — DO NOT REINSTATE IT
+ * ---------------------------------------------------------------------------
+ * This module used to run uploaded PDFs through pdfjs and store whatever text came
+ * back as the member-facing reading view. That was withdrawn deliberately, for two
+ * reasons found in production:
  *
- * Two honest limitations, both surfaced to the admin at upload time rather than hidden:
- *   - charts and images in the PDF are not carried across; the text layer is;
- *   - a scanned/image-only PDF has no text layer at all, so nothing is extracted (we do
- *     not OCR). For those, the admin should paste the reading view content by hand.
- * The admin can always edit or replace the generated HTML before publishing.
+ *   1. It did not work on the real reports. pdfjs returned nothing at all for a
+ *      22-page themed PDF that other extractors read fine — so the reading view came
+ *      out empty and the operator had to write it by hand anyway.
+ *
+ *   2. When it *did* return text, the text was wrong in a way that matters here.
+ *      Tables flattened into runs like `DXY 101.977100.365100.020` and body copy was
+ *      concatenated into price cells (`7,238Q2 earnings are tracking…`). This is a
+ *      trading research product: the price levels ARE the product. A garbled level is
+ *      worse than a missing one, because it still looks like data and a member may
+ *      act on it.
+ *
+ * Reading views are therefore hand-authored. The admin writes them in the "Reading
+ * view content" field, and the report page warns whenever a PDF exists without one.
+ * Reinstating extraction means first solving table-structure reconstruction — a naive
+ * text dump is not a smaller version of that, it is a different and dangerous thing.
+ * ---------------------------------------------------------------------------
  */
-export async function extractPdfHtml(
-  buffer: ArrayBuffer,
-): Promise<{ html: string | null; pages: number; warning: string | null }> {
-  try {
-    // Imported lazily and from the legacy build: the default entry point expects browser
-    // globals that do not exist in a serverless function.
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-
-    const doc = await pdfjs.getDocument({
-      data: new Uint8Array(buffer),
-      // No worker thread and no system fonts in a serverless runtime.
-      useWorkerFetch: false,
-      isEvalSupported: false,
-      useSystemFonts: false,
-    }).promise
-
-    const paragraphs: string[] = []
-
-    for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
-      const page = await doc.getPage(pageNumber)
-      const content = await page.getTextContent()
-
-      // Rebuild lines from the positioned text items, then group consecutive lines into
-      // paragraphs on blank-line boundaries. Crude, but it turns a wall of spans into
-      // something that reflows sensibly.
-      let line = ''
-      const lines: string[] = []
-
-      for (const item of content.items) {
-        if (!('str' in item)) continue
-        line += item.str
-        if (item.hasEOL) {
-          lines.push(line.trim())
-          line = ''
-        }
-      }
-      if (line.trim()) lines.push(line.trim())
-
-      let paragraph: string[] = []
-      for (const entry of lines) {
-        if (entry === '') {
-          if (paragraph.length) paragraphs.push(paragraph.join(' '))
-          paragraph = []
-        } else {
-          paragraph.push(entry)
-        }
-      }
-      if (paragraph.length) paragraphs.push(paragraph.join(' '))
-    }
-
-    const cleaned = paragraphs.map((text) => text.trim()).filter((text) => text.length > 1)
-
-    if (cleaned.length === 0) {
-      return {
-        html: null,
-        pages: doc.numPages,
-        warning:
-          'No text layer was found in this PDF (it may be a scan or an image export). The reading ' +
-          'view will be empty until you add content — members will only be able to download the PDF.',
-      }
-    }
-
-    const html = cleaned
-      .map((text) => {
-        // Short, title-cased lines read as headings far more often than not.
-        const isHeading = text.length < 70 && !text.endsWith('.') && /^[A-Z0-9]/.test(text)
-        return isHeading ? `<h2>${escapeHtml(text)}</h2>` : `<p>${escapeHtml(text)}</p>`
-      })
-      .join('\n')
-
-    return { html, pages: doc.numPages, warning: null }
-  } catch (error) {
-    console.error('[pdf] text extraction failed', error)
-    return {
-      html: null,
-      pages: 0,
-      warning:
-        'We could not read the text out of this PDF, so no reading view was generated. The PDF ' +
-        'itself uploaded fine — you can paste the reading view content in manually.',
-    }
-  }
-}
 
 /**
  * Allow-list sanitiser for admin-authored report HTML.

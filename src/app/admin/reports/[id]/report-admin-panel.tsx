@@ -190,7 +190,7 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
           />
           <Hint>
             {report.hasPdf
-              ? 'Generated from the PDF text on upload. Edit freely — this is what members read on mobile.'
+              ? 'Hand-written — the PDF is a download only. This is what members read on mobile.'
               : 'This report has no PDF, so this content is the whole report.'}
           </Hint>
         </div>

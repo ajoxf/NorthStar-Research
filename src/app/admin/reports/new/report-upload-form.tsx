@@ -140,8 +140,8 @@ export function ReportUploadForm() {
           />
         </label>
         <Hint>
-          Stored for offline download. We also extract its text to build the mobile reading view —
-          charts and images are not carried across, and a scanned PDF has no text to extract.
+          Stored so members can download it. It does not become the on-screen reading view —
+          write that below, so the levels are exactly what you intend.
         </Hint>
       </div>
 
@@ -156,8 +156,9 @@ export function ReportUploadForm() {
             className="font-mono text-[13px]"
           />
           <Hint>
-            Basic HTML: headings, paragraphs, lists, tables, links. Leave blank to auto-generate from
-            the PDF. You can edit it after upload.
+            This is what members actually read on a phone. Basic HTML: headings, paragraphs,
+            lists, tables, links. You can edit it after upload, but a report published without
+            it shows only a download link.
           </Hint>
         </div>
 
