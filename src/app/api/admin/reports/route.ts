@@ -13,7 +13,10 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const schema = z.object({
-  type: z.enum(['commodities', 'international_markets', 'options_crypto_spread']),
+  // Must stay in sync with REPORT_TYPES and the Prisma ReportType enum, both of which
+  // carry four values. Omitting fx_currencies made Report 4 impossible to upload: the
+  // form offered it and the API rejected it with a bare validation error.
+  type: z.enum(['commodities', 'international_markets', 'options_crypto_spread', 'fx_currencies']),
   title: z.string().trim().min(3).max(200),
   summary: z.string().trim().max(600).optional(),
   publishDate: z.string().min(4),
@@ -76,6 +79,22 @@ export async function POST(request: Request) {
   if (file instanceof File && file.size > 0) {
     if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       return NextResponse.json({ error: 'Upload a PDF file.' }, { status: 400 })
+    }
+
+    // Vercel caps a serverless request body at ~4.5 MB. Past that the platform rejects
+    // the request before this handler runs, so the operator sees an opaque network
+    // failure with nothing to act on. Check just under the limit and name the size.
+    const MAX_PDF_BYTES = 4 * 1024 * 1024
+    if (file.size > MAX_PDF_BYTES) {
+      const mb = (file.size / (1024 * 1024)).toFixed(1)
+      return NextResponse.json(
+        {
+          error:
+            `That PDF is ${mb} MB and the upload limit is 4 MB. Compress it — any ` +
+            `"reduce PDF size" tool works — and upload it again.`,
+        },
+        { status: 413 },
+      )
     }
 
     const buffer = await file.arrayBuffer()

@@ -1,8 +1,14 @@
 import 'server-only'
 
-import { createHash } from 'crypto'
-
 import { MissingConfigError, PLAN, appBaseUrl, isConfigured, requireEnvAll } from '@/lib/env'
+import {
+  CHECKOUT_VALID_MINUTES,
+  cregisNonce,
+  cregisSign,
+  signaturesMatch,
+} from '@/lib/cregis-protocol'
+
+export { cregisSign, signaturesMatch }
 
 /**
  * Cregis crypto-checkout client.
@@ -41,43 +47,6 @@ function cregisConfig() {
   }
 }
 
-/**
- * Cregis signature: MD5 over the API key followed by every non-empty parameter
- * (excluding `sign` itself) as `keyvalue`, with keys sorted in ascending ASCII order.
- * See developer.cregis.com/api-reference/signature.
- *
- * Exported so the webhook route can verify inbound callbacks with the same code path
- * that signs outbound requests — one implementation, one place to be wrong.
- */
-export function cregisSign(params: Record<string, unknown>, apiKey: string): string {
-  const joined = Object.keys(params)
-    .filter((key) => key !== 'sign')
-    .filter((key) => {
-      const value = params[key]
-      return value !== undefined && value !== null && value !== ''
-    })
-    .sort()
-    .map((key) => {
-      const value = params[key]
-      const serialised =
-        typeof value === 'object' ? JSON.stringify(value) : String(value)
-      return `${key}${serialised}`
-    })
-    .join('')
-
-  return createHash('md5').update(`${apiKey}${joined}`, 'utf8').digest('hex')
-}
-
-/** Constant-time-ish comparison for the inbound webhook signature. */
-export function signaturesMatch(expected: string, received: string): boolean {
-  if (typeof received !== 'string' || expected.length !== received.length) return false
-  let diff = 0
-  for (let i = 0; i < expected.length; i += 1) {
-    diff |= expected.charCodeAt(i) ^ received.charCodeAt(i)
-  }
-  return diff === 0
-}
-
 export function verifyCregisCallback(payload: Record<string, unknown>): boolean {
   const { apiKey } = cregisConfig()
   const received = typeof payload.sign === 'string' ? payload.sign : ''
@@ -89,6 +58,8 @@ export type CreateCheckoutInput = {
   /** Our internal CheckoutOrder id, echoed back on the callback. */
   orderId: string
   email: string
+  /** Merchant-side identifier for the payer. Defaults to the email. */
+  payerId?: string
 }
 
 export type CreateCheckoutResult = {
@@ -102,14 +73,23 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
   const { projectId, apiKey, baseUrl } = cregisConfig()
   const base = appBaseUrl()
 
+  // Parameter names and requirements follow developer.cregis.com → API reference →
+  // Create Payment order (POST /api/v2/checkout). `pid`, `nonce`, `timestamp`,
+  // `order_id`, `order_amount`, `order_currency`, `payer_id`, `valid_time`,
+  // `success_url` and `cancel_url` are all REQUIRED. The previous version sent
+  // `project_id`, a 13-digit epoch nonce and a `product_name` that does not exist in
+  // the API, and omitted three required fields — every checkout would have been rejected.
   const params: Record<string, unknown> = {
-    project_id: projectId,
+    pid: Number(projectId),
+    nonce: cregisNonce(),
+    timestamp: Date.now(),
     order_id: input.orderId,
     order_amount: PLAN.amount,
     order_currency: PLAN.currency,
-    product_name: PLAN.name,
+    payer_id: input.payerId ?? input.email,
     payer_email: input.email,
-    nonce: Date.now().toString(),
+    valid_time: CHECKOUT_VALID_MINUTES,
+    remark: PLAN.name,
     // The browser is sent to success_url, but access is NEVER granted from it —
     // only the server-to-server callback below can mint a redemption code.
     success_url: `${base}/checkout/success`,

@@ -94,7 +94,7 @@ export function ReportUploadForm() {
               </option>
             ))}
           </Select>
-          <Hint>One of the three fixed weekly reports.</Hint>
+          <Hint>One of the four fixed weekly reports.</Hint>
         </div>
 
         <div className="mb-4">

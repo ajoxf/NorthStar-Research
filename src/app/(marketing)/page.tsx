@@ -101,6 +101,10 @@ function ReportsSection() {
         <h2 className="mt-3 max-w-xl text-3xl leading-tight text-ink sm:text-4xl">
           Four reports, published on a fixed schedule.
         </h2>
+        <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-dim">
+          Every one carries the same three lines — weekly bias, the support and resistance that
+          matter, and the level that invalidates the idea.
+        </p>
 
         <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {REPORT_TYPES.map((report, index) => (
@@ -117,15 +121,6 @@ function ReportsSection() {
 
               <h3 className="font-display text-xl leading-snug text-ink">{report.shortLabel}</h3>
               <p className="mt-3 flex-1 text-[15px] leading-relaxed text-ink-dim">{report.blurb}</p>
-
-              <ul className="mt-6 space-y-2 border-t border-line pt-5">
-                {['Weekly bias', 'Support & resistance', 'Invalidation levels'].map((item) => (
-                  <li key={item} className="flex items-center gap-2 text-[13px] text-ink-dim">
-                    <Check className="h-3.5 w-3.5 shrink-0 text-up" aria-hidden />
-                    {item}
-                  </li>
-                ))}
-              </ul>
             </article>
           ))}
         </div>

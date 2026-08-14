@@ -3,11 +3,25 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { addBillingPeriod, appBaseUrl, MissingConfigError } from '@/lib/env'
 import { verifyCregisCallback } from '@/lib/cregis'
+import { isPaidStatus, isUnderpaid, unwrapCallbackOrder } from '@/lib/cregis-protocol'
 import { generateRedemptionCode } from '@/lib/codes'
 import { getNotificationProvider } from '@/lib/notifications'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+
+/**
+ * Cregis treats a callback as delivered ONLY if the response body is the literal string
+ * `success` — anything else, JSON included, is read as a failure and the callback is
+ * retried. Returning `{"ok":true}` looks perfectly healthy in a log while quietly
+ * producing an infinite retry loop against an already-processed order.
+ */
+function ack(): Response {
+  return new Response('success', {
+    status: 200,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  })
+}
 
 /**
  * Cregis payment callback — the ONLY place a redemption code is ever minted.
@@ -45,9 +59,8 @@ export async function POST(request: Request) {
     throw error
   }
 
-  const status = String(payload.status ?? payload.order_status ?? '').toLowerCase()
-  const orderId = String(payload.order_id ?? '')
-  const cregisOrderId = String(payload.cregis_id ?? payload.trade_id ?? orderId)
+  // Cregis nests the order under `data`; reading it off the envelope matches nothing.
+  const { status, orderId, cregisOrderId } = unwrapCallbackOrder(payload)
 
   if (!orderId) {
     return NextResponse.json({ error: 'missing order_id' }, { status: 400 })
@@ -64,20 +77,27 @@ export async function POST(request: Request) {
 
   // Cregis retries callbacks; acknowledge repeats without issuing a second code.
   if (order.status === 'paid') {
-    return NextResponse.json({ ok: true, note: 'already processed' })
+    return ack()
   }
 
-  const isPaid = ['paid', 'success', 'succeeded', 'completed', 'confirmed'].includes(status)
-
-  if (!isPaid) {
+  if (!isPaidStatus(status)) {
     await db.checkoutOrder.update({
       where: { id: order.id },
       data: {
+        // OrderStatus has no `underpaid` member and adding one is a migration, so a
+        // partial payment is recorded as `failed`. The full payload is preserved in
+        // rawCallback and the log line below flags it for manual review.
         status: status === 'expired' ? 'expired' : 'failed',
         rawCallback: payload as never,
       },
     })
-    return NextResponse.json({ ok: true })
+
+    if (isUnderpaid(status)) {
+      console.error(
+        `[cregis:webhook] UNDERPAID order ${order.id} (${order.email}) — no code issued, needs manual review`,
+      )
+    }
+    return ack()
   }
 
   // Crypto cannot auto-renew, so an existing member paying again is a manual renewal:
@@ -107,7 +127,7 @@ export async function POST(request: Request) {
     })
 
     console.info(`[cregis:webhook] renewal for ${order.email} — period extended`)
-    return NextResponse.json({ ok: true, renewal: true })
+    return ack()
   }
 
   const code = generateRedemptionCode()
@@ -167,5 +187,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true })
+  return ack()
 }

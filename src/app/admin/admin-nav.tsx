@@ -9,6 +9,8 @@ const LINKS = [
   { href: '/admin', label: 'Overview', exact: true },
   { href: '/admin/reports', label: 'Reports' },
   { href: '/admin/members', label: 'Members' },
+  { href: '/admin/payments', label: 'Payments' },
+  { href: '/admin/codes', label: 'Codes' },
 ]
 
 export function AdminNav() {
