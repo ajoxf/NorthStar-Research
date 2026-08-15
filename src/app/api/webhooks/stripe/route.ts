@@ -139,6 +139,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     })
   })
 
+  // A receipt for a payment that actually happened. Stripe emails its own receipt only
+  // if that is switched on in the dashboard, and it carries Stripe's branding rather
+  // than ours — this one is ours and always sends.
+  try {
+    const receipt = await getNotificationProvider().sendReceiptEmail(
+      { email },
+      {
+        amount: ((session.amount_total ?? 19900) / 100).toFixed(2),
+        currency: (session.currency ?? 'usd').toUpperCase(),
+        method: 'Card',
+        reference: session.id,
+        paidAt: new Date(),
+      },
+    )
+    if (receipt.status === 'failed') {
+      console.error(`[stripe:webhook] receipt failed for ${email}: ${receipt.error}`)
+    }
+  } catch (error) {
+    console.error('[stripe:webhook] receipt threw', error)
+  }
+
   // Credit the affiliate, if this buyer came through one. Never throws — see the note in
   // referral-attribution.ts: the payment is real whatever bookkeeping does.
   await recordReferralConversion(email, Math.round((session.amount_total ?? 19900) / 100))

@@ -3,13 +3,16 @@ import { Resend } from 'resend'
 import { optionalEnv, requireEnv } from '@/lib/env'
 import {
   magicLinkEmail,
+  receiptEmail,
   redemptionCodeEmail,
   renewalReminderEmail,
+  welcomeEmail,
   reportEmail,
   sampleReportRequestEmail,
 } from '@/lib/notifications/templates'
 import type {
   DeliveryResult,
+  ReceiptDetails,
   NotificationProvider,
   Recipient,
   ReportSummary,
@@ -70,6 +73,22 @@ export class ResendProvider implements NotificationProvider {
     redeemUrl: string,
   ): Promise<DeliveryResult> {
     const { subject, html, text } = redemptionCodeEmail(code, redeemUrl, recipient.firstName)
+    return this.send(recipient.email, subject, html, text)
+  }
+
+  async sendWelcomeEmail(
+    recipient: { email: string; firstName?: string | null },
+    dashboardUrl: string,
+  ): Promise<DeliveryResult> {
+    const { subject, html, text } = welcomeEmail(dashboardUrl, recipient.firstName)
+    return this.send(recipient.email, subject, html, text)
+  }
+
+  async sendReceiptEmail(
+    recipient: { email: string; firstName?: string | null },
+    details: ReceiptDetails,
+  ): Promise<DeliveryResult> {
+    const { subject, html, text } = receiptEmail(details, recipient.firstName)
     return this.send(recipient.email, subject, html, text)
   }
 

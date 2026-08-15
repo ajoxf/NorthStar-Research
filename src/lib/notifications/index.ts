@@ -5,11 +5,12 @@ import { TwilioWhatsAppProvider } from '@/lib/notifications/twilio-provider'
 import type {
   DeliveryResult,
   NotificationProvider,
+  ReceiptDetails,
   Recipient,
   ReportSummary,
 } from '@/lib/notifications/types'
 
-export type { DeliveryResult, NotificationProvider, Recipient, ReportSummary }
+export type { DeliveryResult, NotificationProvider, ReceiptDetails, Recipient, ReportSummary }
 
 /**
  * Provider registry — the single place a delivery vendor is named.
@@ -81,6 +82,17 @@ class CompositeProvider implements NotificationProvider {
 
   sendSampleReportRequest(request: { name: string; email: string; note?: string }) {
     return this.email.sendSampleReportRequest(request)
+  }
+
+  sendWelcomeEmail(recipient: { email: string; firstName?: string | null }, dashboardUrl: string) {
+    return this.email.sendWelcomeEmail(recipient, dashboardUrl)
+  }
+
+  sendReceiptEmail(
+    recipient: { email: string; firstName?: string | null },
+    details: ReceiptDetails,
+  ) {
+    return this.email.sendReceiptEmail(recipient, details)
   }
 
   sendRenewalReminder(

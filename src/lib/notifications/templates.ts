@@ -86,6 +86,120 @@ export function reportEmail(report: ReportSummary, reportUrl: string, firstName?
   }
 }
 
+/**
+ * The welcome, sent once when a membership becomes active.
+ *
+ * Fires at *redemption*, not at payment, because that is the one point every route
+ * converges on — card, crypto and a gifted or referral code all end there — and it is
+ * the first moment there is an account to welcome anybody to. Sending it from the
+ * payment webhooks instead would greet card and crypto buyers and silently skip
+ * everybody who arrived on a code.
+ *
+ * Warm, and short. It tells a new member what happens next and where to go; it does not
+ * repeat the sales page at somebody who has already bought.
+ */
+export function welcomeEmail(
+  dashboardUrl: string,
+  firstName?: string | null,
+  reportsPerWeek = 3,
+) {
+  const greeting = firstName ? `Welcome, ${escapeHtml(firstName)}.` : 'Welcome aboard.'
+
+  const body = `
+    <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:${ACCENT};margin-bottom:10px;">Membership active</div>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:26px;line-height:1.25;font-weight:500;color:${INK};">${greeting}</h1>
+    <p style="margin:0 0 18px;color:${INK};font-size:15px;line-height:1.7;">You are in. Your membership is active and the full archive is open to you from right now — not just what we publish next.</p>
+    <p style="margin:0 0 18px;color:${INK};font-size:15px;line-height:1.7;">${reportsPerWeek} reports land each week. You will get an email the moment each one is published, with a link straight into your portal.</p>
+    <p style="margin:0 0 6px;color:${INK_DIM};font-size:14px;line-height:1.7;">Two things worth knowing:</p>
+    <ul style="margin:0 0 4px;padding-left:18px;color:${INK_DIM};font-size:14px;line-height:1.7;">
+      <li style="margin-bottom:6px;">Reports open in the portal rather than in the email. Every link checks your session first, so nothing is readable without signing in.</li>
+      <li>Your access is personal. Views and downloads are watermarked to your account.</li>
+    </ul>
+    ${button(dashboardUrl, 'Open your portal')}
+    <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Reply to this email if you need anything — a person reads it.</p>
+  `
+
+  return {
+    subject: 'Welcome to NordStar Pro',
+    html: shell('Welcome to NordStar Pro', body),
+    text:
+      `${firstName ? `Welcome, ${firstName}.` : 'Welcome aboard.'}\n\n` +
+      `Your membership is active and the full archive is open to you from right now.\n\n` +
+      `${reportsPerWeek} reports land each week. You will get an email the moment each one ` +
+      `is published, with a link straight into your portal.\n\n` +
+      `Reports open in the portal, not in the email — every link checks your session ` +
+      `first. Your access is personal, and views and downloads are watermarked to your ` +
+      `account.\n\n` +
+      `Open your portal: ${dashboardUrl}\n\n` +
+      `Reply to this email if you need anything — a person reads it.`,
+  }
+}
+
+/** One line of a receipt. */
+export type ReceiptDetails = {
+  /** Formatted for display — "199.00", not a float. */
+  amount: string
+  currency: string
+  /** "Card" or "Crypto". */
+  method: string
+  /** The processor's own reference, so a query can be traced without guessing. */
+  reference: string
+  paidAt: Date
+}
+
+/**
+ * A receipt for a payment that actually happened.
+ *
+ * Sent from the payment webhooks rather than at redemption, because this is the only
+ * place the amount, currency and processor reference are known — and because a gifted or
+ * referral code involves no payment, so there is nothing to receipt. A free member gets
+ * the welcome and no receipt, which is correct rather than an omission.
+ *
+ * Deliberately plain. A receipt is a record somebody may forward to an accountant, so it
+ * states what was paid, when, how, and against which reference, and sells nothing.
+ */
+export function receiptEmail(details: ReceiptDetails, firstName?: string | null) {
+  const paid = details.paidAt.toLocaleDateString('en-US', {
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric',
+  })
+  const total = `${escapeHtml(details.currency)} ${escapeHtml(details.amount)}`
+
+  const row = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-bottom:1px solid ${LINE};color:${INK_DIM};font-size:13px;">${escapeHtml(label)}</td>
+      <td style="padding:9px 0;border-bottom:1px solid ${LINE};color:${INK};font-size:13px;text-align:right;font-family:'IBM Plex Mono',Consolas,monospace;">${value}</td>
+    </tr>`
+
+  const body = `
+    <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${firstName ? `${escapeHtml(firstName)},` : 'Hello,'}</p>
+    <h1 style="margin:0 0 6px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:24px;line-height:1.3;font-weight:500;color:${INK};">Payment received</h1>
+    <p style="margin:0 0 22px;color:${INK_DIM};font-size:14px;line-height:1.65;">Thank you. Keep this email for your records.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+      ${row('Item', 'NordStar Pro membership')}
+      ${row('Amount', total)}
+      ${row('Method', escapeHtml(details.method))}
+      ${row('Date', escapeHtml(paid))}
+      ${row('Reference', escapeHtml(details.reference))}
+    </table>
+    <p style="margin:20px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Your access code and activation link are in a separate email. If it has not arrived, check your spam folder before contacting us.</p>
+  `
+
+  return {
+    subject: `Your NordStar Pro receipt — ${details.currency} ${details.amount}`,
+    html: shell('Your NordStar Pro receipt', body),
+    text:
+      `Payment received. Thank you — keep this email for your records.\n\n` +
+      `Item:      NordStar Pro membership\n` +
+      `Amount:    ${details.currency} ${details.amount}\n` +
+      `Method:    ${details.method}\n` +
+      `Date:      ${paid}\n` +
+      `Reference: ${details.reference}\n\n` +
+      `Your access code and activation link are in a separate email.`,
+  }
+}
+
 export function redemptionCodeEmail(code: string, redeemUrl: string, firstName?: string | null) {
   const greeting = firstName ? `${escapeHtml(firstName)},` : 'Welcome,'
 

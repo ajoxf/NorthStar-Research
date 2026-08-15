@@ -179,6 +179,26 @@ export async function POST(request: Request) {
   const redeemUrl = `${appBaseUrl()}/redeem?code=${encodeURIComponent(code)}`
   const provider = getNotificationProvider()
 
+  // A receipt for a payment that actually happened. Sent here rather than at redemption
+  // because this is the only place the amount and the processor's reference are known.
+  try {
+    const receipt = await provider.sendReceiptEmail(
+      { email: order.email },
+      {
+        amount: order.amount,
+        currency: order.currency,
+        method: 'Crypto',
+        reference: cregisOrderId,
+        paidAt: new Date(),
+      },
+    )
+    if (receipt.status === 'failed') {
+      console.error(`[cregis:webhook] receipt failed for ${order.email}: ${receipt.error}`)
+    }
+  } catch (error) {
+    console.error('[cregis:webhook] receipt threw', error)
+  }
+
   // Credit the affiliate, if this buyer came through one. Never throws — see the note in
   // referral-attribution.ts: the payment is real whatever bookkeeping does.
   await recordReferralConversion(order.email, Math.round(Number(order.amount) || 0))

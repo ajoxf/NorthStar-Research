@@ -1,5 +1,9 @@
 import type { Member, Report } from '@prisma/client'
 
+import type { ReceiptDetails } from '@/lib/notifications/templates'
+
+export type { ReceiptDetails }
+
 /**
  * The delivery seam.
  *
@@ -79,6 +83,29 @@ export interface NotificationProvider {
    * cause research to be delivered to an arbitrary address (build spec §5.5).
    */
   sendSampleReportRequest(request: SampleReportRequest): Promise<DeliveryResult>
+
+  /**
+   * Transactional: welcome a member whose membership has just become active.
+   *
+   * Called once, at redemption — the single point every route converges on, so a member
+   * who arrived on a gifted or referral code is welcomed exactly like one who paid.
+   */
+  sendWelcomeEmail(
+    recipient: { email: string; firstName?: string | null },
+    dashboardUrl: string,
+  ): Promise<DeliveryResult>
+
+  /**
+   * Transactional: a receipt for a payment that actually happened.
+   *
+   * Called from the payment webhooks, which is the only place the amount and the
+   * processor's reference are known. Free and gifted memberships have no payment and
+   * therefore get no receipt.
+   */
+  sendReceiptEmail(
+    recipient: { email: string; firstName?: string | null },
+    details: ReceiptDetails,
+  ): Promise<DeliveryResult>
 
   /** Transactional: warn a crypto member that their period is about to lapse. */
   sendRenewalReminder(
