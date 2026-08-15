@@ -71,7 +71,7 @@ const MIN_CHART_ASPECT = 1.3
 
 /**
  * An image appearing on more than this share of pages is page furniture — a logo or a
- * letterhead — not content. This is the general rule; it is what excludes the NorthStar
+ * letterhead — not content. This is the general rule; it is what excludes the NordStar
  * mark that sits on all 22 pages without hard-coding anything about it.
  */
 const FURNITURE_PAGE_SHARE = 0.5

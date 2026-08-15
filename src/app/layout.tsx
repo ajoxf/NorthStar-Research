@@ -5,8 +5,8 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: {
-    default: 'NorthStar Research — Institutional-grade market research',
-    template: '%s · NorthStar Research',
+    default: 'NordStar Pro — Institutional-grade market research',
+    template: '%s · NordStar Pro',
   },
   description:
     'Three research reports every week covering commodities, international markets and indices, and option, crypto and spread opportunities.',

@@ -36,7 +36,7 @@ export default async function AdminBootstrapPage() {
     <div className="flex min-h-screen items-center justify-center bg-panel-2 px-5 py-12">
       <div className="w-full max-w-md">
         <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-dim">
-          NorthStar Research
+          NordStar Pro
         </p>
         <h1 className="mt-2 font-mono text-xl text-ink">First-time setup</h1>
         <p className="mt-2 max-w-sm font-mono text-[12px] leading-relaxed text-ink-dim">

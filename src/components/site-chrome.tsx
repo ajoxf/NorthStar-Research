@@ -7,9 +7,12 @@ import { getCurrentMember } from '@/lib/auth'
 export function Wordmark({ href = '/' }: { href?: string }) {
   return (
     <Link href={href} className="group inline-flex items-baseline gap-2">
-      <span className="font-display text-[19px] tracking-tight text-ink">NorthStar</span>
+      {/* The brand is split across two spans so the two halves can be set differently.
+          Any find-and-replace over "NordStar Pro" therefore misses this — the second
+          span has to be edited by hand or the logo keeps reading the old name. */}
+      <span className="font-display text-[19px] tracking-tight text-ink">NordStar</span>
       <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent transition-colors group-hover:text-ink">
-        Research
+        Pro
       </span>
     </Link>
   )
@@ -104,7 +107,7 @@ export function SiteFooter() {
           <h2 className="eyebrow mb-4">Disclaimer</h2>
           <DisclaimerText className="space-y-3 text-[12px] leading-relaxed text-ink-dim/85" />
           <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim/60">
-            © {new Date().getFullYear()} NorthStar Research
+            © {new Date().getFullYear()} NordStar Pro
           </p>
         </div>
       </div>

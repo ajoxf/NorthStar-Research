@@ -76,7 +76,7 @@ export class TwilioWhatsAppProvider implements NotificationProvider {
     const label = reportTypeLabel(report.type)
     return this.send(
       recipient.phoneNumber,
-      `NorthStar Research — ${label}: ${report.title}. Read it in your member portal (sign-in required): ${reportUrl}`,
+      `NordStar Pro — ${label}: ${report.title}. Read it in your member portal (sign-in required): ${reportUrl}`,
       { 1: label, 2: report.title, 3: reportUrl },
     )
   }
@@ -88,7 +88,7 @@ export class TwilioWhatsAppProvider implements NotificationProvider {
   ): Promise<DeliveryResult> {
     return this.send(
       recipient.phoneNumber,
-      `NorthStar Research — your access code is ${code}. Activate your membership: ${redeemUrl}`,
+      `NordStar Pro — your access code is ${code}. Activate your membership: ${redeemUrl}`,
       { 1: code, 2: redeemUrl },
     )
   }

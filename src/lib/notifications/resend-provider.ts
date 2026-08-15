@@ -29,7 +29,7 @@ export class ResendProvider implements NotificationProvider {
   }
 
   private from(): string {
-    return optionalEnv('EMAIL_FROM', 'NorthStar Research <onboarding@resend.dev>')
+    return optionalEnv('EMAIL_FROM', 'NordStar Pro <onboarding@resend.dev>')
   }
 
   private async send(to: string, subject: string, html: string, text: string): Promise<DeliveryResult> {

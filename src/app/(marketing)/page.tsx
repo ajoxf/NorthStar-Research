@@ -60,7 +60,7 @@ function Hero() {
           </h1>
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
-            NorthStar Research publishes four reports a week — commodities, international markets
+            NordStar Pro publishes four reports a week — commodities, international markets
             and indices, option, crypto and spread opportunities, and FX. Levels, bias, invalidation
             and positioning notes. No noise, no upsells, one price.
           </p>

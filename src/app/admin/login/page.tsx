@@ -20,7 +20,7 @@ export default async function AdminLoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-dim">
-            NorthStar Research
+            NordStar Pro
           </p>
           <h1 className="mt-2 font-mono text-xl text-ink">Admin console</h1>
           <p className="mt-2 font-mono text-[12px] text-ink-dim">Internal tool — staff only.</p>

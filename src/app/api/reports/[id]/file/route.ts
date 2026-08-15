@@ -65,6 +65,6 @@ function slugify(value: string): string {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '')
-      .slice(0, 60) || 'northstar-report'
+      .slice(0, 60) || 'nordstarpro-report'
   )
 }
