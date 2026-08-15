@@ -1,4 +1,4 @@
-# NorthStar Research — go-live checklist
+# NordStar Pro — go-live checklist
 
 Ordered by what blocks what. Work top to bottom.
 
@@ -22,7 +22,7 @@ Once registered:
 1. Vercel → Project → Settings → Domains → add it, follow the DNS records shown.
 2. Set `APP_BASE_URL=https://yourdomain.com` (Production).
 3. Resend → Domains → add the same domain, add the SPF/DKIM records it gives you.
-4. Set `EMAIL_FROM="NorthStar Research <reports@yourdomain.com>"` and `EMAIL_PROVIDER=resend`.
+4. Set `EMAIL_FROM="NordStar Pro <reports@yourdomain.com>"` and `EMAIL_PROVIDER=resend`.
 
 **If you are not registering a domain yet**, see §6 — there is a no-email fallback, but it
 is a deliberate decision, not a default.
@@ -117,7 +117,7 @@ live one.
 >    on our side?
 >
 > Thank you,
-> &lt;your name&gt; — NorthStar Research
+> &lt;your name&gt; — NordStar Pro
 
 ---
 

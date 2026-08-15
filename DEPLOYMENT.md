@@ -8,18 +8,31 @@ in the Vercel dashboard, not in a file.
 
 ---
 
-## 1. Create the project (about 30 seconds)
+## 1. The project (already created)
 
-1. Go to <https://vercel.com/new> with the **ajoxf's projects** team selected.
-2. Import **`ajoxf/NorthStar-Research`**.
-3. Leave the framework preset as **Next.js** and the build settings untouched — the repo's
-   `package.json` and `vercel.json` already carry the right build command and cron schedule.
-4. Set the project name to **`northstar-research`**, giving you
-   `northstar-research.vercel.app`.
-5. **Do not click Deploy yet** — add the environment variables in step 3 first, or the first
-   build will succeed but every page that touches the database will error at runtime.
+The Vercel project exists — this section is here for reference, and for standing up a
+second environment from scratch.
+
+| | |
+| --- | --- |
+| Team | **ajoxf's projects** |
+| Project | **`north-star-research`** |
+| Repository | **`ajoxf/NorthStar-Research`** |
+| Vercel URL | `north-star-research.vercel.app` |
+| Production domain | `nordstarpro.com` |
+
+The project and repository keep their original names after the rebrand to NordStar Pro.
+Renaming either would break the git connection and the deploy URL for no benefit — the
+name a visitor sees is the domain, and that is `nordstarpro.com`.
 
 Production deploys from `main`; every pull request gets its own preview URL automatically.
+
+**If you ever do create a fresh project:** import the repository at
+<https://vercel.com/new>, leave the framework preset as **Next.js** and the build settings
+untouched — `package.json` and `vercel.json` already carry the right build command and
+cron schedule — and add the environment variables in step 3 *before* the first deploy.
+Without them the build succeeds and every page that touches the database errors at
+runtime.
 
 ## 2. Provision storage
 
@@ -38,7 +51,7 @@ Development unless noted.
 
 | Variable | Value |
 | --- | --- |
-| `APP_BASE_URL` | `https://northstar-research.vercel.app` (swap for the real domain later) |
+| `APP_BASE_URL` | `https://nordstarpro.com` |
 | `AUTH_SECRET` | Generate: `openssl rand -base64 32` |
 | `CRON_SECRET` | Generate: `openssl rand -base64 32` |
 | `CREGIS_PROJECT_ID` | `REPLACE_ME_PROJECT_ID` |

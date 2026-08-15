@@ -85,7 +85,7 @@ export async function GET(request: Request) {
   return new NextResponse(csv, {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
-      'Content-Disposition': `attachment; filename="northstar-members-${stamp}.csv"`,
+      'Content-Disposition': `attachment; filename="nordstarpro-members-${stamp}.csv"`,
       'Cache-Control': 'no-store',
     },
   })

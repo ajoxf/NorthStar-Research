@@ -1,4 +1,4 @@
-// NorthStar Research — data model.
+// NordStar Pro — data model.
 //
 // This schema is deliberately CRM-shaped: a Member is not just an auth row, it is a
 // contact with a subscription, contact channels, tags/notes for segmentation, and a

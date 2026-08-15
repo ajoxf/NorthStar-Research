@@ -17,7 +17,7 @@
  *     mechanical, which is the opposite of the point.
  */
 
-const STORAGE_KEY = 'northstar:page-sound'
+const STORAGE_KEY = 'nordstarpro:page-sound'
 
 export type PageSound = {
   play: () => void

@@ -145,7 +145,7 @@ export function JoinForm({
 
       <p className="mt-4 text-center text-[12px] leading-relaxed text-ink-dim">
         {method === 'card'
-          ? 'Billed monthly. Cancel any time from your account. NorthStar Research never sees your card details.'
+          ? 'Billed monthly. Cancel any time from your account. NordStar Pro never sees your card details.'
           : 'One month of access per payment. Crypto cannot renew automatically, so we will remind you before it ends.'}
       </p>
     </form>

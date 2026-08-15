@@ -1,4 +1,4 @@
-# NorthStar Research — Member Portal
+# NordStar Pro — Member Portal
 
 A membership portal for a financial research firm. Members subscribe at **$199/month** by
 card or crypto, receive a one-time access code, create an account with it, and get four
@@ -214,7 +214,7 @@ Things this build deliberately did not decide, and things that need a real value
 
 **Needs content:**
 
-- **Production domain** — currently `northstarresearch.com` in `src/components/disclaimer.tsx`
+- **Production domain** — currently `nordstarpro.com` in `src/components/disclaimer.tsx`
   (`SITE_DOMAIN`). The disclaimer names it as the sole official channel, so it must be right.
 - **Privacy Policy** — `/privacy-policy` is a clearly-labelled placeholder. It accurately
   describes what the system does with member data, which makes it a useful brief for a

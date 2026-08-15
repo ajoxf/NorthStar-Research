@@ -7,25 +7,25 @@ import Link from 'next/link'
  * Until the real domain is confirmed this default stands in; change it here and it
  * updates the footer, the /disclaimer page and the FAQs together.
  */
-export const SITE_DOMAIN = 'northstarresearch.com'
+export const SITE_DOMAIN = 'nordstarpro.com'
 
 /**
  * Section 8 disclaimer, verbatim. Do not shorten, paraphrase or re-order this copy —
- * only the NorthStar-specific substitutions already present are permitted.
+ * only the NordStar-specific substitutions already present are permitted.
  */
 export function DisclaimerText({ className }: { className?: string }) {
   return (
     <div className={className}>
       <p>
         All content, trading ideas, signals, setups, open positions, and closed positions on the
-        NorthStar Research website are for educational and informational purposes only. They should
+        NordStar Pro website are for educational and informational purposes only. They should
         not be construed as financial advice or recommendations to buy or sell any security or
         specific assets.
       </p>
       <p>
         Trading in financial markets, including day trading, swing trading, and AI-assisted trading,
         involves substantial risk and is not suitable for every investor. Past performance is not
-        indicative of future results. NorthStar Research makes no representation, promise, or
+        indicative of future results. NordStar Pro makes no representation, promise, or
         guarantee of any specific outcome or profit.
       </p>
       <p>
@@ -37,7 +37,7 @@ export function DisclaimerText({ className }: { className?: string }) {
         risk tolerance.
       </p>
       <p>
-        <strong className="text-ink">Online Safety Notice:</strong> NorthStar Research and its
+        <strong className="text-ink">Online Safety Notice:</strong> NordStar Pro and its
         analysts will never contact you privately to request money, offer account management, or
         provide trading services through WhatsApp, Telegram, Discord, or social media direct
         messages. All official services are available exclusively through {SITE_DOMAIN}.
@@ -49,7 +49,7 @@ export function DisclaimerText({ className }: { className?: string }) {
         and signals and should be treated as such.
       </p>
       <p>
-        NorthStar Research, its employees, and associates are not liable for your trading outcomes.
+        NordStar Pro, its employees, and associates are not liable for your trading outcomes.
         For more details, read our{' '}
         <Link href="/privacy-policy" className="text-accent underline underline-offset-4">
           Privacy Policy

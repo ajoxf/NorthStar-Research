@@ -12,7 +12,7 @@ export class MissingConfigError extends Error {
 
   constructor(keys: string[], context: string) {
     super(
-      `[NorthStar] ${context} is not configured. The following environment variable(s) are ` +
+      `[NordStar] ${context} is not configured. The following environment variable(s) are ` +
         `missing or still set to a placeholder: ${keys.join(', ')}. ` +
         `Set real values in Vercel → Settings → Environment Variables (see .env.example).`,
     )
@@ -67,7 +67,7 @@ export const PLAN = {
   amount: '199.00',
   currency: 'USD',
   interval: 'month',
-  name: 'NorthStar Research Membership',
+  name: 'NordStar Pro Membership',
   description: '3 research reports per week',
 } as const
 

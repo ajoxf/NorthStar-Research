@@ -28,7 +28,7 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
         You can pay by card or in crypto. Card subscriptions renew automatically each month and can
         be cancelled any time from your account. Crypto cannot renew automatically — there is no
         card on file for us to charge — so you pay again whenever you want another month, and we
-        email you a few days before your access ends. Either way, NorthStar Research never handles
+        email you a few days before your access ends. Either way, NordStar Pro never handles
         your payment details, and you receive an access code once payment confirms.
       </>
     ),

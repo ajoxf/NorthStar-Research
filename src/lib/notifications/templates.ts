@@ -34,13 +34,13 @@ function shell(title: string, body: string, footerNote?: string): string {
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:${PANEL};border:1px solid ${LINE};border-radius:12px;overflow:hidden;">
         <tr><td style="padding:24px 28px 8px;border-bottom:1px solid ${LINE};">
-          <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:${ACCENT};">NorthStar Research</div>
+          <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:${ACCENT};">NordStar Pro</div>
         </td></tr>
         <tr><td style="padding:28px;">${body}</td></tr>
         <tr><td style="padding:18px 28px 26px;border-top:1px solid ${LINE};color:${INK_DIM};font-size:11px;line-height:1.6;">
           ${footerNote ? `<p style="margin:0 0 10px;">${footerNote}</p>` : ''}
           <p style="margin:0 0 10px;">Research is for educational and informational purposes only and is not financial advice. Trading involves substantial risk and past performance does not indicate future results.</p>
-          <p style="margin:0;">NorthStar Research will never contact you privately to request money or offer account management via WhatsApp, Telegram, Discord or social media DMs.</p>
+          <p style="margin:0;">NordStar Pro will never contact you privately to request money or offer account management via WhatsApp, Telegram, Discord or social media DMs.</p>
         </td></tr>
       </table>
     </td></tr>
@@ -101,8 +101,8 @@ export function redemptionCodeEmail(code: string, redeemUrl: string, firstName?:
   `
 
   return {
-    subject: 'Your NorthStar Research access code',
-    html: shell('Your NorthStar Research access code', body),
+    subject: 'Your NordStar Pro access code',
+    html: shell('Your NordStar Pro access code', body),
     text:
       `Your membership is confirmed.\n\nAccess code: ${code}\n\n` +
       `Activate your membership: ${redeemUrl}\n\n` +
@@ -116,15 +116,15 @@ export function magicLinkEmail(link: string, expiresInMinutes: number, firstName
   const body = `
     <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
     <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your sign-in link</h1>
-    <p style="margin:0 0 4px;color:${INK};font-size:15px;line-height:1.65;">Click below to sign in to your NorthStar Research account. The link expires in ${expiresInMinutes} minutes.</p>
+    <p style="margin:0 0 4px;color:${INK};font-size:15px;line-height:1.65;">Click below to sign in to your NordStar Pro account. The link expires in ${expiresInMinutes} minutes.</p>
     ${button(link, 'Sign in')}
     <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">If you did not ask to sign in, you can ignore this email — nobody can access your account without this link.</p>
   `
 
   return {
-    subject: 'Your NorthStar Research sign-in link',
+    subject: 'Your NordStar Pro sign-in link',
     html: shell('Your sign-in link', body),
-    text: `Sign in to NorthStar Research:\n${link}\n\nThis link expires in ${expiresInMinutes} minutes.`,
+    text: `Sign in to NordStar Pro:\n${link}\n\nThis link expires in ${expiresInMinutes} minutes.`,
   }
 }
 
@@ -152,10 +152,10 @@ export function renewalReminderEmail(
   return {
     subject:
       daysRemaining <= 0
-        ? 'Your NorthStar Research membership has ended'
-        : `Your NorthStar Research membership ${when}`,
+        ? 'Your NordStar Pro membership has ended'
+        : `Your NordStar Pro membership ${when}`,
     html: shell('Membership renewal', body),
-    text: `Your NorthStar Research membership ${when}.\n\nRenew: ${renewUrl}`,
+    text: `Your NordStar Pro membership ${when}.\n\nRenew: ${renewUrl}`,
   }
 }
 

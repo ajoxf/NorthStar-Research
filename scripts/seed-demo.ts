@@ -124,9 +124,9 @@ async function main() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12)
 
   const member = await db.member.upsert({
-    where: { email: 'demo@northstarresearch.com' },
+    where: { email: 'demo@nordstarpro.com' },
     create: {
-      email: 'demo@northstarresearch.com',
+      email: 'demo@nordstarpro.com',
       passwordHash,
       firstName: 'Demo',
       lastName: 'Member',
