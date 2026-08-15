@@ -14,7 +14,7 @@
     "create-admin": "tsx scripts/create-admin.ts",
     "seed-demo": "tsx scripts/seed-demo.ts",
     "db:deploy": "node scripts/db-deploy.mjs",
-    "test": "tsx --test src/**/*.test.ts"
+    "test": "tsx --test \"src/**/*.test.ts\""
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

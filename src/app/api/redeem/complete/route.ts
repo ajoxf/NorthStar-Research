@@ -7,6 +7,8 @@ import { hashPassword, startSession } from '@/lib/auth'
 import { isCodeExpired, normaliseCode } from '@/lib/codes'
 import { normalisePhone } from '@/lib/utils'
 import { recordReferralSignup, referralSlugFromCookie } from '@/lib/referral-attribution'
+import { appBaseUrl } from '@/lib/env'
+import { getNotificationProvider } from '@/lib/notifications'
 
 export const runtime = 'nodejs'
 
@@ -115,9 +117,27 @@ export async function POST(request: Request) {
       return created
     })
 
-    // After the transaction, and never inside it: attribution must not be able to roll
-    // back a membership somebody has paid for.
+    // After the transaction, and never inside it: neither attribution nor a welcome
+    // email may roll back a membership somebody has paid for.
     await recordReferralSignup(referralSlugFromCookie(), email, member.id)
+
+    // The welcome fires here rather than from the payment webhooks because this is the
+    // one point every route converges on — card, crypto, and gifted or referral codes.
+    // Sending it from the webhooks would greet buyers and silently skip everybody who
+    // arrived on a code.
+    try {
+      const result = await getNotificationProvider().sendWelcomeEmail(
+        { email, firstName: member.firstName },
+        `${appBaseUrl()}/dashboard`,
+      )
+      if (result.status === 'failed') {
+        console.error(`[redeem] welcome email failed for ${email}: ${result.error}`)
+      }
+    } catch (error) {
+      // A membership that is active must not be reported as failed because a welcome
+      // could not be sent. The member is in; the greeting is not load-bearing.
+      console.error('[redeem] welcome email threw', error)
+    }
 
     await startSession(member)
     return NextResponse.json({ ok: true, redirectTo: '/dashboard' })

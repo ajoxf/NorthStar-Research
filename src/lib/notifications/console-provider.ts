@@ -1,10 +1,11 @@
 import type {
   DeliveryResult,
   NotificationProvider,
+  ReceiptDetails,
   Recipient,
   ReportSummary,
 } from '@/lib/notifications/types'
-import { redemptionCodeEmail, reportEmail } from '@/lib/notifications/templates'
+import { receiptEmail, redemptionCodeEmail, reportEmail, welcomeEmail } from '@/lib/notifications/templates'
 
 /**
  * Development / unconfigured fallback.
@@ -59,6 +60,26 @@ export class ConsoleProvider implements NotificationProvider {
   ): Promise<DeliveryResult> {
     console.info(
       `[notifications:console] WHATSAPP → ${recipient.phoneNumber} | code=${code} | ${redeemUrl}`,
+    )
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
+  async sendWelcomeEmail(
+    recipient: { email: string; firstName?: string | null },
+    dashboardUrl: string,
+  ): Promise<DeliveryResult> {
+    const { subject } = welcomeEmail(dashboardUrl, recipient.firstName)
+    console.info(`[notifications:console] EMAIL → ${recipient.email} | ${subject} | ${dashboardUrl}`)
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
+  async sendReceiptEmail(
+    recipient: { email: string; firstName?: string | null },
+    details: ReceiptDetails,
+  ): Promise<DeliveryResult> {
+    const { subject } = receiptEmail(details, recipient.firstName)
+    console.info(
+      `[notifications:console] EMAIL → ${recipient.email} | ${subject} | ref=${details.reference}`,
     )
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
