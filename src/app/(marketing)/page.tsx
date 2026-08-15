@@ -39,7 +39,7 @@ function Hero() {
       <div className="relative mx-auto max-w-6xl px-5 py-24 sm:py-36 lg:py-44">
         <div className="max-w-2xl animate-fade-up lg:max-w-[52%]">
           <Badge tone="accent" className="mb-6">
-            Four reports · Every week
+            Three reports · Every week
           </Badge>
 
           {/* Oversized and tightly tracked, per the reference: the headline is the
@@ -47,20 +47,20 @@ function Hero() {
               steps back down at the large breakpoint, where the photograph takes the
               right of the frame and the headline has half the width to live in. */}
           <h1 className="text-balance font-display text-[2.75rem] font-semibold tracking-[-0.035em] text-ink sm:text-6xl md:text-7xl lg:text-[3.5rem] xl:text-[4rem]">
-            Research written for people who actually take the trade.
+            Research for people who read the charts themselves.
           </h1>
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
-            NordStar Pro publishes four reports a week, covering commodities, international
+            NordStar Pro publishes three reports a week, covering commodities, international
             markets and indices, options, crypto and spreads, and FX. Each one carries alpha
-            generation ideas, with the levels, bias, invalidation and positioning that stand
-            behind them. No noise, no upsells, one price.
+            generation ideas, with the levels, bias and invalidation. No noise, no upsells, one
+            price.
           </p>
 
           {/* Icon + uppercase meta row, sitting between the copy and the actions. */}
           <ul className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3">
             {[
-              { icon: FileText, label: '4 reports / week' },
+              { icon: FileText, label: '3 reports / week' },
               { icon: Archive, label: 'Full archive' },
               { icon: Smartphone, label: 'Mobile friendly' },
             ].map((item) => (
@@ -143,14 +143,14 @@ function PricingSection() {
             </span>
           </div>
           <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
-            One plan. Four reports a week, the complete archive of everything published, and an
+            One plan. Three reports a week, the complete archive of everything published, and an
             email the moment each one lands. Pay by card and it renews itself — cancel any time —
             or pay in crypto and renew whenever you choose.
           </p>
 
           <ul className="mt-8 space-y-3 border-t border-line pt-7">
             {[
-              'All four weekly reports',
+              'Every weekly report',
               'Full archive of every past report',
               'Mobile-ready reading view',
               'Emailed the moment each report lands',

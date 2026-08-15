@@ -15,7 +15,7 @@ export type ReportCardData = {
   viewed?: boolean
 }
 
-/** Prominent card used for the current week's four reports (build spec §6). */
+/** Prominent card used for the current week's reports (build spec §6). */
 export function ReportCard({ report, index }: { report: ReportCardData; index?: number }) {
   const meta = reportTypeMeta(report.type)
 

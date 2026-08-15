@@ -20,7 +20,7 @@ export default function JoinPage() {
         <div>
           <span className="eyebrow">Membership</span>
           <h1 className="mt-3 text-balance text-4xl leading-tight text-ink sm:text-[42px]">
-            One plan. Four reports a week.
+            One plan. Three reports a week.
           </h1>
           <p className="mt-5 max-w-md text-[16px] leading-relaxed text-ink-dim">
             Pay by card and your membership renews itself each month. Prefer crypto? You can pay
@@ -54,7 +54,7 @@ export default function JoinPage() {
           </div>
 
           <ul className="space-y-2.5 py-6">
-            {['4 reports every week', 'Complete archive access', 'Emailed the moment each report lands'].map(
+            {['3 reports every week', 'Complete archive access', 'Emailed the moment each report lands'].map(
               (item) => (
                 <li key={item} className="flex items-center gap-2.5 text-[14px] text-ink-dim">
                   <Check className="h-3.5 w-3.5 shrink-0 text-up" aria-hidden />

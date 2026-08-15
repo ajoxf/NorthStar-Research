@@ -69,7 +69,7 @@ export function SiteFooter() {
             <Wordmark />
             <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
               Three research reports every week, covering commodities, international markets and
-              indices, and option, crypto and spread opportunities.
+              indices, options, crypto and spreads, and FX.
             </p>
           </div>
 

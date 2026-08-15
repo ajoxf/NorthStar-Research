@@ -60,7 +60,7 @@ export default async function DashboardPage() {
           {name ? `Welcome back, ${name}.` : 'Welcome back.'}
         </h1>
         <p className="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-dim">
-          The latest edition of all four reports. Everything published before is in the archive.
+          The latest edition of each report. Everything published before is in the archive.
         </p>
       </div>
 
