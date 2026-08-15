@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { emailSchema } from '@/lib/validation'
+
 import { db } from '@/lib/db'
 import { addBillingPeriod } from '@/lib/env'
 import { hashPassword, startSession } from '@/lib/auth'
@@ -14,7 +16,7 @@ export const runtime = 'nodejs'
 
 const schema = z.object({
   code: z.string().min(4),
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(10, 'Use at least 10 characters.'),
   firstName: z.string().trim().max(80).optional(),
   lastName: z.string().trim().max(80).optional(),
@@ -39,7 +41,7 @@ export async function POST(request: Request) {
   }
 
   const code = normaliseCode(parsed.data.code)
-  const email = parsed.data.email.trim().toLowerCase()
+  const email = parsed.data.email
   const phoneNumber = parsed.data.phoneNumber ? normalisePhone(parsed.data.phoneNumber) : null
 
   const existing = await db.member.findUnique({ where: { email } })

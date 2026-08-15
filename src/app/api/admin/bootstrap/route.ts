@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { emailSchema } from '@/lib/validation'
+
 import { db } from '@/lib/db'
 import { hashPassword, startSession } from '@/lib/auth'
 import { isPlaceholder } from '@/lib/env'
@@ -28,7 +30,7 @@ export const dynamic = 'force-dynamic'
 
 const schema = z.object({
   secret: z.string().min(1),
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(12, 'Use at least 12 characters for an admin password.'),
 })
 
