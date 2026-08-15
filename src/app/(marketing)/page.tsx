@@ -1,14 +1,5 @@
 import Link from 'next/link'
-import {
-  Archive,
-  ArrowRight,
-  Check,
-  FileText,
-  Lock,
-  MessageCircle,
-  ShieldCheck,
-  Smartphone,
-} from 'lucide-react'
+import { Archive, ArrowRight, Check, FileText, Lock, Smartphone } from 'lucide-react'
 
 import { SampleReportForm } from '@/app/(marketing)/sample-report-form'
 import { HeroMedia } from '@/components/hero-media'
@@ -60,9 +51,10 @@ function Hero() {
           </h1>
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
-            NordStar Pro publishes four reports a week — commodities, international markets
-            and indices, option, crypto and spread opportunities, and FX. Levels, bias, invalidation
-            and positioning notes. No noise, no upsells, one price.
+            NordStar Pro publishes four reports a week, covering commodities, international
+            markets and indices, options, crypto and spreads, and FX. Each one carries alpha
+            generation ideas, with the levels, bias, invalidation and positioning that stand
+            behind them. No noise, no upsells, one price.
           </p>
 
           {/* Icon + uppercase meta row, sitting between the copy and the actions. */}
@@ -70,7 +62,7 @@ function Hero() {
             {[
               { icon: FileText, label: '4 reports / week' },
               { icon: Archive, label: 'Full archive' },
-              { icon: Smartphone, label: 'Reads on mobile' },
+              { icon: Smartphone, label: 'Mobile friendly' },
             ].map((item) => (
               <li key={item.label} className="flex items-center gap-2">
                 <item.icon className="h-3.5 w-3.5 text-accent" aria-hidden />
@@ -107,38 +99,23 @@ function SampleReportSection() {
               Ask for a sample before you subscribe.
             </h2>
             <p className="mt-5 max-w-lg text-[16px] leading-relaxed text-ink-dim">
-              Tell us what you trade and we will send a recent edition so you can judge the
-              research on its own terms. A person reads every request — nothing is automated,
-              and you will not be added to a mailing list.
+              Tell us what you trade and we will send you a recent edition. Read it, and decide
+              for yourself whether the work is worth paying for.
             </p>
 
-            <ul className="mt-8 space-y-4">
-              {[
-                {
-                  icon: Lock,
-                  title: 'Members-only, in every channel',
-                  body: 'Every email carries a link, never the research. Opening it always requires a signed-in member session.',
-                },
-                {
-                  icon: ShieldCheck,
-                  title: 'Watermarked and traceable',
-                  body: 'Every view is signed to your account and watermarked, so reports are not worth passing around.',
-                },
-                {
-                  icon: MessageCircle,
-                  title: 'Built to read on a phone',
-                  body: 'Charts and levels render page by page in the portal — no pinching at a PDF in a browser tab.',
-                },
-              ].map((feature) => (
-                <li key={feature.title} className="flex gap-3.5">
-                  <feature.icon className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
-                  <div>
-                    <h3 className="font-display text-[17px] text-ink">{feature.title}</h3>
-                    <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">{feature.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            {/* One point, not a list. The watermarking and mobile-rendering claims that
+                used to sit beside it were removed; a two-item list with the survivor of a
+                three-item one reads as something half-finished, so this stands alone. */}
+            <div className="mt-8 flex gap-3.5">
+              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
+              <div>
+                <h3 className="font-display text-[17px] text-ink">Members-only, in every channel</h3>
+                <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">
+                  Every email carries a link, never the research. Opening it always requires a
+                  signed-in member session.
+                </p>
+              </div>
+            </div>
           </div>
 
           <SampleReportForm />
