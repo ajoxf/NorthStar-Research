@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { emailSchema } from '@/lib/validation'
+
 import { db } from '@/lib/db'
 import { MissingConfigError, PLAN } from '@/lib/env'
 import { createStripeCheckout } from '@/lib/stripe'
@@ -8,7 +10,7 @@ import { createStripeCheckout } from '@/lib/stripe'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const schema = z.object({ email: z.string().email() })
+const schema = z.object({ email: emailSchema })
 
 /** Start a $199/month card subscription. Access is granted by the webhook, not here. */
 export async function POST(request: Request) {

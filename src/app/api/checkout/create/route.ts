@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { emailSchema } from '@/lib/validation'
+
 import { db } from '@/lib/db'
 import { PLAN } from '@/lib/env'
 import { MissingConfigError } from '@/lib/env'
@@ -10,7 +12,7 @@ import { normalisePhone } from '@/lib/utils'
 export const runtime = 'nodejs'
 
 const schema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   phoneNumber: z.string().trim().optional(),
 })
 

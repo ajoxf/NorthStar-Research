@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { emailSchema } from '@/lib/validation'
+
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { normaliseSlug } from '@/lib/affiliates'
 import { db } from '@/lib/db'
@@ -10,7 +12,7 @@ export const dynamic = 'force-dynamic'
 
 const schema = z.object({
   name: z.string().trim().min(1, 'Give the affiliate a name.').max(120),
-  email: z.string().email('Enter a valid email address.'),
+  email: emailSchema,
   slug: z.string().trim().max(32).optional(),
   rewardKind: z.enum(['percent', 'fixed', 'free_months']).default('percent'),
   rewardAmount: z.number().int().min(0).max(10_000),

@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { emailSchema } from '@/lib/validation'
+
 import { db } from '@/lib/db'
 import { startSession, verifyPassword } from '@/lib/auth'
 
 export const runtime = 'nodejs'
 
 const schema = z.object({
-  email: z.string().email(),
+  email: emailSchema,
   password: z.string().min(1),
 })
 
@@ -19,7 +21,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Enter your email address and password.' }, { status: 400 })
   }
 
-  const email = parsed.data.email.trim().toLowerCase()
+  const email = parsed.data.email
   const member = await db.member.findUnique({ where: { email } })
 
   // Same message and roughly the same work whether the account exists or the password

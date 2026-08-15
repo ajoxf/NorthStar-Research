@@ -64,13 +64,24 @@ export function LoginForm({ next }: { next: string | null }) {
 
     setPending(true)
     try {
-      await fetch('/api/auth/magic', {
+      const response = await fetch('/api/auth/magic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, next }),
       })
-      // Always shows the same confirmation, so this cannot be used to discover which
-      // email addresses belong to members.
+
+      // The response is checked rather than assumed. It used to confirm unconditionally,
+      // which meant that when no email provider was configured the screen said "check
+      // your email" for a message that was never sent — leaving people waiting instead of
+      // trying the password field beside it.
+      if (!response.ok) {
+        const data = await response.json().catch(() => null)
+        setError(data?.error ?? 'We could not send the link. Please try again.')
+        return
+      }
+
+      // On success the confirmation is deliberately identical whether or not the address
+      // has an account, so this cannot be used to discover who is a member.
       setLinkSent(true)
     } catch {
       setError('We could not send the link. Please try again.')

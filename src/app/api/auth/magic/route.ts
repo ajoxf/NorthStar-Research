@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { emailSchema } from '@/lib/validation'
+
 import { db } from '@/lib/db'
 import { hasActiveSubscription, startSession } from '@/lib/auth'
 import { appBaseUrl } from '@/lib/env'
-import { getNotificationProvider } from '@/lib/notifications'
+import { getNotificationProvider, providerNames } from '@/lib/notifications'
 import {
   MAGIC_LINK_TTL_MINUTES,
   createMagicLinkToken,
@@ -16,8 +18,13 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const schema = z.object({
-  email: z.string().email(),
-  next: z.string().optional(),
+  email: emailSchema,
+  // Nullable, not merely optional. The sign-in form always sends this key, and sends
+  // `null` when there is no `?next=` on the URL — which is the common case. Zod's
+  // `.optional()` accepts `undefined` and rejects `null`, so every magic-link request
+  // from the actual form was failing validation before it reached the lookup. The screen
+  // still said "check your email", because it ignored the response.
+  next: z.string().nullable().optional(),
 })
 
 /** Request a magic link. */
@@ -27,7 +34,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Enter a valid email address.' }, { status: 400 })
   }
 
-  const email = parsed.data.email.trim().toLowerCase()
+  // Refuse before pretending. With no email provider configured the console fallback
+  // reports every send as successful, so the form used to tell the visitor a link was on
+  // its way when nothing had left the building — the single worst thing a sign-in screen
+  // can do, because they will wait rather than try another route.
+  //
+  // Whether a provider is configured is a property of the deployment, not of any account,
+  // so saying so leaks nothing an attacker could use to enumerate members.
+  if (providerNames().email === 'console') {
+    console.error('[auth:magic] refused: no email provider is configured')
+    return NextResponse.json(
+      {
+        error:
+          'Sign-in links are unavailable at the moment. Use your email and password, or contact support.',
+      },
+      { status: 503 },
+    )
+  }
+
+  const email = parsed.data.email.toLowerCase()
   const member = await db.member.findUnique({ where: { email } })
 
   // Always answer identically whether or not the account exists — otherwise this

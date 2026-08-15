@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { optionalEmailSchema } from '@/lib/validation'
+
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 
@@ -9,7 +11,7 @@ export const dynamic = 'force-dynamic'
 
 const schema = z.object({
   name: z.string().trim().min(1).max(120).optional(),
-  email: z.string().email().optional(),
+  email: optionalEmailSchema,
   status: z.enum(['active', 'paused', 'closed']).optional(),
   rewardKind: z.enum(['percent', 'fixed', 'free_months']).optional(),
   rewardAmount: z.number().int().min(0).max(10_000).optional(),
