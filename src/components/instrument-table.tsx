@@ -138,8 +138,8 @@ function LockedOverlay() {
         </div>
         <h3 className="mb-2 font-display text-xl text-ink">Members only</h3>
         <p className="mb-5 text-[14px] leading-relaxed text-ink-dim">
-          Levels, bias and positioning notes for every instrument are published to members three
-          times a week. This preview shows the format — the numbers are illustrative.
+          Every instrument is covered in the weekly reports. This preview shows the format only —
+          the numbers are illustrative and are not a recommendation.
         </p>
         <ButtonLink href="/join" size="md">
           Unlock Full Report

@@ -1,6 +1,11 @@
 import type { ReportType } from '@prisma/client'
 
-/** The four fixed weekly reports. There are no other types and none are configurable. */
+/**
+ * The four fixed report types. There are no others and none are configurable.
+ *
+ * Four *types*, three published in a typical week — the desk chooses which. The cadence
+ * quoted on the marketing pages is therefore three, and it is not derived from this list.
+ */
 export const REPORT_TYPES: {
   value: ReportType
   label: string

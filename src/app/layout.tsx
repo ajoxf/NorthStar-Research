@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     template: '%s · NordStar Pro',
   },
   description:
-    'Three research reports every week covering commodities, international markets and indices, and option, crypto and spread opportunities.',
+    'Three research reports every week covering commodities, international markets and indices, options, crypto and spreads, and FX. Educational and informational only.',
   robots: {
     // Member and admin areas are additionally blocked in robots.ts.
     index: true,

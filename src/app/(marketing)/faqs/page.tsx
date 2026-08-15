@@ -14,10 +14,10 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     q: 'What do I get for the membership fee?',
     a: (
       <>
-        ${PLAN.priceUsd} per month gives you all four weekly reports — commodities, international
-        markets and indices, option, crypto and spread opportunities, and FX and currencies — plus
-        access to the complete archive of everything published previously, including editions from before you
-        joined.
+        ${PLAN.priceUsd} per month gives you every weekly report — three a week, covering
+        commodities, international markets and indices, options, crypto and spreads, and FX — plus
+        access to the complete archive of everything published previously, including editions from
+        before you joined.
       </>
     ),
   },
@@ -96,11 +96,12 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
     q: 'Is this financial advice?',
     a: (
       <>
-        No. Everything we publish is for educational and informational purposes only. Please read the{' '}
+        No. Everything we publish is for educational and informational purposes only, and nothing
+        in a report is a recommendation to buy or sell anything. Please read the{' '}
         <Link href="/disclaimer" className="text-accent underline underline-offset-4">
           full disclaimer
-        </Link>{' '}
-        before acting on anything in a report.
+        </Link>
+        .
       </>
     ),
   },

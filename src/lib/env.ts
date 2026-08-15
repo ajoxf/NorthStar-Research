@@ -51,8 +51,27 @@ export function optionalEnv(key: string, fallback: string): string {
   return isPlaceholder(value) ? fallback : (value as string)
 }
 
+/** The site's canonical origin. Used when APP_BASE_URL is unset — see below. */
+export const CANONICAL_BASE_URL = 'https://nordstarpro.com'
+
+/**
+ * What to use when `APP_BASE_URL` is missing or still a placeholder.
+ *
+ * Previously this fell back to `http://localhost:3000` everywhere, which meant a variable
+ * that was unset, misspelled or lost in a project migration failed *silently* in
+ * production: emails would carry links to localhost and the Cregis callback URLs derived
+ * from it would point nowhere. Payments are lost that way without anything erroring.
+ *
+ * Defaulting to the real origin in production makes the deployment correct even when the
+ * dashboard is not. Setting `APP_BASE_URL` explicitly still wins, which is what makes
+ * preview and staging environments work.
+ */
+export function defaultBaseUrl(nodeEnv: string | undefined): string {
+  return nodeEnv === 'production' ? CANONICAL_BASE_URL : 'http://localhost:3000'
+}
+
 export const appBaseUrl = (): string =>
-  optionalEnv('APP_BASE_URL', 'http://localhost:3000').replace(/\/$/, '')
+  optionalEnv('APP_BASE_URL', defaultBaseUrl(process.env.NODE_ENV)).replace(/\/$/, '')
 
 /**
  * The single plan: $199 per month. There is exactly one price and no tiers.
