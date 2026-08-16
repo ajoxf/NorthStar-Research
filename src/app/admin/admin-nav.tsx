@@ -12,6 +12,7 @@ const LINKS = [
   { href: '/admin/payments', label: 'Payments' },
   { href: '/admin/codes', label: 'Codes' },
   { href: '/admin/affiliates', label: 'Affiliates' },
+  { href: '/admin/emails', label: 'Emails' },
 ]
 
 export function AdminNav() {

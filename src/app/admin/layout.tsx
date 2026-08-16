@@ -33,14 +33,20 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <div className="flex min-h-screen flex-col bg-panel-2">
         <header className="border-b border-line bg-bg">
           <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-5">
-            <div className="flex items-center gap-6">
-              <Link href="/admin" className="font-mono text-[13px] text-ink">
+            {/*
+              `min-w-0` is what makes the nav's own horizontal scrolling work. A flex item
+              defaults to `min-width: auto`, so without it this row refuses to shrink below
+              the full width of every link — and instead of the nav scrolling, the whole
+              admin console scrolled sideways on a phone, carrying the page content with it.
+            */}
+            <div className="flex min-w-0 items-center gap-6">
+              <Link href="/admin" className="shrink-0 font-mono text-[13px] text-ink">
                 NordStar <span className="text-accent">admin</span>
               </Link>
               <AdminNav />
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center gap-4">
               <Link href="/dashboard" className="font-mono text-[12px] text-ink-dim hover:text-ink">
                 Member view
               </Link>
