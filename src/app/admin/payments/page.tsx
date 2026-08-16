@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { Settings } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
@@ -53,9 +54,19 @@ export default async function AdminPaymentsPage({
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
-      <div className="mb-8">
-        <span className="eyebrow">Money in</span>
-        <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Payments</h1>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <span className="eyebrow">Money in</span>
+          <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Payments</h1>
+        </div>
+
+        <Link
+          href="/admin/payments/settings"
+          className="inline-flex items-center gap-1.5 rounded border border-line px-3 py-2 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+        >
+          <Settings className="h-3.5 w-3.5" aria-hidden />
+          Settings
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
