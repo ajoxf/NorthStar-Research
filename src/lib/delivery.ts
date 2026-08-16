@@ -4,6 +4,7 @@ import type { Report } from '@prisma/client'
 
 import { db } from '@/lib/db'
 import { appBaseUrl } from '@/lib/env'
+import { wasReallyDelivered } from '@/lib/delivery-retry'
 import { getNotificationProvider } from '@/lib/notifications'
 import type { Recipient } from '@/lib/notifications/types'
 
@@ -46,6 +47,11 @@ export type DeliverySummary = {
  *
  * Idempotent by design: the `[memberId, reportId, channel]` unique constraint means
  * re-running a send (cron retry, admin re-publish) will not spam a member twice.
+ *
+ * With one deliberate exception — a row recorded by a placeholder provider is retried,
+ * because it never reached anybody. See src/lib/delivery-retry.ts: treating those as
+ * delivered silently suppressed every real send to members who had been "delivered" to
+ * while the console provider was active.
  */
 export async function deliverReportToActiveMembers(report: Report): Promise<DeliverySummary> {
   const provider = getNotificationProvider()
@@ -85,7 +91,7 @@ export async function deliverReportToActiveMembers(report: Report): Promise<Deli
           memberId_reportId_channel: { memberId: member.id, reportId: report.id, channel },
         },
       })
-      if (existing && existing.status !== 'failed') {
+      if (existing && existing.status !== 'failed' && wasReallyDelivered(existing.provider)) {
         summary.skipped += 1
         continue
       }

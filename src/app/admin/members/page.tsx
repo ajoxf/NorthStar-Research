@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import type { Prisma, SubscriptionStatus } from '@prisma/client'
 
+import { ActivateMemberButton } from '@/app/admin/members/member-status-action'
 import { Badge, statusTone } from '@/components/ui/badge'
 import { MemberFilters } from '@/app/admin/members/member-filters'
 import { requireAdmin } from '@/lib/auth'
@@ -106,9 +107,19 @@ export default async function AdminMembersPage({
                     </Link>
                   </td>
                   <td className="px-5 py-3.5">
-                    <Badge tone={statusTone(member.subscriptionStatus)}>
-                      {member.subscriptionStatus}
-                    </Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={statusTone(member.subscriptionStatus)}>
+                        {member.subscriptionStatus}
+                      </Badge>
+                      {/*
+                        Shown only where it changes something. An "Activate" button beside
+                        an already-active member is noise that trains an operator to stop
+                        reading the column.
+                      */}
+                      {member.subscriptionStatus !== 'active' && (
+                        <ActivateMemberButton memberId={member.id} email={member.email} />
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex flex-wrap gap-1.5">
