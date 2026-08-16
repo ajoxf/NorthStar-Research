@@ -1,6 +1,7 @@
 import 'server-only'
 
-import { MissingConfigError, PLAN, appBaseUrl, isConfigured, requireEnvAll } from '@/lib/env'
+import { MissingConfigError, PLAN, appBaseUrl } from '@/lib/env'
+import { resolveCregisSettings } from '@/lib/cregis-settings'
 import {
   CHECKOUT_VALID_MINUTES,
   cregisNonce,
@@ -29,23 +30,40 @@ export { cregisSign, signaturesMatch }
 
 export const CREGIS_ENV_KEYS = ['CREGIS_PROJECT_ID', 'CREGIS_API_KEY', 'CREGIS_BASE_URL'] as const
 
-export function cregisConfigured(): boolean {
-  return isConfigured(...CREGIS_ENV_KEYS)
-}
+/**
+ * Resolved from the admin console first, the environment second.
+ *
+ * Still throws MissingConfigError naming every unset key when neither source has one.
+ * Section 5.1: a placeholder must never be mistaken for a working integration, so this
+ * stays noisy by design — the only change is where a real value may come from.
+ */
+async function cregisConfig() {
+  const settings = await resolveCregisSettings()
 
-function cregisConfig() {
-  // Throws MissingConfigError naming every unset key. Section 5.1: a placeholder must
-  // never be mistaken for a working integration, so this is noisy by design.
-  const env = requireEnvAll([...CREGIS_ENV_KEYS], 'Cregis checkout')
+  const missing = ([
+    ['CREGIS_PROJECT_ID', settings.projectId.value],
+    ['CREGIS_API_KEY', settings.apiKey.value],
+    ['CREGIS_BASE_URL', settings.baseUrl.value],
+  ] as const)
+    .filter(([, value]) => !value)
+    .map(([key]) => key)
+
+  if (missing.length > 0) throw new MissingConfigError(missing, 'Cregis checkout')
+
   return {
-    projectId: env.CREGIS_PROJECT_ID,
-    apiKey: env.CREGIS_API_KEY,
-    baseUrl: env.CREGIS_BASE_URL.replace(/\/$/, ''),
+    projectId: settings.projectId.value as string,
+    apiKey: settings.apiKey.value as string,
+    baseUrl: (settings.baseUrl.value as string).replace(/\/$/, ''),
   }
 }
 
-export function verifyCregisCallback(payload: Record<string, unknown>): boolean {
-  const { apiKey } = cregisConfig()
+export async function cregisConfigured(): Promise<boolean> {
+  const settings = await resolveCregisSettings()
+  return Boolean(settings.projectId.value && settings.apiKey.value && settings.baseUrl.value)
+}
+
+export async function verifyCregisCallback(payload: Record<string, unknown>): Promise<boolean> {
+  const { apiKey } = await cregisConfig()
   const received = typeof payload.sign === 'string' ? payload.sign : ''
   if (!received) return false
   return signaturesMatch(cregisSign(payload, apiKey), received.toLowerCase())
@@ -67,7 +85,7 @@ export type CreateCheckoutResult = {
 }
 
 export async function createCheckout(input: CreateCheckoutInput): Promise<CreateCheckoutResult> {
-  const { projectId, apiKey, baseUrl } = cregisConfig()
+  const { projectId, apiKey, baseUrl } = await cregisConfig()
   const base = appBaseUrl()
 
   // Parameter names and requirements follow developer.cregis.com → API reference →
