@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 
 import { optionalEnv, requireEnv } from '@/lib/env'
+import { DEFAULT_EMAIL_FROM } from '@/lib/notifications/from'
 import {
   magicLinkEmail,
   receiptEmail,
@@ -32,7 +33,7 @@ export class ResendProvider implements NotificationProvider {
   }
 
   private from(): string {
-    return optionalEnv('EMAIL_FROM', 'NordStar Pro <onboarding@resend.dev>')
+    return optionalEnv('EMAIL_FROM', DEFAULT_EMAIL_FROM)
   }
 
   private async send(to: string, subject: string, html: string, text: string): Promise<DeliveryResult> {
