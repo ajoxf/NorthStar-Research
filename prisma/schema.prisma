@@ -157,6 +157,7 @@ model Member {
 
   @@index([subscriptionStatus])
   @@index([createdAt])
+  appSettings AppSetting[]
 }
 
 model RedemptionCode {
@@ -375,4 +376,22 @@ model DeliveryLog {
   @@unique([memberId, reportId, channel])
   @@index([reportId])
   @@index([memberId])
+}
+
+/// A setting an operator can change from the admin console rather than from Vercel.
+///
+/// Values are stored ENCRYPTED (AES-256-GCM, key derived from AUTH_SECRET) because some
+/// of them are credentials. See src/lib/secure-settings.ts for the reasoning and the
+/// limits of what that protects against.
+///
+/// Deliberately narrow: only the settings listed in src/lib/cregis-settings.ts are ever
+/// written here. This is not a general key-value store for the application.
+model AppSetting {
+  key   String @id
+  /// Base64 of iv:ciphertext:tag. Never a plaintext credential.
+  value String
+
+  updatedAt        DateTime @updatedAt
+  updatedByAdminId String?
+  updatedByAdmin   Member?  @relation(fields: [updatedByAdminId], references: [id])
 }

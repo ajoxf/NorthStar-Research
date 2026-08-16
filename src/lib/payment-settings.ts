@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { PLAN, appBaseUrl, isPlaceholder } from '@/lib/env'
+import { type CregisSource, resolveCregisSettings } from '@/lib/cregis-settings'
 
 /**
  * What is configured for taking money, and what is merely claimed to be.
@@ -10,20 +11,19 @@ import { PLAN, appBaseUrl, isPlaceholder } from '@/lib/env'
  * one fact is the difference between taking real money and taking none while everything
  * appears to work. Nothing here puts a credential into a page, a bundle or a log line.
  *
- * Credentials themselves are entered in Vercel and read from the environment. They are
- * deliberately not editable from this console and not stored in the database:
+ * **Stripe's credentials are environment-only.** That key can move money out of the
+ * account — charges, refunds, payouts — so it stays where only a deployment can change
+ * it, and this module reports on `process.env` for those rows.
  *
- *   - A form that writes an API key to Postgres puts a live payment credential in a
- *     second place, in plain text, where a database dump or a read-only analytics
- *     connection would expose it.
- *   - It would also mean the key travels through a browser belonging to whoever is
- *     signed in as an admin at the time.
- *   - The environment is already the source of truth at runtime. Two sources of truth
- *     for a payment credential is how a deployment ends up charging against the wrong
- *     account.
+ * **Cregis is editable from the console**, because the owner's account there is
+ * deposit-only: the worst an exposed key permits is receiving money. Being able to rotate
+ * it without a redeploy is worth more than the marginal secrecy, and the stored value is
+ * encrypted at rest. Those rows therefore report the *resolved* value — console first,
+ * environment second — because showing `process.env` would name a variable no longer in
+ * use. See src/lib/cregis-settings.ts.
  *
- * So this page tells the operator precisely what is wrong and exactly where to fix it,
- * which is the useful half, without becoming a place a live key can leak from.
+ * That asymmetry is the design, and it is not an accident of convenience: the credential
+ * that can take money out is the one that stays hardest to change.
  */
 
 export type SettingStatus = 'set' | 'missing' | 'placeholder'
@@ -97,32 +97,66 @@ export function stripeSettings(): SettingRow[] {
   ]
 }
 
-export function cregisSettings(): SettingRow[] {
-  const baseUrl = process.env.CREGIS_BASE_URL
+/**
+ * What Cregis will actually use, from whichever source is winning.
+ *
+ * Unlike the Stripe rows above, these are not a report on the environment: a value set in
+ * the console overrides Vercel, so reading `process.env` here would show an operator the
+ * variable they are no longer using.
+ */
+export async function cregisSettings(): Promise<SettingRow[]> {
+  const resolved = await resolveCregisSettings()
+  const from = (source: CregisSource) =>
+    source === 'console' ? 'set in the admin console' : source === 'environment' ? 'set in Vercel' : null
+
+  const row = (
+    key: string,
+    label: string,
+    what: string,
+    field: { value: string | null; source: CregisSource },
+    reveal = false,
+  ): SettingRow => ({
+    key,
+    label,
+    what,
+    status: field.source === 'unset' ? 'missing' : 'set',
+    detail: field.value
+      ? [reveal ? field.value : lengthDetail(field.value), from(field.source)]
+          .filter(Boolean)
+          .join(' · ')
+      : null,
+    secret: !reveal,
+  })
 
   return [
+    row(
+      'CREGIS_PROJECT_ID',
+      'Project ID',
+      'Identifies your Cregis project on every call and in every callback signature.',
+      resolved.projectId,
+    ),
+    row(
+      'CREGIS_API_KEY',
+      'API key',
+      'Signs outbound requests and verifies inbound callbacks. Never leaves the server.',
+      resolved.apiKey,
+    ),
+    row(
+      'CREGIS_BASE_URL',
+      'API base URL',
+      'The Cregis endpoint this app calls. Given to you in the Cregis Developer Center.',
+      resolved.baseUrl,
+      true,
+    ),
     {
-      key: 'CREGIS_PROJECT_ID',
-      label: 'Project ID',
-      what: 'Identifies your Cregis project on every call and in every callback signature.',
-      status: statusOf('CREGIS_PROJECT_ID'),
-      detail: lengthDetail(process.env.CREGIS_PROJECT_ID),
-      secret: true,
-    },
-    {
-      key: 'CREGIS_API_KEY',
-      label: 'API key',
-      what: 'Signs outbound requests and verifies inbound callbacks. Never leaves the server.',
-      status: statusOf('CREGIS_API_KEY'),
-      detail: lengthDetail(process.env.CREGIS_API_KEY),
-      secret: true,
-    },
-    {
-      key: 'CREGIS_BASE_URL',
-      label: 'API base URL',
-      what: 'The Cregis endpoint this app calls. Given to you in the Cregis Developer Center.',
-      status: statusOf('CREGIS_BASE_URL'),
-      detail: baseUrl && !isPlaceholder(baseUrl) ? baseUrl : null,
+      key: 'cregis.callbackIps',
+      label: 'Callback IP allowlist',
+      what: 'Optional. When set, only these addresses may deliver a payment callback.',
+      status: resolved.callbackIps.value.length > 0 ? 'set' : 'missing',
+      detail:
+        resolved.callbackIps.value.length > 0
+          ? resolved.callbackIps.value.join(', ')
+          : 'Off — every source is accepted, and the signature check is what authorises the callback.',
       secret: false,
     },
   ]

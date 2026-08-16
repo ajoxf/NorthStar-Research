@@ -3,6 +3,8 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { addBillingPeriod, appBaseUrl, MissingConfigError } from '@/lib/env'
 import { verifyCregisCallback } from '@/lib/cregis'
+import { callbackIpAllowed, clientAddress } from '@/lib/cregis-callback'
+import { resolveCregisSettings } from '@/lib/cregis-settings'
 import { isPaidStatus, isUnderpaid, unwrapCallbackOrder } from '@/lib/cregis-protocol'
 import { codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
 import { recordReferralConversion } from '@/lib/referral-attribution'
@@ -42,8 +44,30 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'invalid payload' }, { status: 400 })
   }
 
+  /*
+   * Optional source-address allowlist, checked before the signature.
+   *
+   * Off unless an operator sets it, and that default is correct rather than lax: the
+   * signature below is what actually authorises the callback, and Cregis has historically
+   * called from a rotating pool of addresses. An incomplete allowlist would silently
+   * reject real payments — the worst failure this system has — so it is opt-in, and the
+   * console says as much beside the field.
+   */
   try {
-    if (!verifyCregisCallback(payload)) {
+    const { callbackIps } = await resolveCregisSettings()
+    const source = clientAddress(request.headers)
+    if (!callbackIpAllowed(callbackIps.value, source)) {
+      console.error(`[cregis:webhook] rejected — source ${source ?? 'unknown'} is not allowlisted`)
+      return NextResponse.json({ error: 'source not allowed' }, { status: 403 })
+    }
+  } catch (error) {
+    // A settings lookup failure must not silently open the gate, but it also must not
+    // reject a real payment: the signature check below still stands on its own.
+    console.error('[cregis:webhook] could not read the IP allowlist; continuing on signature', error)
+  }
+
+  try {
+    if (!(await verifyCregisCallback(payload))) {
       // Never fall back to trusting the payload. An unverifiable callback is a hostile
       // callback as far as this route is concerned.
       console.error('[cregis:webhook] rejected — signature verification failed')

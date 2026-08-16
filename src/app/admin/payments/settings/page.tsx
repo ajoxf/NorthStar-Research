@@ -3,6 +3,10 @@ import Link from 'next/link'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 
 import { CopyableUrl, PaymentChecks } from '@/app/admin/payments/settings/payment-checks'
+import { CregisForm, type CregisFormState } from '@/app/admin/payments/settings/cregis-form'
+import { CREGIS_SETTING_KEYS, resolveCregisSettings } from '@/lib/cregis-settings'
+import { settingsMetadata } from '@/lib/secure-settings'
+import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
 import { CANONICAL_BASE_URL, PLAN } from '@/lib/env'
@@ -23,17 +27,19 @@ export const dynamic = 'force-dynamic'
 /**
  * Everything about how money is taken, in one place.
  *
- * What this page does *not* do is hold the credentials. They are entered in Vercel and
- * read from the environment — see the note in src/lib/payment-settings.ts for why a form
- * that writes a live API key into Postgres would be a worse arrangement, not a more
- * convenient one. This page tells the operator exactly what is wrong and exactly where to
- * fix it, which is the useful half, without becoming somewhere a live key can leak from.
+ * The Cregis credentials are editable here; Stripe's are not. That split is deliberate —
+ * a Stripe key can move money out of the account, while the Cregis account is deposit-only
+ * — and it is explained in src/lib/secure-settings.ts.
+ *
+ * For everything that stays in the environment, this page tells the operator exactly what
+ * is wrong and exactly where to fix it, without becoming somewhere a live key can be read.
  */
 export default async function PaymentSettingsPage() {
   await requireAdmin()
 
   const stripe = stripeSettings()
-  const cregis = cregisSettings()
+  const cregis = await cregisSettings()
+  const cregisFormState = await buildCregisFormState()
   const urls = processorUrls()
   const baseLooksWrong = urls.base !== CANONICAL_BASE_URL
 
@@ -103,6 +109,24 @@ export default async function PaymentSettingsPage() {
         title="Cregis"
         note="Crypto checkout. Paid per period by hand — there is nothing to auto-charge."
       >
+        {/*
+          Editable, unlike Stripe. The account is deposit-only, so the worst an exposed key
+          permits is receiving money — which makes rotating it without a redeploy the
+          better trade. Values are encrypted at rest and never sent back to the browser.
+        */}
+        <CregisForm state={cregisFormState} />
+
+        <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+          Saved values are encrypted with a key derived from{' '}
+          <code className="font-mono text-[12px]">AUTH_SECRET</code> and are never displayed
+          again — the fields above show where each value comes from, not what it is. Changing{' '}
+          <code className="font-mono text-[12px]">AUTH_SECRET</code> makes them unreadable, and
+          they would need re-entering.
+        </p>
+
+        <h3 className="mb-3 mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+          In effect now
+        </h3>
         <SettingTable rows={cregis} />
 
         <div className="mt-5 rounded-lg border border-line bg-panel px-4 py-1">
@@ -135,14 +159,20 @@ export default async function PaymentSettingsPage() {
         }}
       >
         <p className="text-[14px] leading-relaxed text-ink-dim">
-          Keys are read from the environment and are deliberately not editable here. Putting a
-          live payment credential behind a web form would copy it into the database in plain
-          text and send it through whichever browser happens to be signed in as an admin — and
-          it would give the deployment two sources of truth for which account gets charged.
+          <strong className="font-medium text-ink">Stripe stays here, in Vercel.</strong> That key
+          can move money out of the account — charges, refunds, payouts — so it is deliberately
+          not editable from a web form, where it would travel through whichever browser happens
+          to be signed in as an admin.
         </p>
         <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
-          Environment variables are only read at boot, so a change does not take effect until
-          you redeploy.
+          <strong className="font-medium text-ink">Cregis can be edited above</strong>, because
+          that account is deposit-only: the worst an exposed key permits is receiving money.
+          Anything saved there overrides the matching variable below and takes effect
+          immediately, with no redeploy.
+        </p>
+        <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
+          Environment variables are only read at boot, so a change made in Vercel does not take
+          effect until you redeploy.
         </p>
       </Section>
 
@@ -242,4 +272,50 @@ function Fact({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 text-[14px] text-ink">{value}</dd>
     </div>
   )
+}
+
+/**
+ * What the console may know about each Cregis value.
+ *
+ * Note what is absent: the values. A saved credential is never sent back to the browser,
+ * so there is no screen in this product on which a live key can be read — only its
+ * length, its source and when it last changed.
+ */
+async function buildCregisFormState(): Promise<CregisFormState> {
+  const resolved = await resolveCregisSettings()
+  const meta = await settingsMetadata(Object.values(CREGIS_SETTING_KEYS))
+
+  const field = (
+    key: string,
+    entry: { value: string | null; source: 'console' | 'environment' | 'unset' },
+    detail: string | null,
+  ) => ({
+    source: entry.source,
+    detail,
+    updatedAt: meta[key]?.updatedAt ? formatDate(meta[key]!.updatedAt) : null,
+    updatedByEmail: meta[key]?.updatedByEmail ?? null,
+  })
+
+  return {
+    projectId: field(
+      CREGIS_SETTING_KEYS.projectId,
+      resolved.projectId,
+      resolved.projectId.value ? `${resolved.projectId.value.length} characters` : null,
+    ),
+    apiKey: field(
+      CREGIS_SETTING_KEYS.apiKey,
+      resolved.apiKey,
+      resolved.apiKey.value ? `${resolved.apiKey.value.length} characters` : null,
+    ),
+    // Not a credential, so it is shown in full — that is what makes it checkable.
+    baseUrl: field(CREGIS_SETTING_KEYS.baseUrl, resolved.baseUrl, resolved.baseUrl.value),
+    callbackIps: {
+      ...field(
+        CREGIS_SETTING_KEYS.callbackIps,
+        { value: resolved.callbackIps.value.join('\n') || null, source: resolved.callbackIps.source },
+        null,
+      ),
+      value: resolved.callbackIps.value.join('\n'),
+    },
+  }
 }

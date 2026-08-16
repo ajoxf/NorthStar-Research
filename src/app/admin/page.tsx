@@ -131,7 +131,9 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
  * nobody intends to configure trains an operator to ignore the panel, which is exactly
  * what it exists to prevent.
  */
-function ConfigurationPanel({ providers }: { providers: { email: string } }) {
+async function ConfigurationPanel({ providers }: { providers: { email: string } }) {
+  const cregisReady = await cregisConfigured()
+
   const rows = [
     {
       label: 'Card billing (Stripe)',
@@ -142,8 +144,8 @@ function ConfigurationPanel({ providers }: { providers: { email: string } }) {
     },
     {
       label: 'Crypto checkout (Cregis)',
-      ready: cregisConfigured(),
-      detail: cregisConfigured()
+      ready: cregisReady,
+      detail: cregisReady
         ? 'Credentials set — renewals are manual'
         : 'Placeholder credentials — checkout will refuse to run',
     },

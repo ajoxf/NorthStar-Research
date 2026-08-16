@@ -151,8 +151,10 @@ export async function POST() {
     }
   }
 
+  const cregisReady = await cregisConfigured()
+
   cregis.push(
-    cregisConfigured()
+    cregisReady
       ? {
           label: 'Credentials',
           status: 'ok',
