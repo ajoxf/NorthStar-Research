@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { PortalNav } from '@/app/(portal)/portal-nav'
@@ -10,7 +11,19 @@ import { initials } from '@/lib/utils'
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
   const member = await getCurrentMember()
-  if (!member) redirect('/login')
+
+  if (!member) {
+    /*
+     * Carry the destination through the sign-in.
+     *
+     * Without this a member following a link from an email — commonly on a second
+     * device, where there is no session — signs in and lands on the dashboard rather
+     * than the page they asked for. The link still "works", so the loss is invisible
+     * to us and merely annoying to them, which is why it went unnoticed.
+     */
+    const pathname = headers().get('x-pathname')
+    redirect(pathname ? `/login?next=${encodeURIComponent(pathname)}` : '/login')
+  }
 
   const active = hasActiveSubscription(member)
 

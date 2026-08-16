@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 
 import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label } from '@/components/ui/field'
+import { PasswordInput } from '@/components/ui/password-input'
 
 export function BootstrapForm() {
   const router = useRouter()
@@ -48,7 +49,7 @@ export function BootstrapForm() {
     <form onSubmit={handleSubmit} className="mt-7 rounded-lg border border-line bg-panel p-6" noValidate>
       <div className="mb-4">
         <Label htmlFor="secret">Bootstrap secret</Label>
-        <Input id="secret" name="secret" type="password" required autoFocus />
+        <PasswordInput id="secret" name="secret" required autoFocus />
         <Hint>The value you set for ADMIN_BOOTSTRAP_SECRET in Vercel.</Hint>
       </div>
 
@@ -59,10 +60,9 @@ export function BootstrapForm() {
 
       <div className="mb-5">
         <Label htmlFor="password">Admin password</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="new-password"
           minLength={12}
           required

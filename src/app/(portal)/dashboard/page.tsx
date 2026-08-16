@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
   const member = await getCurrentMember()
-  if (!member) redirect('/login')
+  if (!member) redirect('/login?next=/dashboard')
 
   if (!hasActiveSubscription(member)) return <InactiveState />
 

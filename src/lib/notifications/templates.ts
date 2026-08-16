@@ -116,7 +116,8 @@ export function welcomeEmail(
       <li>Your access is personal. Views and downloads are watermarked to your account.</li>
     </ul>
     ${button(dashboardUrl, 'Open your portal')}
-    <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Reply to this email if you need anything — a person reads it.</p>
+    <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">If you are opening this on a different device from the one you signed up on, you will be asked to sign in first — that is the paywall doing its job, not an error.</p>
+    <p style="margin:10px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Reply to this email if you need anything — a person reads it.</p>
   `
 
   return {
@@ -131,6 +132,9 @@ export function welcomeEmail(
       `first. Your access is personal, and views and downloads are watermarked to your ` +
       `account.\n\n` +
       `Open your portal: ${dashboardUrl}\n\n` +
+      `If you are opening this on a different device from the one you signed up on, ` +
+      `you will be asked to sign in first — that is the paywall doing its job, not an ` +
+      `error.\n\n` +
       `Reply to this email if you need anything — a person reads it.`,
   }
 }

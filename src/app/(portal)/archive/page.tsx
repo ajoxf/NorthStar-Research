@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function ArchivePage() {
   const member = await getCurrentMember()
-  if (!member) redirect('/login')
+  if (!member) redirect('/login?next=/archive')
   if (!hasActiveSubscription(member)) redirect('/dashboard')
 
   // Nothing is ever deleted (requirement 3), so the archive is simply every published
