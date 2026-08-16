@@ -4,10 +4,42 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertTriangle, Upload } from 'lucide-react'
 
+import { upload } from '@vercel/blob/client'
+
 import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label, Select, Textarea } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 import { REPORT_TYPES } from '@/lib/report-content'
+import { MAX_PDF_BYTES, REPORT_BLOB_PREFIX, formatBytes, slugify } from '@/lib/report-upload'
+
+/**
+ * Turn a Blob upload failure into something an operator can act on.
+ *
+ * The client library collapses every token problem into one opaque sentence, so this
+ * re-asks our own token endpoint and prefers the reason it gives — "file storage is not
+ * configured", a 403 after the admin session expired mid-upload, and so on.
+ */
+async function explainUploadFailure(error: unknown): Promise<string> {
+  try {
+    const response = await fetch('/api/admin/reports/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    const data = await response.json().catch(() => null)
+
+    if (response.status === 403) {
+      return 'Your admin session has expired. Sign in again, then re-upload the PDF.'
+    }
+    if (data?.error) return data.error
+  } catch {
+    // The probe itself failed, which usually means the connection dropped.
+  }
+
+  return error instanceof Error
+    ? `The PDF could not be uploaded: ${error.message}`
+    : 'The PDF could not be uploaded.'
+}
 
 /** Starter JSON so an admin can see the shape of the instrument table without docs. */
 const INSTRUMENT_TEMPLATE = JSON.stringify(
@@ -40,6 +72,8 @@ export function ReportUploadForm() {
   const [error, setError] = React.useState<string | null>(null)
   const [fileName, setFileName] = React.useState<string | null>(null)
   const [instruments, setInstruments] = React.useState('')
+  /** Null until an upload starts. A 15 MB file is a wait worth showing. */
+  const [progress, setProgress] = React.useState<number | null>(null)
 
   const today = new Date().toISOString().slice(0, 10)
 
@@ -47,16 +81,73 @@ export function ReportUploadForm() {
     event.preventDefault()
     setError(null)
     setPending(true)
+    setProgress(null)
 
     const form = new FormData(event.currentTarget)
 
     try {
+      /*
+       * The PDF goes browser → Vercel Blob directly, and only its resulting URL is sent
+       * to our own API.
+       *
+       * It used to be posted to /api/admin/reports as part of this form, which capped the
+       * whole thing at Vercel's ~4.5 MB serverless request body limit. A real report runs
+       * to tens of megabytes, so uploads failed at the platform edge with a response that
+       * was not JSON — and the `await response.json()` below threw, which is why the only
+       * thing the operator ever saw was the generic "could not be saved".
+       */
+      const file = form.get('pdf')
+      form.delete('pdf')
+
+      if (file instanceof File && file.size > 0) {
+        if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+          setError('Upload a PDF file.')
+          return
+        }
+
+        if (file.size > MAX_PDF_BYTES) {
+          setError(
+            `That PDF is ${formatBytes(file.size)}, over the ${formatBytes(MAX_PDF_BYTES)} limit.`,
+          )
+          return
+        }
+
+        setProgress(0)
+        let blob
+        try {
+          blob = await upload(`${REPORT_BLOB_PREFIX}${slugify(String(form.get('title')))}.pdf`, file, {
+            access: 'public',
+            contentType: 'application/pdf',
+            handleUploadUrl: '/api/admin/reports/upload',
+            // Large files upload in parts, so a stalled connection resumes rather than
+            // restarting a 15 MB transfer from zero.
+            multipart: true,
+            onUploadProgress: ({ percentage }) => setProgress(percentage),
+          })
+        } catch (uploadError) {
+          // Blob reports any token problem as "Failed to retrieve the client token",
+          // which tells an operator nothing about what to fix. Ask our own endpoint for
+          // the real reason — it knows whether storage is unconfigured, the session has
+          // expired, or the file was refused.
+          setError(await explainUploadFailure(uploadError))
+          return
+        }
+
+        form.set('pdfBlobUrl', blob.url)
+        form.set('pdfBlobPathname', blob.pathname)
+        setProgress(100)
+      }
+
       const response = await fetch('/api/admin/reports', { method: 'POST', body: form })
-      const data = await response.json()
+      // Parsed defensively: a failure from the platform rather than the app comes back as
+      // HTML, and calling .json() on it would throw away the status entirely.
+      const data = await response.json().catch(() => null)
 
       if (!response.ok) {
-        setError(data.error ?? 'The report could not be saved.')
-        toast(data.error ?? 'Upload failed.', 'error')
+        const message =
+          data?.error ?? `The report could not be saved (HTTP ${response.status}).`
+        setError(message)
+        toast(message, 'error')
         return
       }
 
@@ -70,10 +161,13 @@ export function ReportUploadForm() {
 
       router.push(`/admin/reports/${data.reportId}`)
       router.refresh()
-    } catch {
-      setError('The report could not be saved.')
+    } catch (err) {
+      // Includes upload failures, which now carry a real reason from Blob rather than
+      // being flattened into one unhelpful sentence.
+      setError(err instanceof Error ? err.message : 'The report could not be saved.')
     } finally {
       setPending(false)
+      setProgress(null)
     }
   }
 
@@ -139,9 +233,25 @@ export function ReportUploadForm() {
             onChange={(event) => setFileName(event.target.files?.[0]?.name ?? null)}
           />
         </label>
+
+        {progress !== null && (
+          <div className="mt-3">
+            <div className="h-1 overflow-hidden rounded-full bg-panel-2">
+              <div
+                className="h-full bg-accent transition-[width] duration-200"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <p className="mt-2 font-mono text-[11px] text-ink-dim">
+              {progress < 100 ? `Uploading… ${Math.round(progress)}%` : 'Upload complete'}
+            </p>
+          </div>
+        )}
+
         <Hint>
           Stored so members can download it. It does not become the on-screen reading view —
-          write that below, so the levels are exactly what you intend.
+          write that below, so the levels are exactly what you intend. Uploads go straight to
+          storage, so a full-size report — tens of megabytes — is fine.
         </Hint>
       </div>
 
