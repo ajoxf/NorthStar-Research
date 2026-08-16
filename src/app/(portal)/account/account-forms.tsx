@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { Button, ButtonLink, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label } from '@/components/ui/field'
+import { PasswordInput } from '@/components/ui/password-input'
 import { useToast } from '@/components/ui/toast'
 
 type MemberSettings = {
@@ -173,19 +174,17 @@ function ProfileSection({ member }: { member: MemberSettings }) {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="currentPassword">Current password</Label>
-              <Input
+              <PasswordInput
                 id="currentPassword"
                 name="currentPassword"
-                type="password"
                 autoComplete="current-password"
               />
             </div>
             <div>
               <Label htmlFor="newPassword">New password</Label>
-              <Input
+              <PasswordInput
                 id="newPassword"
                 name="newPassword"
-                type="password"
                 autoComplete="new-password"
               />
             </div>

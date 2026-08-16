@@ -6,6 +6,7 @@ import { Mail } from 'lucide-react'
 
 import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Input, Label } from '@/components/ui/field'
+import { PasswordInput } from '@/components/ui/password-input'
 import { useToast } from '@/components/ui/toast'
 import { isValidEmail } from '@/lib/utils'
 
@@ -143,10 +144,9 @@ export function LoginForm({ next }: { next: string | null }) {
         {mode === 'password' && (
           <div className="mb-5">
             <Label htmlFor="password">Password</Label>
-            <Input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               autoComplete="current-password"
               required
             />

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 
 import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Input, Label } from '@/components/ui/field'
+import { PasswordInput } from '@/components/ui/password-input'
 
 export function AdminLoginForm() {
   const router = useRouter()
@@ -93,10 +94,9 @@ export function AdminLoginForm() {
 
       <div className="mb-5">
         <Label htmlFor="password">Password</Label>
-        <Input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           autoComplete="current-password"
           required
         />

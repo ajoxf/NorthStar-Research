@@ -6,6 +6,7 @@ import { ArrowRight, Check, CheckCircle2 } from 'lucide-react'
 
 import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label } from '@/components/ui/field'
+import { PasswordInput } from '@/components/ui/password-input'
 import { useToast } from '@/components/ui/toast'
 import { cn, isValidEmail } from '@/lib/utils'
 
@@ -204,9 +205,8 @@ export function RedeemWizard({ initialCode }: { initialCode: string }) {
 
           <div className="mt-4">
             <Label htmlFor="password">Password</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               value={password}
               autoComplete="new-password"
               onChange={(event) => setPassword(event.target.value)}

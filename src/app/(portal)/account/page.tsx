@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function AccountPage() {
   const member = await getCurrentMember()
-  if (!member) redirect('/login')
+  if (!member) redirect('/login?next=/account')
 
   const daysLeft = daysUntilRenewal(member)
 
