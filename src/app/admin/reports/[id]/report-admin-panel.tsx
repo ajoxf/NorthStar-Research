@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Send } from 'lucide-react'
+import { Send, Trash2 } from 'lucide-react'
 
 import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label, Textarea } from '@/components/ui/field'
@@ -28,6 +28,7 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
   const [publishing, setPublishing] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [confirmPublish, setConfirmPublish] = React.useState(false)
+  const [deleting, setDeleting] = React.useState(false)
 
   async function saveChanges(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -103,6 +104,41 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
     }
   }
 
+  /**
+   * Delete, for the case delete is actually for: the wrong file went up, or a draft was
+   * made by mistake. The server refuses once anyone has viewed it or a delivery was
+   * attempted, and says so — the confirmation here does not pretend otherwise.
+   */
+  async function deleteReport() {
+    if (
+      !window.confirm(
+        `Permanently delete "${report.title}"? This removes the report and its PDF. ` +
+          `It only works while no member has opened it and nothing has been sent.`,
+      )
+    ) {
+      return
+    }
+
+    setDeleting(true)
+    try {
+      const response = await fetch(`/api/admin/reports/${report.id}`, { method: 'DELETE' })
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        toast(data?.error ?? 'The report could not be deleted.', 'error')
+        return
+      }
+
+      toast('Report deleted.', 'success')
+      router.push('/admin/reports')
+      router.refresh()
+    } catch {
+      toast('The report could not be deleted.', 'error')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   return (
     <>
       <section className="mt-8 rounded-lg border border-line bg-panel p-6">
@@ -157,6 +193,34 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
             )}
           </div>
         )}
+      </section>
+
+      {/*
+        Kept apart from publishing, and last. Destructive actions sitting next to routine
+        ones is how the wrong button gets pressed.
+      */}
+      <section className="mt-5 rounded-lg border border-down/30 bg-down/[0.06] p-6">
+        <h2 className="mb-1 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+          Delete
+        </h2>
+        <p className="mb-5 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+          Removes the report and its PDF for good. Only possible while no member has opened it
+          and nothing has been sent — after that the views and delivery records are the audit
+          trail, so un-publish instead and members lose access immediately.
+        </p>
+        <Button variant="danger" onClick={deleteReport} disabled={deleting || publishing}>
+          {deleting ? (
+            <>
+              <Spinner />
+              Deleting…
+            </>
+          ) : (
+            <>
+              <Trash2 className="h-4 w-4" aria-hidden />
+              Delete this report
+            </>
+          )}
+        </Button>
       </section>
 
       <form onSubmit={saveChanges} className="mt-5 rounded-lg border border-line bg-panel p-6">
