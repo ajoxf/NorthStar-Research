@@ -13,6 +13,7 @@ import {
 } from '@/lib/notifications/templates'
 import type {
   DeliveryResult,
+  LatestReport,
   ReceiptDetails,
   NotificationProvider,
   Recipient,
@@ -80,8 +81,9 @@ export class ResendProvider implements NotificationProvider {
   async sendWelcomeEmail(
     recipient: { email: string; firstName?: string | null },
     dashboardUrl: string,
+    latest?: LatestReport | null,
   ): Promise<DeliveryResult> {
-    const { subject, html, text } = welcomeEmail(dashboardUrl, recipient.firstName)
+    const { subject, html, text } = welcomeEmail(dashboardUrl, recipient.firstName, 3, latest)
     return this.send(recipient.email, subject, html, text)
   }
 

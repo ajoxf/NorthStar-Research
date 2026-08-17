@@ -6,6 +6,8 @@ import { emailSchema } from '@/lib/validation'
 import { db } from '@/lib/db'
 import { addBillingPeriod } from '@/lib/env'
 import { hashPassword, startSession } from '@/lib/auth'
+import { safeNext } from '@/lib/oauth'
+import { latestPublishedReport } from '@/lib/latest-report'
 import { isCodeExpired, normaliseCode } from '@/lib/codes'
 import { normalisePhone } from '@/lib/utils'
 import { recordReferralSignup, referralSlugFromCookie } from '@/lib/referral-attribution'
@@ -15,12 +17,27 @@ import { getNotificationProvider } from '@/lib/notifications'
 export const runtime = 'nodejs'
 
 const schema = z.object({
+  /** Where to land after activating. Same-origin paths only — see safeNext. */
+  next: z.string().nullable().optional(),
   code: z.string().min(4),
   email: emailSchema,
   password: z.string().min(10, 'Use at least 10 characters.'),
   firstName: z.string().trim().max(80).optional(),
   lastName: z.string().trim().max(80).optional(),
-  phoneNumber: z.string().trim().optional(),
+  /*
+   * Required at sign-up.
+   *
+   * It is a contact detail, not a delivery channel — reports go by email only. The desk
+   * needs a way to reach a paying member that does not depend on an email landing in a
+   * spam folder, and asking later means never getting it.
+   */
+  phoneNumber: z
+    // `required_error` matters: a *missing* field never reaches .min(), so without this
+    // an omitted number is reported to the member as the bare word "Required".
+    .string({ required_error: 'Enter your WhatsApp or phone number, including the country code.' })
+    .trim()
+    .min(6, 'Enter your WhatsApp or phone number, including the country code.')
+    .max(32, 'That number is too long.'),
 })
 
 /**
@@ -42,7 +59,7 @@ export async function POST(request: Request) {
 
   const code = normaliseCode(parsed.data.code)
   const email = parsed.data.email
-  const phoneNumber = parsed.data.phoneNumber ? normalisePhone(parsed.data.phoneNumber) : null
+  const phoneNumber = normalisePhone(parsed.data.phoneNumber)
 
   const existing = await db.member.findUnique({ where: { email } })
   if (existing?.passwordHash) {
@@ -131,6 +148,10 @@ export async function POST(request: Request) {
       const result = await getNotificationProvider().sendWelcomeEmail(
         { email, firstName: member.firstName },
         `${appBaseUrl()}/dashboard`,
+        // Something to read immediately. A member who joins between editions would
+        // otherwise wait days for their first email with a report in it, having just
+        // paid for research that is already sitting there.
+        await latestPublishedReport(),
       )
       if (result.status === 'failed') {
         console.error(`[redeem] welcome email failed for ${email}: ${result.error}`)
@@ -142,7 +163,7 @@ export async function POST(request: Request) {
     }
 
     await startSession(member)
-    return NextResponse.json({ ok: true, redirectTo: '/dashboard' })
+    return NextResponse.json({ ok: true, redirectTo: safeNext(parsed.data.next) ?? '/dashboard' })
   } catch (error) {
     if (error instanceof RedemptionError) {
       return NextResponse.json({ error: error.message }, { status: 409 })

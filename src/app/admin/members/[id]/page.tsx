@@ -69,7 +69,7 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
           value={member.subscriptionStartedAt ? formatDate(member.subscriptionStartedAt) : '—'}
         />
         <Detail label="Source" value={member.source} />
-        <Detail label="Phone" value={member.phoneNumber ?? '—'} />
+        <Detail label="WhatsApp" value={member.phoneNumber ?? '—'} />
         <Detail label="Last login" value={member.lastLoginAt ? formatDateTime(member.lastLoginAt) : '—'} />
         <Detail label="Messages sent" value={String(member.deliveryLogs.length)} />
         <Detail label="Reports opened" value={String(member.reportViews.length)} />

@@ -98,10 +98,14 @@ export function reportEmail(report: ReportSummary, reportUrl: string, firstName?
  * Warm, and short. It tells a new member what happens next and where to go; it does not
  * repeat the sales page at somebody who has already bought.
  */
+/** The newest published edition, when there is one to point at. */
+export type LatestReport = { title: string; url: string }
+
 export function welcomeEmail(
   dashboardUrl: string,
   firstName?: string | null,
   reportsPerWeek = 3,
+  latest?: LatestReport | null,
 ) {
   const greeting = firstName ? `Welcome, ${escapeHtml(firstName)}.` : 'Welcome aboard.'
 
@@ -115,6 +119,14 @@ export function welcomeEmail(
       <li style="margin-bottom:6px;">Reports open in the portal rather than in the email. Every link checks your session first, so nothing is readable without signing in.</li>
       <li>Your access is personal. Views and downloads are watermarked to your account.</li>
     </ul>
+    ${
+      latest
+        ? `<div style="margin:22px 0 0;padding:16px 18px;background:#060606;border:1px solid ${LINE};border-radius:10px;">
+             <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:${ACCENT};margin-bottom:6px;">Latest edition</div>
+             <a href="${escapeHtml(latest.url)}" style="color:${INK};font-size:15px;line-height:1.5;text-decoration:none;">${escapeHtml(latest.title)}</a>
+           </div>`
+        : ''
+    }
     ${button(dashboardUrl, 'Open your portal')}
     <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">If you are opening this on a different device from the one you signed up on, you will be asked to sign in first — that is the paywall doing its job, not an error.</p>
     <p style="margin:10px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Reply to this email if you need anything — a person reads it.</p>
@@ -131,6 +143,7 @@ export function welcomeEmail(
       `Reports open in the portal, not in the email — every link checks your session ` +
       `first. Your access is personal, and views and downloads are watermarked to your ` +
       `account.\n\n` +
+      (latest ? `Latest edition — ${latest.title}\n${latest.url}\n\n` : '') +
       `Open your portal: ${dashboardUrl}\n\n` +
       `If you are opening this on a different device from the one you signed up on, ` +
       `you will be asked to sign in first — that is the paywall doing its job, not an ` +

@@ -4,8 +4,10 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 
 import { ReportAdminPanel } from '@/app/admin/reports/[id]/report-admin-panel'
+import { ShareLinks } from '@/app/admin/reports/[id]/share-links'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
+import { appBaseUrl } from '@/lib/env'
 import { db } from '@/lib/db'
 import { reportTypeLabel } from '@/lib/report-content'
 import { formatDate } from '@/lib/utils'
@@ -88,6 +90,16 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
           hasPdf: Boolean(report.pdfBlobUrl),
         }}
       />
+
+      {/*
+        Only for a published report. Sharing a link to a draft sends somebody to a page
+        that will not resolve, and there is no way for them to tell that from a fault.
+      */}
+      {report.published && (
+        <div className="mt-6">
+          <ShareLinks reportId={report.id} baseUrl={appBaseUrl()} />
+        </div>
+      )}
     </div>
   )
 }
