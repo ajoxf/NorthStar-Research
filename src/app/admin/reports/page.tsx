@@ -6,7 +6,7 @@ import { ButtonLink } from '@/components/ui/button'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { appBaseUrl } from '@/lib/env'
-import { ShareReportButton } from '@/app/admin/reports/share-report-button'
+import { reportShareMessage, whatsappShareUrl } from '@/lib/share-message'
 import { reportTypeLabel } from '@/lib/report-content'
 import { formatDate } from '@/lib/utils'
 
@@ -79,19 +79,23 @@ export default async function AdminReportsPage() {
                         mostly empty dashes.
                       */}
                       {/*
-                        Hidden on phones. The control adds intrinsic width that Chromium
-                        leaks past this table's horizontal scroll container, scrolling the
-                        whole admin page sideways — and at that size the table is already
-                        scrolled horizontally, so a 26px target inside it is awkward
-                        anyway. The report's own page carries the full share panel, which
-                        is the better surface on a phone.
+                        A plain server-rendered anchor, labelled. The earlier version was
+                        an unlabelled icon inside a client component, which was both easy
+                        to miss and — for reasons that resisted diagnosis — leaked width
+                        past this table's scroll container on a phone. No client boundary,
+                        no icon, no overflow.
                       */}
                       {report.published && (
-                        <ShareReportButton
-                          report={{ id: report.id, title: report.title }}
-                          baseUrl={base}
-                          className="hidden sm:flex"
-                        />
+                        <a
+                          href={whatsappShareUrl(
+                            reportShareMessage({ id: report.id, title: report.title }, base),
+                          )}
+                          target="_blank"
+                          rel="noreferrer noopener"
+                          className="shrink-0 whitespace-nowrap rounded border border-line px-2 py-0.5 font-mono text-[11px] text-ink-dim transition-colors hover:border-up/50 hover:text-up"
+                        >
+                          Share
+                        </a>
                       )}
                     </div>
                   </td>
