@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { appBaseUrl } from '@/lib/env'
+import { ShareReportButton } from '@/app/admin/reports/share-report-button'
 import { reportTypeLabel } from '@/lib/report-content'
 import { formatDate } from '@/lib/utils'
 
@@ -13,6 +15,8 @@ export const dynamic = 'force-dynamic'
 
 export default async function AdminReportsPage() {
   await requireAdmin()
+
+  const base = appBaseUrl()
 
   const reports = await db.report.findMany({
     orderBy: { publishDate: 'desc' },
@@ -33,7 +37,7 @@ export default async function AdminReportsPage() {
         </ButtonLink>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-line bg-panel">
+      <div className="mt-5 overflow-x-auto rounded-lg border border-line bg-panel">
         <table className="w-full min-w-[720px] text-left">
           <thead>
             <tr className="border-b border-line font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
@@ -62,12 +66,34 @@ export default async function AdminReportsPage() {
                     {reportTypeLabel(report.type)}
                   </td>
                   <td className="px-5 py-3.5">
-                    <Link
-                      href={`/admin/reports/${report.id}`}
-                      className="text-[14px] text-ink hover:text-accent"
-                    >
-                      {report.title}
-                    </Link>
+                    <div className="flex items-center gap-2.5">
+                      <Link
+                        href={`/admin/reports/${report.id}`}
+                        className="text-[14px] text-ink hover:text-accent"
+                      >
+                        {report.title}
+                      </Link>
+                      {/*
+                        Beside the title rather than in a column of its own: a published
+                        report is the only thing worth sharing, so a whole column would be
+                        mostly empty dashes.
+                      */}
+                      {/*
+                        Hidden on phones. The control adds intrinsic width that Chromium
+                        leaks past this table's horizontal scroll container, scrolling the
+                        whole admin page sideways — and at that size the table is already
+                        scrolled horizontally, so a 26px target inside it is awkward
+                        anyway. The report's own page carries the full share panel, which
+                        is the better surface on a phone.
+                      */}
+                      {report.published && (
+                        <ShareReportButton
+                          report={{ id: report.id, title: report.title }}
+                          baseUrl={base}
+                          className="hidden sm:flex"
+                        />
+                      )}
+                    </div>
                   </td>
                   <td className="px-5 py-3.5 font-mono text-[13px] text-ink-dim">
                     {report._count.deliveryLogs}
