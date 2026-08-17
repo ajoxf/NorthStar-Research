@@ -18,21 +18,21 @@ export const REPORT_TYPES: {
     value: 'commodities',
     label: 'Report 1 — Commodities',
     shortLabel: 'Commodities',
-    blurb: 'Energy, metals and agricultural positioning with levels for the week ahead.',
+    blurb: 'Energy, metals and agricultural markets read through trend structure and the macro backdrop.',
     defaultInstruments: ['XAUUSD', 'XAGUSD', 'WTI', 'NATGAS', 'COPPER'],
   },
   {
     value: 'international_markets',
     label: 'Report 2 — International Markets & Indices',
     shortLabel: 'International Markets & Indices',
-    blurb: 'Global index structure, cross-market rotation and macro-driven index levels.',
+    blurb: 'Global index structure, cross-market rotation and the macro drivers behind them.',
     defaultInstruments: ['DXY', 'SPX', 'DAX', 'NIKKEI', 'EURUSD'],
   },
   {
     value: 'options_crypto_spread',
     label: 'Report 3 — Option Strategies, Crypto & Spread Opportunities',
     shortLabel: 'Options, Crypto & Spreads',
-    blurb: 'Defined-risk option structures, digital-asset levels and relative-value spreads.',
+    blurb: 'Defined-risk option structures, digital assets and relative-value spreads, framed as scenarios.',
     defaultInstruments: ['BTCUSD', 'ETHUSD', 'SPX', 'VIX', 'EURUSD'],
   },
   {
@@ -40,7 +40,7 @@ export const REPORT_TYPES: {
     label: 'Report 4 — FX & Currencies',
     shortLabel: 'FX & Currencies',
     blurb:
-      'Major and cross pairs with rate-differential context, carry positioning and the levels that matter into the week.',
+      'Major and cross pairs with rate-differential context, carry positioning and the technical structure into the week.',
     defaultInstruments: ['EURUSD', 'GBPUSD', 'USDJPY', 'AUDUSD', 'USDCHF', 'EURGBP'],
   },
 ]

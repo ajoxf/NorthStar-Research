@@ -11,8 +11,8 @@ export function Wordmark({ href = '/' }: { href?: string }) {
         {/* The brand is split across two spans so the two halves can be set differently.
             Any find-and-replace over "NordStar Pro" therefore misses this — the second
             span has to be edited by hand or the logo keeps reading the old name. */}
-        <span className="font-display text-[19px] tracking-tight text-ink">NordStar</span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent transition-colors group-hover:text-ink">
+        <span className="font-display text-[23px] tracking-tight text-ink">NordStar</span>
+        <span className="font-mono text-[13px] uppercase tracking-[0.22em] text-accent transition-colors group-hover:text-ink">
           Pro
         </span>
       </span>
@@ -22,7 +22,7 @@ export function Wordmark({ href = '/' }: { href?: string }) {
         apart from the two spans above, so it reads as an attribution rather than as a
         third word in the logo.
       */}
-      <span className="mt-1 font-serif text-[11px] italic tracking-[0.02em] text-imprint/80">
+      <span className="mt-1 font-serif text-[15px] italic tracking-[0.02em] text-imprint/80">
         by Fincoursa
       </span>
     </Link>
