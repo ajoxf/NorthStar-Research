@@ -83,6 +83,7 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
           id: report.id,
           title: report.title,
           summary: report.summary,
+          shareHook: report.shareHook,
           publishDate: report.publishDate.toISOString().slice(0, 10),
           htmlContent: report.htmlContent,
           instruments: report.instruments ? JSON.stringify(report.instruments, null, 2) : '',
@@ -97,7 +98,12 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
       */}
       {report.published && (
         <div className="mt-6">
-          <ShareLinks reportId={report.id} title={report.title} baseUrl={appBaseUrl()} />
+          <ShareLinks
+            reportId={report.id}
+            title={report.title}
+            shareHook={report.shareHook}
+            baseUrl={appBaseUrl()}
+          />
         </div>
       )}
     </div>

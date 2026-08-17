@@ -88,7 +88,10 @@ export default async function AdminReportsPage() {
                       {report.published && (
                         <a
                           href={whatsappShareUrl(
-                            reportShareMessage({ id: report.id, title: report.title }, base),
+                            reportShareMessage(
+                              { id: report.id, title: report.title, shareHook: report.shareHook },
+                              base,
+                            ),
                           )}
                           target="_blank"
                           rel="noreferrer noopener"

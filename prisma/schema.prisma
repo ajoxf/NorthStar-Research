@@ -336,6 +336,10 @@ model Report {
 
   @@index([type, publishDate])
   @@index([publishDate])
+  /// One line written for sharing — the hook that makes somebody open the link.
+  /// Distinct from `summary`, which is written for members who already subscribe.
+  shareHook String?
+
 }
 
 model ReportView {
