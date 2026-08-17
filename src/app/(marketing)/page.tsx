@@ -11,6 +11,7 @@ export default function LandingPage() {
   return (
     <>
       <Hero />
+      <CoverageSection />
       <SampleReportSection />
       <PricingSection />
     </>
@@ -47,7 +48,7 @@ function Hero() {
               steps back down at the large breakpoint, where the photograph takes the
               right of the frame and the headline has half the width to live in. */}
           <h1 className="text-balance font-display text-[2.75rem] font-semibold tracking-[-0.035em] text-ink sm:text-6xl md:text-7xl lg:text-[3.5rem] xl:text-[4rem]">
-            Research for people who read the charts themselves.
+            Technical and macro analysis for traders who make their own calls.
           </h1>
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
@@ -83,6 +84,85 @@ function Hero() {
             </ButtonLink>
           </div>
         </div>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * What is actually covered, in three cards.
+ *
+ * The instruments are the real ones the desk publishes on — they mirror the
+ * `defaultInstruments` on each report type rather than being a marketing wish-list, so a
+ * prospect reading this and a member opening the reader see the same universe.
+ *
+ * Three cards, four report types: International Markets & Indices and FX & Currencies sit
+ * together here because a prospect thinks in asset classes, not in our publishing
+ * schedule. The cadence line below the cards states three a week, which is what actually
+ * ships, so grouping them this way does not overstate what arrives.
+ */
+const COVERAGE = [
+  {
+    title: 'Commodities & Energy',
+    analysis: 'Trend structure, key levels and the macro drivers behind them',
+    instruments: ['XAUUSD', 'XAGUSD', 'WTI', 'NATGAS', 'COPPER'],
+  },
+  {
+    title: 'Indices & FX',
+    analysis: 'Index structure, cross-market rotation, rate differentials and carry',
+    instruments: ['SPX', 'DAX', 'NIKKEI', 'DXY', 'EURUSD', 'GBPUSD', 'USDJPY'],
+  },
+  {
+    title: 'Options, Crypto & Spreads',
+    analysis: 'Defined-risk option structures, digital-asset levels, relative value',
+    instruments: ['BTCUSD', 'ETHUSD', 'VIX', 'SPX'],
+  },
+]
+
+function CoverageSection() {
+  return (
+    <section className="border-b border-line">
+      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+        <div className="max-w-2xl">
+          <span className="eyebrow">Coverage</span>
+          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
+            Every edition works the same way.
+          </h2>
+          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
+            Charts first, with the levels marked. Technical structure read against the macro
+            backdrop, and the invalidation stated as plainly as the setup.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {COVERAGE.map((card) => (
+            <div
+              key={card.title}
+              className="flex flex-col rounded-lg border border-line bg-panel p-6 transition-colors hover:border-accent/40"
+            >
+              <h3 className="text-[18px] text-ink">{card.title}</h3>
+              <p className="mt-2 flex-1 text-[14px] leading-relaxed text-ink-dim">
+                {card.analysis}
+              </p>
+
+              <ul className="mt-5 flex flex-wrap gap-1.5">
+                {card.instruments.map((symbol) => (
+                  <li
+                    key={symbol}
+                    className="rounded border border-line bg-panel-2 px-2 py-1 font-mono text-[11px] tracking-[0.06em] text-ink-dim"
+                  >
+                    {symbol}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        <p className="mt-6 text-[13px] leading-relaxed text-ink-dim">
+          Three editions a week across this coverage. Instruments shown are representative of
+          what each edition carries, not a fixed list.
+        </p>
       </div>
     </section>
   )
