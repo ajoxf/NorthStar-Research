@@ -1,18 +1,24 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import type { Prisma, SubscriptionStatus } from '@prisma/client'
 
 import { ActivateMemberButton } from '@/app/admin/members/member-status-action'
 import { Badge, statusTone } from '@/components/ui/badge'
 import { MemberFilters } from '@/app/admin/members/member-filters'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import {
+  ENGAGEMENT,
+  ENGAGEMENT_LABELS,
+  SOURCES,
+  SOURCE_LABELS,
+  isFiltered,
+  parseSegment,
+  segmentWhere,
+} from '@/lib/member-segments'
 import { formatDate, fullName } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Members' }
 export const dynamic = 'force-dynamic'
-
-const STATUSES: (SubscriptionStatus | 'all')[] = ['all', 'active', 'pending', 'expired', 'cancelled']
 
 /**
  * The CRM list view (build spec §5.3): every member, their status, channels, last
@@ -21,30 +27,12 @@ const STATUSES: (SubscriptionStatus | 'all')[] = ['all', 'active', 'pending', 'e
 export default async function AdminMembersPage({
   searchParams,
 }: {
-  searchParams: { status?: string; q?: string; tag?: string }
+  searchParams: Record<string, string | undefined>
 }) {
   await requireAdmin()
 
-  const status = STATUSES.includes(searchParams.status as never)
-    ? (searchParams.status as SubscriptionStatus | 'all')
-    : 'all'
-  const query = searchParams.q?.trim() ?? ''
-  const tag = searchParams.tag?.trim() ?? ''
-
-  const where: Prisma.MemberWhereInput = {
-    ...(status !== 'all' ? { subscriptionStatus: status } : {}),
-    ...(tag ? { tags: { has: tag } } : {}),
-    ...(query
-      ? {
-          OR: [
-            { email: { contains: query, mode: 'insensitive' } },
-            { firstName: { contains: query, mode: 'insensitive' } },
-            { lastName: { contains: query, mode: 'insensitive' } },
-            { phoneNumber: { contains: query } },
-          ],
-        }
-      : {}),
-  }
+  const segment = parseSegment(searchParams)
+  const where = segmentWhere(segment)
 
   const [members, total, allTags] = await Promise.all([
     db.member.findMany({
@@ -69,7 +57,38 @@ export default async function AdminMembersPage({
         </p>
       </div>
 
-      <MemberFilters status={status} query={query} tag={tag} tagOptions={tagOptions} />
+      <MemberFilters
+        status={segment.status}
+        query={segment.search ?? ''}
+        tag={segment.tag ?? ''}
+        source={segment.source}
+        engagement={segment.engagement}
+        tagOptions={tagOptions}
+        sourceOptions={SOURCES.map((value) => ({ value, label: SOURCE_LABELS[value] }))}
+        engagementOptions={ENGAGEMENT.map((value) => ({ value, label: ENGAGEMENT_LABELS[value] }))}
+      />
+
+      {isFiltered(segment) && (
+        <p className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-ink-dim">
+          <span>Segment:</span>
+          {[
+            segment.status !== 'all' ? segment.status : null,
+            segment.source !== 'all' ? SOURCE_LABELS[segment.source] : null,
+            segment.engagement !== 'all' ? ENGAGEMENT_LABELS[segment.engagement] : null,
+            segment.tag ? `tag: ${segment.tag}` : null,
+            segment.search ? `"${segment.search}"` : null,
+          ]
+            .filter(Boolean)
+            .map((label) => (
+              <span key={label as string} className="rounded border border-line px-2 py-0.5 font-mono text-[11px] text-ink">
+                {label}
+              </span>
+            ))}
+          <Link href="/admin/members" className="text-accent underline underline-offset-4">
+            Clear
+          </Link>
+        </p>
+      )}
 
       <div className="mt-5 overflow-x-auto rounded-lg border border-line bg-panel">
         <table className="w-full min-w-[880px] text-left">
@@ -88,7 +107,7 @@ export default async function AdminMembersPage({
             {members.length === 0 ? (
               <tr>
                 <td colSpan={7} className="px-5 py-12 text-center font-mono text-[13px] text-ink-dim">
-                  {total === 0 && !query && status === 'all'
+                  {total === 0 && !isFiltered(segment)
                     ? 'No members yet. They appear here as soon as a payment confirms.'
                     : 'No members match those filters.'}
                 </td>

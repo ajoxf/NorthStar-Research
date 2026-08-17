@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
+import { parseSegment, segmentWhere } from '@/lib/member-segments'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 
 export const runtime = 'nodejs'
@@ -24,10 +25,19 @@ export async function GET(request: Request) {
     throw error
   }
 
-  const status = new URL(request.url).searchParams.get('status')
+  /*
+   * The CSV must contain exactly what the screen showed.
+   *
+   * It previously honoured only `status`, so exporting from a filtered view — say
+   * "never read" — silently produced a longer list than the one on screen. That list
+   * then gets emailed, which makes it the kind of bug you find out about from a
+   * recipient.
+   */
+  const url = new URL(request.url)
+  const segment = parseSegment(Object.fromEntries(url.searchParams.entries()))
 
   const members = await db.member.findMany({
-    where: status && status !== 'all' ? { subscriptionStatus: status as never } : undefined,
+    where: segmentWhere(segment),
     orderBy: { createdAt: 'desc' },
     include: {
       _count: { select: { reportViews: true, deliveryLogs: true } },
