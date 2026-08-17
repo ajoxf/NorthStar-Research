@@ -76,7 +76,7 @@ function Hero() {
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <ButtonLink href="/join" size="lg">
-              Become a member — ${PLAN.priceUsd}/mo
+              Become a member — ${PLAN.priceUsd}/mo intro
               <ArrowRight className="h-4 w-4" aria-hidden />
             </ButtonLink>
             <ButtonLink href="#sample-report" size="lg" variant="secondary">
@@ -200,16 +200,28 @@ function PricingSection() {
           />
 
           <span className="eyebrow">Membership</span>
-          <div className="mt-4 flex items-baseline gap-2">
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-2">
             <span className="font-display text-5xl text-ink">${PLAN.priceUsd}</span>
             <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
               per month
             </span>
+            {/*
+              Stated as a fact about the current price, not as a countdown. No fake
+              deadline, no struck-through "was" figure that never existed — both are the
+              kind of pressure a research product should not need, and the second is a
+              claim we would have to be able to stand behind.
+            */}
+            <Badge tone="accent">Introductory rate</Badge>
           </div>
           <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
             One plan. Three reports a week, the complete archive of everything published, and an
             email the moment each one lands. Pay by card and it renews itself — cancel any time —
             or pay in crypto and renew whenever you choose.
+          </p>
+          <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
+            <span className="text-ink">${PLAN.priceUsd} is an introductory rate</span> while the
+            desk builds out its coverage. It will rise for new members later; join now and yours
+            stays as it is for as long as your membership runs.
           </p>
 
           <ul className="mt-8 space-y-3 border-t border-line pt-7">

@@ -13,6 +13,7 @@ type EditableReport = {
   id: string
   title: string
   summary: string | null
+  shareHook: string | null
   publishDate: string
   htmlContent: string | null
   instruments: string
@@ -44,6 +45,7 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
         body: JSON.stringify({
           title: String(form.get('title') ?? ''),
           summary: String(form.get('summary') ?? ''),
+          shareHook: String(form.get('shareHook') ?? ''),
           publishDate: String(form.get('publishDate') ?? ''),
           htmlContent: String(form.get('htmlContent') ?? ''),
           instruments: String(form.get('instruments') ?? ''),
@@ -236,6 +238,22 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
         <div className="mb-4">
           <Label htmlFor="summary">Summary</Label>
           <Textarea id="summary" name="summary" rows={3} defaultValue={report.summary ?? ''} />
+        </div>
+
+        <div className="mb-4">
+          <Label htmlFor="shareHook">Share hook</Label>
+          <Input
+            id="shareHook"
+            name="shareHook"
+            maxLength={200}
+            defaultValue={report.shareHook ?? ''}
+            placeholder="Dollar, gold, silver and oil — all four turning at once."
+          />
+          <Hint>
+            One line for people who are not members yet. It leads the WhatsApp share, where it
+            is the only line most people read — the title goes in its place if this is blank,
+            and a masthead means nothing to a stranger. Say what moved, not what to do about it.
+          </Hint>
         </div>
 
         <div className="mb-4">

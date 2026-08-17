@@ -252,6 +252,20 @@ export function ReportUploadForm() {
           />
         </div>
 
+        <div className="mb-4">
+          <Label htmlFor="shareHook">Share hook</Label>
+          <Input
+            id="shareHook"
+            name="shareHook"
+            maxLength={200}
+            placeholder="Dollar, gold, silver and oil — all four turning at once."
+          />
+          <Hint>
+            One line for people who are not members yet — it leads the WhatsApp share. Blank
+            is fine; the title is used instead. Can be written later.
+          </Hint>
+        </div>
+
         <div>
           <Label htmlFor="publishDate">Publish date</Label>
           <Input id="publishDate" name="publishDate" type="date" defaultValue={today} required />

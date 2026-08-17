@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic'
 const schema = z.object({
   title: z.string().trim().min(3).max(200).optional(),
   summary: z.string().trim().max(600).nullable().optional(),
+  shareHook: z.string().trim().max(200).nullable().optional(),
   publishDate: z.string().optional(),
   htmlContent: z.string().nullable().optional(),
   instruments: z.string().optional(),
@@ -42,6 +43,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const data: Record<string, unknown> = {}
   if (parsed.data.title !== undefined) data.title = parsed.data.title
   if (parsed.data.summary !== undefined) data.summary = parsed.data.summary || null
+  if (parsed.data.shareHook !== undefined) data.shareHook = parsed.data.shareHook || null
   if (parsed.data.htmlContent !== undefined) {
     data.htmlContent = parsed.data.htmlContent ? sanitiseReportHtml(parsed.data.htmlContent) : null
   }

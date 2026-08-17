@@ -27,17 +27,19 @@ import { reportInviteUrl, reportShareMessage, whatsappShareUrl } from '@/lib/sha
 export function ShareLinks({
   reportId,
   title,
+  shareHook,
   baseUrl,
 }: {
   reportId: string
   title: string
+  shareHook: string | null
   baseUrl: string
 }) {
   const [code, setCode] = React.useState('')
 
   const memberLink = `${baseUrl}/reports/${reportId}`
   const inviteLink = reportInviteUrl(baseUrl, reportId, code)
-  const message = reportShareMessage({ id: reportId, title }, baseUrl, code)
+  const message = reportShareMessage({ id: reportId, title, shareHook }, baseUrl, code)
 
   return (
     <div className="rounded-lg border border-line bg-panel p-5">

@@ -17,6 +17,7 @@ const schema = z.object({
   title: z.string().trim().min(3).max(200),
   summary: z.string().trim().max(600).optional(),
   publishDate: z.string().min(4),
+  shareHook: z.string().trim().max(200).optional(),
   htmlContent: z.string().optional(),
   instruments: z.string().optional(),
   // Where the browser already put the PDF. Validated below, not trusted as given.
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     title: form.get('title'),
     summary: form.get('summary') || undefined,
     publishDate: form.get('publishDate'),
+    shareHook: form.get('shareHook') || undefined,
     htmlContent: form.get('htmlContent') || undefined,
     instruments: form.get('instruments') || undefined,
     pdfBlobUrl: form.get('pdfBlobUrl') || undefined,
@@ -106,6 +108,7 @@ export async function POST(request: Request) {
       type: parsed.data.type,
       title: parsed.data.title,
       summary: parsed.data.summary || null,
+      shareHook: parsed.data.shareHook || null,
       publishDate,
       pdfBlobUrl,
       pdfBlobPathname,

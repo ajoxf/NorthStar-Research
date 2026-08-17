@@ -16,6 +16,8 @@
 export type ShareableReport = {
   id: string
   title: string
+  /** A line written for people who are not members yet. Optional. */
+  shareHook?: string | null
 }
 
 /** Where a shared link points: redemption, returning to this report afterwards. */
@@ -26,12 +28,23 @@ export function reportInviteUrl(baseUrl: string, reportId: string, code?: string
   return `${baseUrl}/redeem?${params.toString()}`
 }
 
+/**
+ * Two lines: a hook, then the link.
+ *
+ * When a hook has been written for the report it leads, because that is the only line
+ * that gets read in a chat — and a masthead means nothing to somebody who is not a member
+ * yet, which is exactly who this link is for. The title is the fallback, not the ideal:
+ * "NordStar Pro — Ahead of the Curve" tells a stranger nothing, while "Dollar, gold,
+ * silver and oil, all turning at once" tells them whether to tap.
+ */
 export function reportShareMessage(
   report: ShareableReport,
   baseUrl: string,
   code?: string | null,
 ): string {
   const url = reportInviteUrl(baseUrl, report.id, code)
+  const hook = report.shareHook?.trim()
+  if (hook) return `${hook}\n\nRead it here: ${url}`
   return `New from NordStar Pro — ${report.title}\n\nRead it here: ${url}`
 }
 
