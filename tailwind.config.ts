@@ -16,6 +16,10 @@ const config: Config = {
         'ink-dim': '#A3A3A3',
         // Acid lime, yellow-leaning rather than a pure green.
         accent: '#D0F53C',
+        // The parent-brand attribution under the wordmark. A warm parchment, chosen to
+        // sit apart from both the white ink and the lime accent without competing with
+        // either — it reads as an imprint line rather than a third brand colour.
+        imprint: '#D8CFC0',
         up: '#00E08A',
         down: '#FF4D5E',
         // Chart series. Kept green rather than re-hued to the lime accent: the accent
@@ -30,6 +34,9 @@ const config: Config = {
         display: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['var(--font-plex-mono)', 'IBM Plex Mono', 'ui-monospace', 'monospace'],
         sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        // A system serif, deliberately: the only genuinely different letterform available
+        // without adding a webfont request to every page for two words.
+        serif: ['Georgia', "'Times New Roman'", 'serif'],
       },
       keyframes: {
         'fade-up': {

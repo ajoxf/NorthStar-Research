@@ -147,11 +147,6 @@ function CoverageSection() {
             </div>
           ))}
         </div>
-
-        <p className="mt-6 text-[13px] leading-relaxed text-ink-dim">
-          Three editions a week across this coverage. What each one covers follows the market,
-          not a fixed schedule of instruments.
-        </p>
       </div>
     </section>
   )

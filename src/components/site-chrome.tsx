@@ -6,20 +6,23 @@ import { getCurrentMember } from '@/lib/auth'
 
 export function Wordmark({ href = '/' }: { href?: string }) {
   return (
-    <Link href={href} className="group inline-flex items-baseline gap-2">
-      {/* The brand is split across two spans so the two halves can be set differently.
-          Any find-and-replace over "NordStar Pro" therefore misses this — the second
-          span has to be edited by hand or the logo keeps reading the old name. */}
-      <span className="font-display text-[19px] tracking-tight text-ink">NordStar</span>
-      <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent transition-colors group-hover:text-ink">
-        Pro
+    <Link href={href} className="group inline-flex flex-col leading-none">
+      <span className="inline-flex items-baseline gap-2">
+        {/* The brand is split across two spans so the two halves can be set differently.
+            Any find-and-replace over "NordStar Pro" therefore misses this — the second
+            span has to be edited by hand or the logo keeps reading the old name. */}
+        <span className="font-display text-[19px] tracking-tight text-ink">NordStar</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent transition-colors group-hover:text-ink">
+          Pro
+        </span>
       </span>
+
       {/*
-        The parent brand, set small and in italic serif so it reads as an attribution
-        rather than a third word in the logo. Hidden on the narrowest screens, where the
-        header has a sign-in link and a join button competing for the same row.
+        The parent brand on its own line, in a serif and a warm imprint tone — three ways
+        apart from the two spans above, so it reads as an attribution rather than as a
+        third word in the logo.
       */}
-      <span className="hidden font-display text-[11px] italic tracking-normal text-ink-dim/70 sm:inline">
+      <span className="mt-1 font-serif text-[11px] italic tracking-[0.02em] text-imprint/80">
         by Fincoursa
       </span>
     </Link>
