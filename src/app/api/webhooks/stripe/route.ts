@@ -118,6 +118,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         // Bought at list price, so no discount to record.
         discountPercent: 0,
         expiresAt: codeExpiresAt(),
+        // Read off the order this session created, not off the session: the order is
+        // where the package the buyer chose was recorded, and it is what carries that
+        // choice forward to the membership they end up with.
+        packageId: existingOrder?.packageId ?? null,
       },
     })
 
@@ -130,11 +134,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         billingProvider: 'stripe',
         stripeCustomerId: customerId ?? null,
         stripeSubscriptionId: subscriptionId ?? null,
+        packageId: existingOrder?.packageId ?? null,
       },
       update: {
         billingProvider: 'stripe',
         stripeCustomerId: customerId ?? undefined,
         stripeSubscriptionId: subscriptionId ?? undefined,
+        packageId: existingOrder?.packageId ?? undefined,
       },
     })
   })

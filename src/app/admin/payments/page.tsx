@@ -1,11 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Settings } from 'lucide-react'
+import { Settings, Tag } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { PLAN } from '@/lib/env'
 import { formatDate } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Payments', robots: { index: false, follow: false } }
@@ -38,16 +37,25 @@ export default async function AdminPaymentsPage({
   const status = FILTERS.includes(searchParams.status as never) ? searchParams.status : 'all'
   const where = status && status !== 'all' ? { status: status as never } : {}
 
-  const [orders, paidCount, pendingCount, failedCount] = await Promise.all([
+  const [orders, paidOrders, pendingCount, failedCount] = await Promise.all([
     db.checkoutOrder.findMany({ where, orderBy: { createdAt: 'desc' }, take: 200 }),
-    db.checkoutOrder.count({ where: { status: 'paid' } }),
+    // The amounts themselves, not a count times a price. Packages mean orders no longer
+    // share one figure, and multiplying would have quietly reported the wrong total the
+    // moment a second price existed.
+    db.checkoutOrder.findMany({ where: { status: 'paid' }, select: { amount: true } }),
     db.checkoutOrder.count({ where: { status: 'pending' } }),
     db.checkoutOrder.count({ where: { status: 'failed' } }),
   ])
 
+  const paidCount = paidOrders.length
+  const collected = paidOrders.reduce((sum, order) => sum + (Number(order.amount) || 0), 0)
+
   const stats = [
     { label: 'Paid', value: String(paidCount) },
-    { label: 'Collected', value: `$${(paidCount * PLAN.priceUsd).toLocaleString()}` },
+    {
+      label: 'Collected',
+      value: `$${collected.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    },
     { label: 'Awaiting payment', value: String(pendingCount) },
     { label: 'Failed', value: String(failedCount) },
   ]
@@ -60,13 +68,22 @@ export default async function AdminPaymentsPage({
           <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Payments</h1>
         </div>
 
-        <Link
-          href="/admin/payments/settings"
-          className="inline-flex items-center gap-1.5 rounded border border-line px-3 py-2 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
-        >
-          <Settings className="h-3.5 w-3.5" aria-hidden />
-          Settings
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/payments/packages"
+            className="inline-flex items-center gap-1.5 rounded border border-line px-3 py-2 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+          >
+            <Tag className="h-3.5 w-3.5" aria-hidden />
+            Packages
+          </Link>
+          <Link
+            href="/admin/payments/settings"
+            className="inline-flex items-center gap-1.5 rounded border border-line px-3 py-2 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+          >
+            <Settings className="h-3.5 w-3.5" aria-hidden />
+            Settings
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">

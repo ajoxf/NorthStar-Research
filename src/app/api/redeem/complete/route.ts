@@ -4,7 +4,8 @@ import { z } from 'zod'
 import { emailSchema } from '@/lib/validation'
 
 import { db } from '@/lib/db'
-import { addBillingPeriod } from '@/lib/env'
+import { addPeriod, isFallbackPackage } from '@/lib/package-shape'
+import { defaultPackage, packageById } from '@/lib/packages'
 import { hashPassword, startSession } from '@/lib/auth'
 import { safeNext } from '@/lib/oauth'
 import { latestPublishedReport } from '@/lib/latest-report'
@@ -71,6 +72,17 @@ export async function POST(request: Request) {
 
   const passwordHash = await hashPassword(parsed.data.password)
 
+  // Which membership this code grants, read before the claim below. The code's package
+  // never changes, so reading it outside the transaction races with nothing — and a
+  // gifted code, which carries none, falls back to whatever is currently on sale.
+  const codePackage = await db.redemptionCode.findUnique({
+    where: { code },
+    select: { packageId: true },
+  })
+  const chosen = codePackage?.packageId ? await packageById(codePackage.packageId) : null
+  const pkg = chosen ?? (await defaultPackage())
+  const packageId = isFallbackPackage(pkg) ? null : pkg.id
+
   try {
     const member = await db.$transaction(async (tx) => {
       // Conditional on status *and* expiry, both inside the transaction: the update
@@ -100,7 +112,7 @@ export async function POST(request: Request) {
       const now = new Date()
       // First paid period starts now. Stripe members then have this extended
       // automatically by each `invoice.paid`; Cregis members extend it by paying again.
-      const renewsAt = addBillingPeriod(now)
+      const renewsAt = addPeriod(pkg.interval, now)
 
       const created = await tx.member.upsert({
         where: { email },
@@ -116,6 +128,7 @@ export async function POST(request: Request) {
           subscriptionRenewsAt: renewsAt,
           billingProvider: 'cregis',
           source: 'cregis_checkout',
+          packageId,
         },
         update: {
           passwordHash,
@@ -125,6 +138,7 @@ export async function POST(request: Request) {
           subscriptionStatus: 'active',
           subscriptionStartedAt: now,
           subscriptionRenewsAt: renewsAt,
+          packageId: packageId ?? undefined,
         },
       })
 

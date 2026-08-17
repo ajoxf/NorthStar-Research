@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
-import { addBillingPeriod, appBaseUrl, MissingConfigError } from '@/lib/env'
+import { appBaseUrl, MissingConfigError } from '@/lib/env'
+import { addPeriod } from '@/lib/package-shape'
+import { intervalForPackage } from '@/lib/packages'
 import { verifyCregisCallback } from '@/lib/cregis'
 import { callbackIpAllowed, clientAddress } from '@/lib/cregis-callback'
 import { resolveCregisSettings } from '@/lib/cregis-settings'
@@ -130,6 +132,8 @@ export async function POST(request: Request) {
   const existingMember = await db.member.findUnique({ where: { email: order.email } })
 
   if (existingMember?.passwordHash) {
+    // The period this renewal buys is the one their package sells, not a fixed month.
+    const interval = await intervalForPackage(order.packageId ?? existingMember.packageId)
     const from =
       existingMember.subscriptionRenewsAt && existingMember.subscriptionRenewsAt > new Date()
         ? existingMember.subscriptionRenewsAt // stack onto unused time rather than truncating it
@@ -144,8 +148,9 @@ export async function POST(request: Request) {
         where: { id: existingMember.id },
         data: {
           subscriptionStatus: 'active',
-          subscriptionRenewsAt: addBillingPeriod(from),
+          subscriptionRenewsAt: addPeriod(interval, from),
           billingProvider: 'cregis',
+          packageId: order.packageId ?? existingMember.packageId,
           renewalReminderSentAt: null,
         },
       })
@@ -180,6 +185,9 @@ export async function POST(request: Request) {
         // Bought at list price, so no discount to record.
         discountPercent: 0,
         expiresAt: codeExpiresAt(),
+        // Carried from the order so the buyer is granted the package they paid for,
+        // whatever the default has become by the time they redeem.
+        packageId: order.packageId,
       },
     })
 
@@ -193,9 +201,11 @@ export async function POST(request: Request) {
         phoneNumber: order.phoneNumber,
         source: 'cregis_checkout',
         subscriptionStatus: 'pending',
+        packageId: order.packageId,
       },
       update: {
         phoneNumber: order.phoneNumber ?? undefined,
+        packageId: order.packageId ?? undefined,
       },
     })
   })

@@ -3,6 +3,7 @@ import 'server-only'
 import Stripe from 'stripe'
 
 import { PLAN, appBaseUrl, isConfigured, requireEnv } from '@/lib/env'
+import type { StripePriceFacts } from '@/lib/package-shape'
 
 /**
  * Stripe: the auto-renewing half of billing.
@@ -30,15 +31,43 @@ export function stripeClient(): Stripe {
 }
 
 /**
- * Create a Checkout Session for the $199/month subscription.
+ * Read back the facts about a Stripe Price that decide whether it is safe to sell.
+ *
+ * Kept here, beside the client, and returned as a plain shape so the comparison itself
+ * can live in pure, tested code (`stripePriceMismatch`). Stripe charges what its own
+ * Price says, so this round trip is the only thing standing between a package that
+ * advertises one figure and a buyer who is charged another.
+ */
+export async function stripePriceFacts(priceId: string): Promise<StripePriceFacts> {
+  const price = await stripeClient().prices.retrieve(priceId)
+  return {
+    active: price.active,
+    type: price.type,
+    unitAmount: price.unit_amount,
+    currency: price.currency,
+    interval: price.recurring?.interval ?? null,
+  }
+}
+
+/**
+ * Create a Checkout Session for a recurring membership.
  *
  * `mode: 'subscription'` is what makes this recurring — Stripe stores the payment method
  * and charges it every period, emitting `invoice.paid` each time, which is what extends
  * the member's access.
+ *
+ * The price comes from the package when it has one of its own, and falls back to
+ * `STRIPE_PRICE_ID` otherwise — which is the plan the site sold before packages existed.
+ * The caller is responsible for not offering a card checkout on a package that has
+ * neither; charging the fallback price for a differently-priced package would be exactly
+ * the silent mismatch this feature is built to prevent.
  */
-export async function createStripeCheckout(email: string): Promise<{ url: string; sessionId: string }> {
+export async function createStripeCheckout(
+  email: string,
+  options: { priceId?: string | null; planName?: string; packageId?: string } = {},
+): Promise<{ url: string; sessionId: string }> {
   const stripe = stripeClient()
-  const priceId = requireEnv('STRIPE_PRICE_ID', 'Card billing (Stripe)')
+  const priceId = options.priceId || requireEnv('STRIPE_PRICE_ID', 'Card billing (Stripe)')
   const base = appBaseUrl()
 
   const session = await stripe.checkout.sessions.create({
@@ -50,7 +79,10 @@ export async function createStripeCheckout(email: string): Promise<{ url: string
     success_url: `${base}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${base}/checkout/cancelled`,
     subscription_data: {
-      metadata: { plan: PLAN.name },
+      metadata: {
+        plan: options.planName ?? PLAN.name,
+        ...(options.packageId ? { packageId: options.packageId } : {}),
+      },
     },
     allow_promotion_codes: false,
   })

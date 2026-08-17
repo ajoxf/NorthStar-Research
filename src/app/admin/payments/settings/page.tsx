@@ -8,8 +8,11 @@ import { CREGIS_SETTING_KEYS, resolveCregisSettings } from '@/lib/cregis-setting
 import { settingsMetadata } from '@/lib/secure-settings'
 import { formatDate } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
+import { ButtonLink } from '@/components/ui/button'
 import { requireAdmin } from '@/lib/auth'
-import { CANONICAL_BASE_URL, PLAN } from '@/lib/env'
+import { priceLine } from '@/lib/package-shape'
+import { defaultPackage, sellablePackages } from '@/lib/packages'
+import { CANONICAL_BASE_URL } from '@/lib/env'
 import {
   REQUIRED_STRIPE_EVENTS,
   type SettingRow,
@@ -40,6 +43,7 @@ export default async function PaymentSettingsPage() {
   const stripe = stripeSettings()
   const cregis = await cregisSettings()
   const cregisFormState = await buildCregisFormState()
+  const [packages, defaultPkg] = await Promise.all([sellablePackages(), defaultPackage()])
   const urls = processorUrls()
   const baseLooksWrong = urls.base !== CANONICAL_BASE_URL
 
@@ -87,7 +91,7 @@ export default async function PaymentSettingsPage() {
 
       <Section
         title="Stripe"
-        note={`Card subscriptions at $${PLAN.priceUsd} per month, renewing automatically.`}
+        note={`Card subscriptions, renewing automatically. Default package: ${priceLine(defaultPkg)}.`}
         action={{ href: 'https://dashboard.stripe.com/apikeys', label: 'Stripe dashboard' }}
       >
         <SettingTable rows={stripe} />
@@ -176,16 +180,45 @@ export default async function PaymentSettingsPage() {
         </p>
       </Section>
 
-      <Section title="The plan" note="One price, no tiers.">
+      <Section
+        title="Packages and pricing"
+        note={
+          packages.length > 0
+            ? `${packages.length} package${packages.length === 1 ? '' : 's'} on sale. The default is what the homepage and a bare /join quote.`
+            : 'Nothing has been created yet, so the site is selling the built-in plan.'
+        }
+      >
         <dl className="grid gap-px overflow-hidden rounded-lg border border-line bg-line sm:grid-cols-3">
-          <Fact label="Price" value={`$${PLAN.priceUsd} / ${PLAN.interval}`} />
-          <Fact label="Currency" value={PLAN.currency} />
-          <Fact label="Includes" value={PLAN.description} />
+          <Fact label="Default price" value={priceLine(defaultPkg)} />
+          <Fact label="Currency" value={defaultPkg.currency} />
+          <Fact label="Includes" value={defaultPkg.description ?? defaultPkg.name} />
         </dl>
-        <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
-          The price is fixed in code and in your Stripe price object, and is not editable from
-          this console — changing it in one place only would mean the site advertises one figure
-          while buyers are charged another.
+
+        {packages.length > 1 && (
+          <ul className="mt-4 overflow-hidden rounded-lg border border-line">
+            {packages.map((pkg) => (
+              <li
+                key={pkg.id}
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line bg-panel px-4 py-3 last:border-b-0"
+              >
+                <span className="text-[14px] text-ink">{pkg.name}</span>
+                <span className="font-mono text-[13px] text-ink-dim">{priceLine(pkg)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-5">
+          <ButtonLink href="/admin/payments/packages" variant="secondary" size="sm">
+            Manage packages
+          </ButtonLink>
+        </div>
+
+        <p className="mt-4 text-[13px] leading-relaxed text-ink-dim">
+          Prices are editable there, but a package sold by card must carry its own Stripe price ID
+          — Stripe charges what its own price object says, so the two are verified against each
+          other before a package can be saved. Otherwise the site would advertise one figure while
+          buyers were charged another.
         </p>
       </Section>
     </div>
