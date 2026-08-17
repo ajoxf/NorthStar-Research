@@ -328,6 +328,14 @@ model CheckoutOrder {
   packageId String?
   package   Package? @relation(fields: [packageId], references: [id])
 
+  /// An operator's own live-mode probe, not a sale.
+  ///
+  /// This flag is load-bearing in the webhooks: a test order is acknowledged and recorded
+  /// and then stops there — no redemption code, no member, no receipt, no affiliate
+  /// credit. Without it, a $1 probe would mint a membership and email a stranger's
+  /// address a code, which is the one thing a test must never do.
+  isTest Boolean @default(false)
+
   createdAt DateTime  @default(now())
   paidAt    DateTime?
 }
@@ -363,7 +371,16 @@ model Package {
 
   /// The Stripe recurring Price this package sells. Required before card checkout will
   /// offer the package; crypto works without it.
+  ///
+  /// Normally created by this app when the price is set, rather than pasted: Stripe
+  /// prices are immutable, so changing a price means creating a new one and pointing
+  /// here at it. An operator may still paste an existing ID.
   stripePriceId String?
+
+  /// The Stripe Product the prices above hang off. Reused across every price change so
+  /// the Stripe dashboard shows one product with a price history, rather than a new
+  /// product for every edit.
+  stripeProductId String?
 
   /// Bullet points on the join page. Plain strings so they stay editable by hand.
   features String[] @default([])

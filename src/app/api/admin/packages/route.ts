@@ -4,7 +4,7 @@ import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { packageInputSchema } from '@/lib/package-shape'
 import { setDefaultPackage, uniqueSlug } from '@/lib/packages'
-import { verifyPackagePrice } from '@/app/api/admin/packages/verify-price'
+import { resolveStripePrice } from '@/app/api/admin/packages/resolve-price'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 /**
  * Create a package.
  *
- * The Stripe price is verified against Stripe *before* the row is written, not after.
+ * The Stripe price is resolved against Stripe *before* the row is written, not after.
  * Saving first and warning second would leave a sellable package on the join page that
  * charges the wrong amount for however long it takes someone to read the warning, and
  * the buyers in between are charged what Stripe says regardless of what our row claims.
@@ -37,10 +37,14 @@ export async function POST(request: Request) {
 
   const input = parsed.data
 
-  if (input.stripePriceId) {
-    const problem = await verifyPackagePrice(input.stripePriceId, input)
-    if (problem) return NextResponse.json({ error: problem }, { status: 400 })
-  }
+  // Resolved before the row is written: a package that exists but cannot be charged
+  // correctly is worse than one that was never created.
+  const price = await resolveStripePrice({
+    sellByCard: input.sellByCard,
+    pastedPriceId: input.stripePriceId,
+    desired: { ...input, name: input.name },
+  })
+  if (!price.ok) return NextResponse.json({ error: price.error }, { status: 400 })
 
   // The very first package becomes the default, because a site with packages and no
   // default would fall back to the built-in plan and quietly ignore what was just created.
@@ -54,7 +58,8 @@ export async function POST(request: Request) {
       priceCents: input.priceCents,
       currency: input.currency,
       interval: input.interval,
-      stripePriceId: input.stripePriceId || null,
+      stripePriceId: price.stripePriceId,
+      stripeProductId: price.stripeProductId,
       features: input.features,
       sortOrder: input.sortOrder,
       isDefault: existing === 0,

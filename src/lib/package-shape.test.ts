@@ -148,6 +148,34 @@ test('the input schema refuses prices that would be a typo or a giveaway', () =>
   assert.ok(!packageInputSchema.safeParse({ ...valid, interval: 'week' }).success)
 })
 
+test('card selling is on by default, and is stated rather than inferred from a blank ID', () => {
+  const parsed = packageInputSchema.parse({
+    name: 'Pro',
+    priceCents: 19900,
+    currency: 'USD',
+    interval: 'month',
+    features: [],
+    sortOrder: 0,
+  })
+  // With the app creating prices itself, an empty price ID no longer means "not for sale
+  // by card" — so intent has its own field and defaults to selling.
+  assert.equal(parsed.sellByCard, true)
+  assert.equal(parsed.stripePriceId, undefined)
+
+  assert.equal(
+    packageInputSchema.parse({
+      name: 'Pro',
+      priceCents: 19900,
+      currency: 'USD',
+      interval: 'month',
+      features: [],
+      sortOrder: 0,
+      sellByCard: false,
+    }).sellByCard,
+    false,
+  )
+})
+
 test('a Stripe price ID is checked for shape before a round trip is spent on it', () => {
   const valid = {
     name: 'Pro',
