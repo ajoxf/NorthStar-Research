@@ -24,6 +24,7 @@ export type PackageShape = {
   currency: string
   interval: BillingIntervalValue
   stripePriceId: string | null
+  stripeProductId: string | null
   features: string[]
   sortOrder: number
   isDefault: boolean
@@ -48,6 +49,7 @@ export const FALLBACK_PACKAGE: PackageShape = {
   currency: PLAN.currency,
   interval: PLAN.interval,
   stripePriceId: null,
+  stripeProductId: null,
   features: ['3 reports every week', 'Complete archive access', 'Emailed the moment each report lands'],
   sortOrder: 0,
   isDefault: true,
@@ -185,6 +187,16 @@ export const packageInputSchema = z.object({
     .max(100_000_00, 'That price looks like a typo. The maximum is 100,000.'),
   currency: z.enum(['USD'], { required_error: 'Choose a currency.' }),
   interval: z.enum(['month', 'year'], { required_error: 'Choose a billing interval.' }),
+  /**
+   * Whether this package can be bought by card.
+   *
+   * Separated from the price ID because they answer different questions: this is the
+   * operator's intent, the ID is a mechanism. With the app creating prices itself, an
+   * empty ID no longer means "not for sale by card" — it means "you decide the ID", so
+   * the intent has to be stated rather than inferred from a blank field.
+   */
+  sellByCard: z.boolean().default(true),
+  /** Optional: an existing Stripe price to use instead of one this app creates. */
   stripePriceId: stripePriceIdSchema.optional().nullable(),
   features: z.array(z.string().trim().min(1).max(80)).max(12, 'Twelve bullet points is plenty.').default([]),
   sortOrder: z.number().int().min(0).max(999).default(0),

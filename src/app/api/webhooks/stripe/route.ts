@@ -90,6 +90,34 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // Stripe retries webhooks; issuing a second code for one payment would be wrong.
   if (existingOrder?.status === 'paid') return
 
+  /*
+   * An operator's configuration probe. Record it and grant nothing.
+   *
+   * Checked against both our own row and Stripe's metadata: the row is authoritative,
+   * and the metadata catches the case where the order was never written because the
+   * request died between creating the session and recording it. Either one is enough to
+   * stop this from minting a membership.
+   */
+  if (existingOrder?.isTest || session.metadata?.nordstarTest === 'true') {
+    await db.checkoutOrder.upsert({
+      where: { cregisOrderId: session.id },
+      create: {
+        cregisOrderId: session.id,
+        provider: 'stripe',
+        email,
+        amount: ((session.amount_total ?? 100) / 100).toFixed(2),
+        currency: (session.currency ?? 'usd').toUpperCase(),
+        status: 'paid',
+        paidAt: new Date(),
+        isTest: true,
+        rawCallback: session as never,
+      },
+      update: { status: 'paid', paidAt: new Date(), rawCallback: session as never },
+    })
+    console.info(`[stripe:webhook] TEST session ${session.id} settled. Nothing granted.`)
+    return
+  }
+
   const code = generateRedemptionCode()
 
   await db.$transaction(async (tx) => {

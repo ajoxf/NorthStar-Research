@@ -5,7 +5,7 @@ import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { packageInputSchema } from '@/lib/package-shape'
 import { packageById, packageUsage, setDefaultPackage, uniqueSlug } from '@/lib/packages'
-import { verifyPackagePrice } from '@/app/api/admin/packages/verify-price'
+import { resolveStripePrice } from '@/app/api/admin/packages/resolve-price'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,10 +52,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const input = parsed.data
 
-  if (input.stripePriceId) {
-    const problem = await verifyPackagePrice(input.stripePriceId, input)
-    if (problem) return NextResponse.json({ error: problem }, { status: 400 })
-  }
+  const price = await resolveStripePrice({
+    sellByCard: input.sellByCard,
+    pastedPriceId: input.stripePriceId,
+    desired: { ...input, name: input.name },
+    current: { stripePriceId: existing.stripePriceId, stripeProductId: existing.stripeProductId },
+  })
+  if (!price.ok) return NextResponse.json({ error: price.error }, { status: 400 })
 
   await db.package.update({
     where: { id: existing.id },
@@ -68,7 +71,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       priceCents: input.priceCents,
       currency: input.currency,
       interval: input.interval,
-      stripePriceId: input.stripePriceId || null,
+      stripePriceId: price.stripePriceId,
+      stripeProductId: price.stripeProductId,
       features: input.features,
       sortOrder: input.sortOrder,
     },

@@ -34,6 +34,7 @@ export function toShape(row: Package): PackageShape {
     currency: row.currency,
     interval: row.interval as BillingIntervalValue,
     stripePriceId: row.stripePriceId,
+    stripeProductId: row.stripeProductId,
     features: row.features,
     sortOrder: row.sortOrder,
     isDefault: row.isDefault,

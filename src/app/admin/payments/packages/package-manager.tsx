@@ -172,7 +172,7 @@ function PackageRow({
             <span className="text-[15px] text-ink">{pkg.name}</span>
             {pkg.isDefault && <Badge tone="accent">Default</Badge>}
             {pkg.archived && <Badge tone="muted">Archived</Badge>}
-            {!pkg.stripePriceId && !pkg.archived && <Badge tone="down">Crypto only</Badge>}
+            {!pkg.stripePriceId && !pkg.archived && <Badge tone="neutral">Crypto only</Badge>}
           </div>
 
           <p className="mt-1 font-mono text-[13px] text-ink">
@@ -305,6 +305,9 @@ function PackageForm({
     initial ? (initial.priceCents / 100).toFixed(2).replace(/\.00$/, '') : '',
   )
   const [interval, setInterval] = React.useState<BillingIntervalValue>(initial?.interval ?? 'month')
+  const [sellByCard, setSellByCard] = React.useState(
+    initial ? initial.stripePriceId !== null : stripeReady,
+  )
   const [stripePriceId, setStripePriceId] = React.useState(initial?.stripePriceId ?? '')
   const [features, setFeatures] = React.useState((initial?.features ?? []).join('\n'))
   const [sortOrder, setSortOrder] = React.useState(String(initial?.sortOrder ?? 0))
@@ -330,6 +333,7 @@ function PackageForm({
         priceCents: cents,
         currency: 'USD',
         interval,
+        sellByCard,
         stripePriceId: stripePriceId.trim() || null,
         features: parseFeatures(features),
         sortOrder: Number(sortOrder) || 0,
@@ -407,25 +411,55 @@ function PackageForm({
         </div>
 
         <div className="sm:col-span-2">
-          <Label htmlFor={`stripe-${initial?.id ?? 'new'}`}>Stripe price ID</Label>
-          <Input
-            id={`stripe-${initial?.id ?? 'new'}`}
-            value={stripePriceId}
-            onChange={(event) => setStripePriceId(event.target.value)}
-            placeholder="price_1A2b3C…"
-            autoComplete="off"
-            spellCheck={false}
-          />
-          <Hint>
-            {stripeReady
-              ? 'Create a recurring price in Stripe for this amount, then paste its ID. It is checked ' +
-                'against Stripe before saving — amount, currency and interval must match, because Stripe ' +
-                'charges what its own price says, not what this page says. Leave blank for a ' +
-                'crypto-only package.'
-              : 'Stripe is not configured on this deployment, so this cannot be verified yet and card ' +
-                'checkout is unavailable. Crypto checkout works without it.'}
-          </Hint>
+          <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+              checked={sellByCard}
+              disabled={!stripeReady}
+              onChange={(event) => setSellByCard(event.target.checked)}
+            />
+            <span className="min-w-0">
+              <span className="block text-[14px] text-ink">Sell this by card (Stripe)</span>
+              <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
+                {stripeReady
+                  ? 'A matching Stripe price is created for you when you save. Stripe prices cannot be ' +
+                    'edited, so changing the amount always creates a new one and archives the old.'
+                  : 'Stripe is not configured on this deployment, so card checkout is unavailable. ' +
+                    'Crypto works without it.'}
+              </span>
+            </span>
+          </label>
         </div>
+
+        {/*
+          Advanced, and last. Pasting an ID is the exception — an operator with a price
+          they already use — so it sits below the toggle rather than being the control
+          that has to be understood before a package can exist at all.
+        */}
+        {sellByCard && (
+          <details className="sm:col-span-2">
+            <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim hover:text-ink">
+              Use an existing Stripe price
+            </summary>
+            <div className="mt-3">
+              <Label htmlFor={`stripe-${initial?.id ?? 'new'}`}>Stripe price ID</Label>
+              <Input
+                id={`stripe-${initial?.id ?? 'new'}`}
+                value={stripePriceId}
+                onChange={(event) => setStripePriceId(event.target.value)}
+                placeholder="price_1A2b3C…"
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <Hint>
+                Leave blank and one is created for you. Paste an ID to use a price you already
+                have — it is checked against Stripe before saving, and refused if the amount,
+                currency or interval disagree with the price above.
+              </Hint>
+            </div>
+          </details>
+        )}
 
         <div className="sm:col-span-2">
           <Label htmlFor={`features-${initial?.id ?? 'new'}`}>What it includes — one per line</Label>

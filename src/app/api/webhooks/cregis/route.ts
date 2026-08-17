@@ -107,6 +107,32 @@ export async function POST(request: Request) {
     return ack()
   }
 
+  /*
+   * An operator's configuration probe. Record the outcome and stop.
+   *
+   * This return is the whole safety of the test-payment feature: everything below grants
+   * access — a redemption code, a member row, a welcome email, affiliate credit — and
+   * none of it should happen because somebody checked that the plumbing works. Placed
+   * before the paid/unpaid branch so a failed test is recorded just as faithfully as a
+   * successful one; a probe that only reports its successes is not a probe.
+   */
+  if (order.isTest) {
+    const paid = isPaidStatus(status)
+    await db.checkoutOrder.update({
+      where: { id: order.id },
+      data: {
+        status: paid ? 'paid' : status === 'expired' ? 'expired' : 'failed',
+        paidAt: paid ? new Date() : null,
+        cregisOrderId,
+        rawCallback: payload as never,
+      },
+    })
+    console.info(
+      `[cregis:webhook] TEST order ${order.id} → ${status}. Callback verified; nothing granted.`,
+    )
+    return ack()
+  }
+
   if (!isPaidStatus(status)) {
     await db.checkoutOrder.update({
       where: { id: order.id },
