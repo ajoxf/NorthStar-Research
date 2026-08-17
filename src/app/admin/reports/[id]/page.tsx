@@ -97,7 +97,7 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
       */}
       {report.published && (
         <div className="mt-6">
-          <ShareLinks reportId={report.id} baseUrl={appBaseUrl()} />
+          <ShareLinks reportId={report.id} title={report.title} baseUrl={appBaseUrl()} />
         </div>
       )}
     </div>

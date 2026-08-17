@@ -53,9 +53,9 @@ function Hero() {
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
             NordStar Pro publishes three reports a week, covering commodities, international
-            markets and indices, options, crypto and spreads, and FX. Each one carries alpha
-            generation ideas, with the levels, bias and invalidation. No noise, no upsells, one
-            price.
+            markets and indices, options, crypto and spreads, and FX. Each one sets out the
+            technical structure and the macro context behind it, with the reasoning shown. No
+            noise, no upsells, one price.
           </p>
 
           {/* Icon + uppercase meta row, sitting between the copy and the actions. */}
@@ -90,32 +90,31 @@ function Hero() {
 }
 
 /**
- * What is actually covered, in three cards.
+ * What is covered, in three cards.
  *
- * The instruments are the real ones the desk publishes on — they mirror the
- * `defaultInstruments` on each report type rather than being a marketing wish-list, so a
- * prospect reading this and a member opening the reader see the same universe.
+ * Asset classes rather than tickers, deliberately. A symbol list reads as a watchlist —
+ * "these are the instruments you will be told about" — which is the promise of a signals
+ * service, not a research one. The desk covers what is worth covering in a given week,
+ * and naming the classes says that honestly where a fixed list of symbols would not.
  *
- * Three cards, four report types: International Markets & Indices and FX & Currencies sit
- * together here because a prospect thinks in asset classes, not in our publishing
- * schedule. The cadence line below the cards states three a week, which is what actually
- * ships, so grouping them this way does not overstate what arrives.
+ * The language stays on method — structure, context, scenarios — and off levels, entries
+ * and targets, for the same reason: this is analysis a reader acts on themselves.
  */
 const COVERAGE = [
   {
     title: 'Commodities & Energy',
-    analysis: 'Trend structure, key levels and the macro drivers behind them',
-    instruments: ['XAUUSD', 'XAGUSD', 'WTI', 'NATGAS', 'COPPER'],
+    analysis:
+      'Precious and base metals, crude and natural gas, read through trend structure and the macro backdrop driving them.',
   },
   {
     title: 'Indices & FX',
-    analysis: 'Index structure, cross-market rotation, rate differentials and carry',
-    instruments: ['SPX', 'DAX', 'NIKKEI', 'DXY', 'EURUSD', 'GBPUSD', 'USDJPY'],
+    analysis:
+      'Global equity indices and major currency pairs, with cross-market rotation, rate differentials and positioning.',
   },
   {
     title: 'Options, Crypto & Spreads',
-    analysis: 'Defined-risk option structures, digital-asset levels, relative value',
-    instruments: ['BTCUSD', 'ETHUSD', 'VIX', 'SPX'],
+    analysis:
+      'Defined-risk option structures, digital assets and relative-value spreads, framed as scenarios rather than calls.',
   },
 ]
 
@@ -129,8 +128,9 @@ function CoverageSection() {
             Every edition works the same way.
           </h2>
           <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
-            Charts first, with the levels marked. Technical structure read against the macro
-            backdrop, and the invalidation stated as plainly as the setup.
+            Charts first. Technical structure read against the macro backdrop, with the
+            reasoning shown — so you can weigh it against your own view rather than take it
+            on trust.
           </p>
         </div>
 
@@ -144,24 +144,13 @@ function CoverageSection() {
               <p className="mt-2 flex-1 text-[14px] leading-relaxed text-ink-dim">
                 {card.analysis}
               </p>
-
-              <ul className="mt-5 flex flex-wrap gap-1.5">
-                {card.instruments.map((symbol) => (
-                  <li
-                    key={symbol}
-                    className="rounded border border-line bg-panel-2 px-2 py-1 font-mono text-[11px] tracking-[0.06em] text-ink-dim"
-                  >
-                    {symbol}
-                  </li>
-                ))}
-              </ul>
             </div>
           ))}
         </div>
 
         <p className="mt-6 text-[13px] leading-relaxed text-ink-dim">
-          Three editions a week across this coverage. Instruments shown are representative of
-          what each edition carries, not a fixed list.
+          Three editions a week across this coverage. What each one covers follows the market,
+          not a fixed schedule of instruments.
         </p>
       </div>
     </section>

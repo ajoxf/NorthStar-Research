@@ -14,6 +14,14 @@ export function Wordmark({ href = '/' }: { href?: string }) {
       <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-accent transition-colors group-hover:text-ink">
         Pro
       </span>
+      {/*
+        The parent brand, set small and in italic serif so it reads as an attribution
+        rather than a third word in the logo. Hidden on the narrowest screens, where the
+        header has a sign-in link and a join button competing for the same row.
+      */}
+      <span className="hidden font-display text-[11px] italic tracking-normal text-ink-dim/70 sm:inline">
+        by Fincoursa
+      </span>
     </Link>
   )
 }
@@ -67,11 +75,6 @@ export function SiteFooter() {
         <div className="mb-10 flex flex-wrap items-start justify-between gap-8">
           <div className="max-w-xs">
             <Wordmark />
-            {/* The parent brand, stated once where it belongs, rather than crowding the
-                header wordmark on every page. */}
-            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-dim">
-              by Fincoursa
-            </p>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
               Three research reports every week, covering commodities, international markets and
               indices, options, crypto and spreads, and FX.

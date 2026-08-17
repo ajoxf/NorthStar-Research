@@ -4,6 +4,7 @@ import * as React from 'react'
 import { Check, Copy } from 'lucide-react'
 
 import { Hint, Input, Label } from '@/components/ui/field'
+import { reportInviteUrl, reportShareMessage, whatsappShareUrl } from '@/lib/share-message'
 
 /**
  * The two links for putting a report in front of somebody.
@@ -23,15 +24,20 @@ import { Hint, Input, Label } from '@/components/ui/field'
  * Neither link exposes the report. Both end at the same paywall — the invite one simply
  * remembers where the person was heading.
  */
-export function ShareLinks({ reportId, baseUrl }: { reportId: string; baseUrl: string }) {
+export function ShareLinks({
+  reportId,
+  title,
+  baseUrl,
+}: {
+  reportId: string
+  title: string
+  baseUrl: string
+}) {
   const [code, setCode] = React.useState('')
 
   const memberLink = `${baseUrl}/reports/${reportId}`
-
-  const params = new URLSearchParams()
-  if (code.trim()) params.set('code', code.trim())
-  params.set('next', `/reports/${reportId}`)
-  const inviteLink = `${baseUrl}/redeem?${params.toString()}`
+  const inviteLink = reportInviteUrl(baseUrl, reportId, code)
+  const message = reportShareMessage({ id: reportId, title }, baseUrl, code)
 
   return (
     <div className="rounded-lg border border-line bg-panel p-5">
@@ -55,6 +61,27 @@ export function ShareLinks({ reportId, baseUrl }: { reportId: string; baseUrl: s
           single tap — no copying a code out of a message. Leave it blank and they will be
           asked for a code they already have.
         </Hint>
+      </div>
+
+      {/*
+        The same message the reports list sends, built by the same function — so the
+        WhatsApp share and anything copied from here can never say different things.
+      */}
+      <div className="mt-5">
+        <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-dim">
+          Ready to send
+        </p>
+        <pre className="mt-1.5 whitespace-pre-wrap rounded-lg border border-line bg-panel-2 px-3.5 py-3 text-[13px] leading-relaxed text-ink-dim">
+{message}
+        </pre>
+        <a
+          href={whatsappShareUrl(message)}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="mt-2 inline-flex items-center gap-1.5 rounded border border-line px-2.5 py-1.5 font-mono text-[11px] text-ink-dim transition-colors hover:border-up/50 hover:text-up"
+        >
+          Share on WhatsApp
+        </a>
       </div>
 
       <div className="mt-5 space-y-4">
