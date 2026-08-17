@@ -5,8 +5,10 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: {
-    default: 'NordStar Pro — Institutional-grade market research',
-    template: '%s · NordStar Pro',
+    default: 'NordStar Pro by Fincoursa — Technical and macro market research',
+    // Sub-pages read "Payments · NordStar Pro by Fincoursa", so the parent brand travels
+    // with every tab title rather than only appearing on the home page.
+    template: '%s · NordStar Pro by Fincoursa',
   },
   description:
     'Three research reports every week covering commodities, international markets and indices, options, crypto and spreads, and FX. Educational and informational only.',

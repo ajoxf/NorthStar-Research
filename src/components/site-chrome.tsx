@@ -67,6 +67,11 @@ export function SiteFooter() {
         <div className="mb-10 flex flex-wrap items-start justify-between gap-8">
           <div className="max-w-xs">
             <Wordmark />
+            {/* The parent brand, stated once where it belongs, rather than crowding the
+                header wordmark on every page. */}
+            <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink-dim">
+              by Fincoursa
+            </p>
             <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
               Three research reports every week, covering commodities, international markets and
               indices, options, crypto and spreads, and FX.
