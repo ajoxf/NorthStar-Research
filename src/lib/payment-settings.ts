@@ -1,6 +1,6 @@
 import 'server-only'
 
-import { PLAN, appBaseUrl, isPlaceholder } from '@/lib/env'
+import { appBaseUrl, isPlaceholder } from '@/lib/env'
 import { type CregisSource, resolveCregisSettings } from '@/lib/cregis-settings'
 
 /**
@@ -79,7 +79,9 @@ export function stripeSettings(): SettingRow[] {
     {
       key: 'STRIPE_PRICE_ID',
       label: 'Price',
-      what: `Must be a recurring monthly price of $${PLAN.priceUsd}. A one-off price will not subscribe anyone.`,
+      what:
+        'The fallback recurring price, used only by packages that carry no Stripe price of ' +
+        'their own. A one-off price will not subscribe anyone.',
       status: statusOf('STRIPE_PRICE_ID'),
       // A price id is not a credential — it appears in the checkout call itself — so
       // showing it in full is what makes it checkable against the Stripe dashboard.

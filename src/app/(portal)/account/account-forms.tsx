@@ -56,7 +56,10 @@ function BillingSection({ member }: { member: MemberSettings }) {
           <p className="text-[15px] leading-relaxed text-ink-dim">
             {member.cancelAtPeriodEnd
               ? 'Your subscription is set to end at the close of the current period. You keep full access until then.'
-              : 'Your $199/month membership renews automatically. Update your card or cancel any time — cancelling keeps your access until the end of the period you have paid for.'}
+              : // Deliberately no figure: with packages, members are on different prices,
+                // and the one true number for any given member is on their card statement
+                // and in the Stripe portal this button opens.
+                'Your membership renews automatically. Update your card or cancel any time — cancelling keeps your access until the end of the period you have paid for.'}
           </p>
           <Button variant="secondary" className="mt-5" onClick={openPortal} disabled={pending}>
             {pending ? (

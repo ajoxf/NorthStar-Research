@@ -48,6 +48,14 @@ enum BillingProvider {
   manual
 }
 
+/// How often a package bills. Kept deliberately small: these two are the intervals
+/// Stripe's recurring prices are configured for here, and an interval this app cannot
+/// actually charge is worse than one it does not offer.
+enum BillingInterval {
+  month
+  year
+}
+
 enum ReportType {
   commodities
   international_markets
@@ -150,6 +158,12 @@ model Member {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// What this member is subscribed to. Null for everyone who joined before packages
+  /// existed, and for anyone comped by hand — both of which are still real members, so
+  /// this cannot be required.
+  packageId String?
+  package   Package? @relation(fields: [packageId], references: [id])
+
   redemptionCodes RedemptionCode[]
   reportViews     ReportView[]
   deliveryLogs    DeliveryLog[]
@@ -183,6 +197,14 @@ model RedemptionCode {
 
   redeemedByMemberId String?
   redeemedByMember   Member? @relation(fields: [redeemedByMemberId], references: [id])
+
+  /// Which package this code grants. Carried from the order that paid for it, so the
+  /// membership a buyer ends up with is the one they actually bought rather than
+  /// whatever happens to be the default by the time they get round to redeeming.
+  /// Null on gifted codes and on everything issued before packages existed — both fall
+  /// back to the default package at redemption.
+  packageId String?
+  package   Package? @relation(fields: [packageId], references: [id])
 
   /// Codes stop working after this. Null means no expiry — codes issued before validity
   /// existed keep working, because retroactively killing a code already in someone's
@@ -300,8 +322,70 @@ model CheckoutOrder {
 
   rawCallback Json?
 
+  /// Which package was being bought. Null for orders placed before packages existed.
+  /// The `amount` above stays the record of what was actually charged — a package whose
+  /// price is edited later must not rewrite the history of what someone paid.
+  packageId String?
+  package   Package? @relation(fields: [packageId], references: [id])
+
   createdAt DateTime  @default(now())
   paidAt    DateTime?
+}
+
+/// A sellable membership: a name, a price, and — for card buyers — the Stripe price it
+/// maps onto.
+///
+/// The Stripe price id is the crux. Stripe charges whatever its own Price object says,
+/// not what this row says, so a package advertising $299 against a $199 Stripe price
+/// would show one figure and take another. `POST /api/admin/packages` therefore verifies
+/// the pasted id against Stripe — amount, currency, interval and recurring-ness — and
+/// refuses the save on any mismatch. Crypto packages need no such id: Cregis is told the
+/// amount at checkout time, so the price here *is* the price charged.
+///
+/// Nothing is ever deleted. A package that any member or order has ever referenced is
+/// archived (`archivedAt` set): it stops being sellable, and every record that points at
+/// it still resolves. A package nothing has touched can be removed outright, because
+/// there is no history to lose.
+model Package {
+  id          String  @id @default(cuid())
+  name        String
+  /// Stable, URL-safe handle. Used in the `?package=` link to /join, so it is what an
+  /// operator shares — which is why renaming a package does not change it.
+  slug        String  @unique
+  /// One line under the name, on the join page.
+  description String?
+
+  /// Minor units, always. Storing 19900 rather than 199.00 keeps this in the same
+  /// integer arithmetic Stripe uses and out of float rounding entirely.
+  priceCents Int
+  currency   String          @default("USD")
+  interval   BillingInterval @default(month)
+
+  /// The Stripe recurring Price this package sells. Required before card checkout will
+  /// offer the package; crypto works without it.
+  stripePriceId String?
+
+  /// Bullet points on the join page. Plain strings so they stay editable by hand.
+  features String[] @default([])
+
+  /// Low first on the join page. Ties break on name, so the order is never arbitrary.
+  sortOrder Int @default(0)
+
+  /// The one offered when nothing else is chosen — a bare /join, the marketing pages,
+  /// a checkout with no package. Exactly one package holds this at a time.
+  isDefault Boolean @default(false)
+
+  /// Withdrawn from sale, still resolvable by everything that references it.
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members Member[]
+  orders  CheckoutOrder[]
+  codes   RedemptionCode[]
+
+  @@index([archivedAt, sortOrder])
 }
 
 model Report {

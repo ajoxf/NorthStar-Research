@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { DisclaimerText } from '@/components/disclaimer'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember } from '@/lib/auth'
+import { formatPrice } from '@/lib/package-shape'
+import { defaultPackage } from '@/lib/packages'
 
 export function Wordmark({ href = '/' }: { href?: string }) {
   return (
@@ -31,6 +33,9 @@ export function Wordmark({ href = '/' }: { href?: string }) {
 
 export async function SiteHeader() {
   const member = await getCurrentMember()
+  // The header quotes the same package the join page sells. Hard-coding it here is how a
+  // site ends up advertising last month's price in its own navigation.
+  const plan = await defaultPackage()
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-md">
@@ -61,7 +66,10 @@ export async function SiteHeader() {
                   at phone width the label shortens rather than wrapping the header. */}
               <ButtonLink href="/join" size="sm" className="whitespace-nowrap">
                 <span className="sm:hidden">Join</span>
-                <span className="hidden sm:inline">Join — $199/mo</span>
+                <span className="hidden sm:inline">
+                  Join — {formatPrice(plan.priceCents, plan.currency)}/
+                  {plan.interval === 'year' ? 'yr' : 'mo'}
+                </span>
               </ButtonLink>
             </>
           )}

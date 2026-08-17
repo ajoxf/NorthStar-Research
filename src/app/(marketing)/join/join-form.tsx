@@ -1,14 +1,27 @@
 'use client'
 
 import * as React from 'react'
-import { ArrowRight, Bitcoin, CreditCard } from 'lucide-react'
+import { ArrowRight, Bitcoin, Check, CreditCard } from 'lucide-react'
 
 import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
+import { formatPrice } from '@/lib/package-shape'
 import { cn, isValidEmail } from '@/lib/utils'
 
 type Method = 'card' | 'crypto'
+
+export type JoinPackage = {
+  id: string
+  name: string
+  description: string | null
+  priceCents: number
+  currency: string
+  interval: string
+  features: string[]
+  /** False when the package carries no Stripe price, so card checkout cannot sell it. */
+  cardAvailable: boolean
+}
 
 /**
  * Both payment paths, side by side.
@@ -21,18 +34,29 @@ type Method = 'card' | 'crypto'
 export function JoinForm({
   cardReady,
   cryptoReady,
+  packages,
+  selectedId,
 }: {
   cardReady: boolean
   cryptoReady: boolean
+  packages: JoinPackage[]
+  selectedId: string
 }) {
   const toast = useToast()
   const [method, setMethod] = React.useState<Method>(cardReady ? 'card' : 'crypto')
+  const [packageId, setPackageId] = React.useState(selectedId)
   const [email, setEmail] = React.useState('')
   const [phone, setPhone] = React.useState('')
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
 
-  const ready = method === 'card' ? cardReady : cryptoReady
+  const chosen = packages.find((pkg) => pkg.id === packageId) ?? packages[0]
+  const price = formatPrice(chosen.priceCents, chosen.currency)
+
+  // A package with no Stripe price cannot be billed by card, whatever Stripe's own
+  // configuration says. Disabling the option here is the honest version of a checkout
+  // that would otherwise be refused after the buyer had committed to it.
+  const ready = method === 'card' ? cardReady && chosen.cardAvailable : cryptoReady
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -49,7 +73,7 @@ export function JoinForm({
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, phoneNumber: phone || undefined }),
+        body: JSON.stringify({ email, phoneNumber: phone || undefined, packageId: chosen.id }),
       })
       const data = await response.json()
 
@@ -71,6 +95,57 @@ export function JoinForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate>
+      {packages.length > 1 && (
+        <div className="mb-5 grid gap-2" role="radiogroup" aria-label="Membership">
+          {packages.map((pkg) => (
+            <button
+              key={pkg.id}
+              type="button"
+              role="radio"
+              aria-checked={pkg.id === chosen.id}
+              onClick={() => setPackageId(pkg.id)}
+              className={cn(
+                'flex items-start justify-between gap-3 rounded-lg border p-3.5 text-left transition-colors',
+                pkg.id === chosen.id
+                  ? 'border-accent/60 bg-accent/10'
+                  : 'border-line bg-panel-2 hover:border-ink-dim/40',
+              )}
+            >
+              <span className="min-w-0">
+                <span className="block text-[14px] text-ink">{pkg.name}</span>
+                {pkg.description && (
+                  <span className="mt-0.5 block text-[13px] leading-relaxed text-ink-dim">
+                    {pkg.description}
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0 font-mono text-[13px] text-ink">
+                {formatPrice(pkg.priceCents, pkg.currency)}
+                <span className="text-ink-dim">/{pkg.interval === 'year' ? 'yr' : 'mo'}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mb-6 flex items-baseline gap-2 border-b border-line pb-6">
+        <span className="font-display text-4xl text-ink">{price}</span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+          per {chosen.interval}
+        </span>
+      </div>
+
+      {chosen.features.length > 0 && (
+        <ul className="mb-6 space-y-2.5">
+          {chosen.features.map((feature) => (
+            <li key={feature} className="flex items-center gap-2.5 text-[14px] text-ink-dim">
+              <Check className="h-3.5 w-3.5 shrink-0 text-up" aria-hidden />
+              {feature}
+            </li>
+          ))}
+        </ul>
+      )}
+
       <div className="mb-5 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Payment method">
         <MethodOption
           icon={CreditCard}
@@ -90,12 +165,23 @@ export function JoinForm({
 
       {!ready && (
         <div className="mb-5 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3 text-[13px] leading-relaxed text-ink">
-          <strong className="font-medium">
-            {method === 'card' ? 'Card payments' : 'Crypto payments'} are not live yet.
-          </strong>{' '}
-          Those credentials have not been configured for this deployment, so this option cannot take
-          a payment. {method === 'card' && cryptoReady && 'Crypto is available in the meantime.'}
-          {method === 'crypto' && cardReady && 'Card payment is available in the meantime.'}
+          {method === 'card' && cardReady && !chosen.cardAvailable ? (
+            <>
+              <strong className="font-medium">{chosen.name} cannot be paid by card.</strong> This
+              membership is set up for crypto only.{' '}
+              {cryptoReady && 'Choose crypto above, or pick another membership.'}
+            </>
+          ) : (
+            <>
+              <strong className="font-medium">
+                {method === 'card' ? 'Card payments' : 'Crypto payments'} are not live yet.
+              </strong>{' '}
+              Those credentials have not been configured for this deployment, so this option cannot
+              take a payment.{' '}
+              {method === 'card' && cryptoReady && 'Crypto is available in the meantime.'}
+              {method === 'crypto' && cardReady && 'Card payment is available in the meantime.'}
+            </>
+          )}
         </div>
       )}
 
@@ -137,7 +223,9 @@ export function JoinForm({
           </>
         ) : (
           <>
-            {method === 'card' ? 'Subscribe — $199/month' : 'Pay $199 in crypto'}
+            {method === 'card'
+              ? `Subscribe — ${price}/${chosen.interval}`
+              : `Pay ${price} in crypto`}
             <ArrowRight className="h-4 w-4" aria-hidden />
           </>
         )}
@@ -145,8 +233,8 @@ export function JoinForm({
 
       <p className="mt-4 text-center text-[12px] leading-relaxed text-ink-dim">
         {method === 'card'
-          ? 'Billed monthly. Cancel any time from your account. NordStar Pro never sees your card details.'
-          : 'One month of access per payment. Crypto cannot renew automatically, so we will remind you before it ends.'}
+          ? `Billed every ${chosen.interval}. Cancel any time from your account. NordStar Pro never sees your card details.`
+          : `One ${chosen.interval} of access per payment. Crypto cannot renew automatically, so we will remind you before it ends.`}
       </p>
     </form>
   )

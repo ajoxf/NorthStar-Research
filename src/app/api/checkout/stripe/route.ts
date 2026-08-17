@@ -4,15 +4,24 @@ import { z } from 'zod'
 import { emailSchema } from '@/lib/validation'
 
 import { db } from '@/lib/db'
-import { MissingConfigError, PLAN } from '@/lib/env'
+import { MissingConfigError } from '@/lib/env'
+import { amountString, isFallbackPackage } from '@/lib/package-shape'
+import { packageForCheckout } from '@/lib/packages'
 import { createStripeCheckout } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const schema = z.object({ email: emailSchema })
+const schema = z.object({ email: emailSchema, packageId: z.string().trim().max(64).optional() })
 
-/** Start a $199/month card subscription. Access is granted by the webhook, not here. */
+/**
+ * Start a card subscription. Access is granted by the webhook, not here.
+ *
+ * The price comes from the package's own Stripe price, and a package without one cannot
+ * be sold by card at all. The alternative — falling back to `STRIPE_PRICE_ID` — would
+ * charge every package the same amount while each advertised its own, which is the one
+ * failure this whole feature has to make impossible.
+ */
 export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) {
@@ -29,16 +38,36 @@ export async function POST(request: Request) {
     )
   }
 
+  const pkg = await packageForCheckout(parsed.data.packageId)
+
+  if (!isFallbackPackage(pkg) && !pkg.stripePriceId) {
+    return NextResponse.json(
+      {
+        error:
+          'This membership cannot be paid by card yet. Choose crypto, or contact support — nothing has been charged.',
+      },
+      { status: 409 },
+    )
+  }
+
   try {
-    const { url, sessionId } = await createStripeCheckout(email)
+    const { url, sessionId } = await createStripeCheckout(email, {
+      priceId: pkg.stripePriceId,
+      planName: pkg.name,
+      packageId: isFallbackPackage(pkg) ? undefined : pkg.id,
+    })
 
     await db.checkoutOrder.create({
       data: {
         cregisOrderId: sessionId,
         provider: 'stripe',
         email,
-        amount: PLAN.amount,
-        currency: PLAN.currency,
+        // What we believe is being charged, recorded at the moment of the order. Stripe
+        // is the authority on the actual amount; this is the row that makes a divergence
+        // visible afterwards rather than invisible.
+        amount: amountString(pkg.priceCents),
+        currency: pkg.currency,
+        packageId: isFallbackPackage(pkg) ? null : pkg.id,
         status: 'pending',
       },
     })

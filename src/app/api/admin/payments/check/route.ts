@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
-import { PLAN } from '@/lib/env'
 import { REQUIRED_STRIPE_EVENTS, processorUrls } from '@/lib/payment-settings'
+import { priceLine, stripePriceMismatch } from '@/lib/package-shape'
+import { sellablePackages } from '@/lib/packages'
 import { cregisConfigured } from '@/lib/cregis'
-import { stripeClient, stripeConfigured } from '@/lib/stripe'
+import { stripeClient, stripeConfigured, stripePriceFacts } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -78,16 +79,46 @@ export async function POST() {
       } else {
         const amount = (price.unit_amount ?? 0) / 100
         const currency = (price.currency ?? '').toUpperCase()
-        const matches = amount === PLAN.priceUsd && currency === PLAN.currency
 
         stripe.push({
           label: 'Price',
-          status: matches ? 'ok' : 'warn',
-          detail: matches
-            ? `${currency} ${amount.toFixed(2)} per month, recurring.`
-            : `Stripe will charge ${currency} ${amount.toFixed(2)} per month, but the site advertises ` +
-              `${PLAN.currency} ${PLAN.priceUsd}.00. The buyer is charged what Stripe says.`,
+          status: 'ok',
+          detail:
+            `${currency} ${amount.toFixed(2)} per month, recurring. This is the fallback price, ` +
+            `used only by packages with no Stripe price of their own.`,
         })
+      }
+
+      // Every package that sells by card, checked against the price it actually bills.
+      // This is the mismatch that cannot be seen from either dashboard alone: our row
+      // says one figure, Stripe's Price says another, and the buyer is charged Stripe's.
+      for (const pkg of await sellablePackages()) {
+        if (!pkg.stripePriceId) {
+          stripe.push({
+            label: `Package — ${pkg.name}`,
+            status: 'warn',
+            detail: `No Stripe price, so this package cannot be bought by card. Crypto still works.`,
+          })
+          continue
+        }
+
+        try {
+          const facts = await stripePriceFacts(pkg.stripePriceId)
+          const problem = stripePriceMismatch(pkg, facts)
+          stripe.push({
+            label: `Package — ${pkg.name}`,
+            status: problem ? 'fail' : 'ok',
+            detail: problem ?? `Stripe bills ${priceLine(pkg)}, matching what the site advertises.`,
+          })
+        } catch (error) {
+          stripe.push({
+            label: `Package — ${pkg.name}`,
+            status: 'fail',
+            detail: `Stripe could not confirm that price: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          })
+        }
       }
 
       // A registered endpoint on the wrong domain is the classic cause of "they paid and

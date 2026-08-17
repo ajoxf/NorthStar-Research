@@ -75,6 +75,18 @@ export type CreateCheckoutInput = {
   email: string
   /** Merchant-side identifier for the payer. Defaults to the email. */
   payerId?: string
+  /**
+   * What to charge, as a two-decimal string. Comes from the package being bought;
+   * defaults to the built-in plan when no package has been created.
+   *
+   * Unlike Stripe, Cregis has no stored Price object of its own — it charges whatever
+   * this call says — so here the package price *is* the price charged, with nothing to
+   * diverge from.
+   */
+  amount?: string
+  currency?: string
+  /** Shown on the Cregis order. Defaults to the plan name. */
+  remark?: string
 }
 
 export type CreateCheckoutResult = {
@@ -99,12 +111,12 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     nonce: cregisNonce(),
     timestamp: Date.now(),
     order_id: input.orderId,
-    order_amount: PLAN.amount,
-    order_currency: PLAN.currency,
+    order_amount: input.amount ?? PLAN.amount,
+    order_currency: input.currency ?? PLAN.currency,
     payer_id: input.payerId ?? input.email,
     payer_email: input.email,
     valid_time: CHECKOUT_VALID_MINUTES,
-    remark: PLAN.name,
+    remark: input.remark ?? PLAN.name,
     // The browser is sent to success_url, but access is NEVER granted from it —
     // only the server-to-server callback below can mint a redemption code.
     success_url: `${base}/checkout/success`,

@@ -4,9 +4,10 @@ import { z } from 'zod'
 import { emailSchema } from '@/lib/validation'
 
 import { db } from '@/lib/db'
-import { PLAN } from '@/lib/env'
 import { MissingConfigError } from '@/lib/env'
 import { CregisError, createCheckout } from '@/lib/cregis'
+import { amountString, isFallbackPackage } from '@/lib/package-shape'
+import { packageForCheckout } from '@/lib/packages'
 import { normalisePhone } from '@/lib/utils'
 
 export const runtime = 'nodejs'
@@ -14,6 +15,7 @@ export const runtime = 'nodejs'
 const schema = z.object({
   email: emailSchema,
   phoneNumber: z.string().trim().optional(),
+  packageId: z.string().trim().max(64).optional(),
 })
 
 export async function POST(request: Request) {
@@ -27,6 +29,8 @@ export async function POST(request: Request) {
   const email = parsed.data.email.trim().toLowerCase()
   const phoneNumber = parsed.data.phoneNumber ? normalisePhone(parsed.data.phoneNumber) : null
 
+  const pkg = await packageForCheckout(parsed.data.packageId)
+
   // Recorded before contacting Cregis so an order exists to reconcile the callback
   // against even if the call or the browser session dies part-way through.
   const order = await db.checkoutOrder.create({
@@ -34,14 +38,21 @@ export async function POST(request: Request) {
       cregisOrderId: `pending_${crypto.randomUUID()}`,
       email,
       phoneNumber,
-      amount: PLAN.amount,
-      currency: PLAN.currency,
+      amount: amountString(pkg.priceCents),
+      currency: pkg.currency,
+      packageId: isFallbackPackage(pkg) ? null : pkg.id,
       status: 'pending',
     },
   })
 
   try {
-    const result = await createCheckout({ orderId: order.id, email })
+    const result = await createCheckout({
+      orderId: order.id,
+      email,
+      amount: amountString(pkg.priceCents),
+      currency: pkg.currency,
+      remark: pkg.name,
+    })
 
     await db.checkoutOrder.update({
       where: { id: order.id },

@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-import { PLAN } from '@/lib/env'
+import { formatPrice } from '@/lib/package-shape'
+import { defaultPackage } from '@/lib/packages'
 
 export const metadata: Metadata = { title: 'FAQs' }
 
@@ -9,12 +10,14 @@ export const metadata: Metadata = { title: 'FAQs' }
  * PLACEHOLDER WORDING — answers describe how the platform actually behaves, but the
  * client should confirm the commercial answers (refunds, cadence, support) before launch.
  */
-const FAQS: { q: string; a: React.ReactNode }[] = [
+// A function of the price rather than a module constant, so the answer below quotes
+// whatever the default package currently costs instead of a figure frozen at import time.
+const faqs = (price: string): { q: string; a: React.ReactNode }[] => [
   {
     q: 'What do I get for the membership fee?',
     a: (
       <>
-        ${PLAN.priceUsd} per month gives you every weekly report — three a week, covering
+        {price} per month gives you every weekly report — three a week, covering
         commodities, international markets and indices, options, crypto and spreads, and FX — plus
         access to the complete archive of everything published previously, including editions from
         before you joined.
@@ -107,7 +110,10 @@ const FAQS: { q: string; a: React.ReactNode }[] = [
   },
 ]
 
-export default function FaqsPage() {
+export default async function FaqsPage() {
+  const plan = await defaultPackage()
+  const FAQS = faqs(formatPrice(plan.priceCents, plan.currency))
+
   return (
     <div className="mx-auto max-w-3xl px-5 py-20">
       <span className="eyebrow">Support</span>
