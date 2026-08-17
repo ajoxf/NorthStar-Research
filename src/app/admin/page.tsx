@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { DashboardCharts } from '@/app/admin/dashboard-charts'
 import { EngagementPanel } from '@/app/admin/engagement-panel'
 import { cregisConfigured } from '@/lib/cregis'
 import { stripeConfigured } from '@/lib/stripe'
@@ -66,6 +67,8 @@ export default async function AdminDashboard() {
         <Stat label="Lapsed / cancelled" value={lapsedMembers} />
         <Stat label="Sends this week" value={sentThisWeek} hint="report emails" />
       </div>
+
+      <DashboardCharts />
 
       <ConfigurationPanel providers={providers} />
 
