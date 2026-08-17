@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { EngagementPanel } from '@/app/admin/engagement-panel'
 import { cregisConfigured } from '@/lib/cregis'
 import { stripeConfigured } from '@/lib/stripe'
 import { googleConfigured } from '@/lib/oauth'
@@ -68,6 +69,8 @@ export default async function AdminDashboard() {
 
       <ConfigurationPanel providers={providers} />
 
+      <EngagementPanel />
+
       <section className="mt-8">
         <div className="mb-3 flex items-baseline justify-between">
           <h2 className="font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
@@ -90,14 +93,20 @@ export default async function AdminDashboard() {
                 href={`/admin/reports/${report.id}`}
                 className="flex items-center gap-4 border-b border-line px-5 py-3.5 last:border-b-0 hover:bg-panel-2"
               >
-                <span className="w-28 shrink-0 font-mono text-[12px] text-ink-dim">
+                {/*
+                  Two fixed-width columns plus a badge came to more than a phone's width,
+                  so this row scrolled the whole overview sideways. The date and type are
+                  the least useful parts at that size — the archive is one tap away — so
+                  they drop out below sm, and the title takes the room.
+                */}
+                <span className="hidden w-28 shrink-0 font-mono text-[12px] text-ink-dim sm:block">
                   {formatDate(report.publishDate)}
                 </span>
-                <span className="w-40 shrink-0 truncate font-mono text-[12px] text-accent">
+                <span className="hidden w-40 shrink-0 truncate font-mono text-[12px] text-accent sm:block">
                   {reportTypeLabel(report.type)}
                 </span>
-                <span className="flex-1 truncate text-[14px] text-ink">{report.title}</span>
-                <Badge tone={report.published ? 'up' : 'muted'}>
+                <span className="min-w-0 flex-1 truncate text-[14px] text-ink">{report.title}</span>
+                <Badge tone={report.published ? 'up' : 'muted'} className="shrink-0">
                   {report.published ? 'Published' : 'Draft'}
                 </Badge>
               </Link>
@@ -185,9 +194,18 @@ async function ConfigurationPanel({ providers }: { providers: { email: string } 
             key={row.label}
             className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3.5 last:border-b-0"
           >
-            <Badge tone={row.ready ? 'up' : 'accent'}>{row.ready ? 'Ready' : 'Not configured'}</Badge>
+            {/*
+              `shrink-0` on the badge and `min-w-0` on the text: without them the detail
+              string, which never wraps, pushed this row past the viewport and scrolled the
+              whole overview sideways on a phone. Pre-dates the engagement panel below.
+            */}
+            <Badge tone={row.ready ? 'up' : 'accent'} className="shrink-0">
+              {row.ready ? 'Ready' : 'Not configured'}
+            </Badge>
             <span className="text-[14px] text-ink">{row.label}</span>
-            <span className="ml-auto font-mono text-[12px] text-ink-dim">{row.detail}</span>
+            <span className="min-w-0 font-mono text-[12px] text-ink-dim sm:ml-auto">
+              {row.detail}
+            </span>
           </div>
         ))}
       </div>
