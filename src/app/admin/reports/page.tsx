@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { CopyShareMessage } from '@/app/admin/reports/share-actions'
 import { appBaseUrl } from '@/lib/env'
 import { reportShareMessage, whatsappShareUrl } from '@/lib/share-message'
 import { reportTypeLabel } from '@/lib/report-content'
@@ -86,19 +87,40 @@ export default async function AdminReportsPage() {
                         no icon, no overflow.
                       */}
                       {report.published && (
-                        <a
-                          href={whatsappShareUrl(
-                            reportShareMessage(
+                        <>
+                          <a
+                            href={whatsappShareUrl(
+                              reportShareMessage(
+                                { id: report.id, title: report.title, shareHook: report.shareHook },
+                                base,
+                              ),
+                            )}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            className="shrink-0 whitespace-nowrap rounded border border-line px-2 py-0.5 font-mono text-[11px] text-ink-dim transition-colors hover:border-up/50 hover:text-up"
+                          >
+                            WhatsApp
+                          </a>
+                          <CopyShareMessage
+                            message={reportShareMessage(
                               { id: report.id, title: report.title, shareHook: report.shareHook },
                               base,
-                            ),
+                            )}
+                          />
+                          {/*
+                            Says why the message reads generically. Without it an operator
+                            sees "New from NordStar Pro — <title>", assumes the hook feature
+                            is broken, and never finds the empty field that explains it.
+                          */}
+                          {!report.shareHook && (
+                            <Link
+                              href={`/admin/reports/${report.id}`}
+                              className="shrink-0 whitespace-nowrap font-mono text-[11px] text-accent hover:underline"
+                            >
+                              + hook
+                            </Link>
                           )}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="shrink-0 whitespace-nowrap rounded border border-line px-2 py-0.5 font-mono text-[11px] text-ink-dim transition-colors hover:border-up/50 hover:text-up"
-                        >
-                          Share
-                        </a>
+                        </>
                       )}
                     </div>
                   </td>
