@@ -48,7 +48,7 @@ function Hero() {
               steps back down at the large breakpoint, where the photograph takes the
               right of the frame and the headline has half the width to live in. */}
           <h1 className="text-balance font-display text-[2.75rem] font-semibold tracking-[-0.035em] text-ink sm:text-6xl md:text-7xl lg:text-[3.5rem] xl:text-[4rem]">
-            Technical and macro analysis for traders who make their own calls.
+            Independent technical and macro research.
           </h1>
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
