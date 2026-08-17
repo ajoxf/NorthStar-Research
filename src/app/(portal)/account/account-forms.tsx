@@ -153,11 +153,11 @@ function ProfileSection({ member }: { member: MemberSettings }) {
         </div>
 
         {/*
-          Phone number is a contact detail on your member record — the desk may use it to
+          Your number is a contact detail on your member record — the desk may use it to
           reach you. Reports are delivered by email only; nothing is sent to this number.
         */}
         <div className="mt-4">
-          <Label htmlFor="phoneNumber">Phone number (optional)</Label>
+          <Label htmlFor="phoneNumber">WhatsApp or phone number</Label>
           <Input
             id="phoneNumber"
             name="phoneNumber"

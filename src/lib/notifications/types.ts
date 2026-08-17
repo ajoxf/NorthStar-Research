@@ -1,8 +1,8 @@
 import type { Member, Report } from '@prisma/client'
 
-import type { ReceiptDetails } from '@/lib/notifications/templates'
+import type { LatestReport, ReceiptDetails } from '@/lib/notifications/templates'
 
-export type { ReceiptDetails }
+export type { LatestReport, ReceiptDetails }
 
 /**
  * The delivery seam.
@@ -93,6 +93,8 @@ export interface NotificationProvider {
   sendWelcomeEmail(
     recipient: { email: string; firstName?: string | null },
     dashboardUrl: string,
+    /** The newest published edition, so a new member has something to open at once. */
+    latest?: LatestReport | null,
   ): Promise<DeliveryResult>
 
   /**

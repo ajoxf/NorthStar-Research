@@ -20,7 +20,13 @@ import { cn, isValidEmail } from '@/lib/utils'
 
 const STEPS = ['Access code', 'Your account', 'Done'] as const
 
-export function RedeemWizard({ initialCode }: { initialCode: string }) {
+export function RedeemWizard({
+  initialCode,
+  next = null,
+}: {
+  initialCode: string
+  next?: string | null
+}) {
   const router = useRouter()
   const toast = useToast()
 
@@ -86,9 +92,10 @@ export function RedeemWizard({ initialCode }: { initialCode: string }) {
           code,
           email,
           password,
+          next,
           firstName: firstName || undefined,
           lastName: lastName || undefined,
-          phoneNumber: phoneNumber || undefined,
+          phoneNumber,
         }),
       })
       const data = await response.json()
@@ -102,7 +109,9 @@ export function RedeemWizard({ initialCode }: { initialCode: string }) {
       toast('Membership activated', 'success')
       // Brief pause so the confirmation state is actually seen, then straight in.
       setTimeout(() => {
-        router.push('/dashboard')
+        // The server decides the destination: it validates `next` and falls back to the
+        // dashboard, so a tampered link cannot bounce a new member off-site.
+        router.push(data.redirectTo ?? '/dashboard')
         router.refresh()
       }, 1600)
     } catch {
@@ -215,19 +224,27 @@ export function RedeemWizard({ initialCode }: { initialCode: string }) {
             <PasswordStrength value={password} />
           </div>
 
-          {/* Contact detail on your member record. Reports are delivered by email
-              only, so this is not a delivery preference. */}
+          {/*
+            Contact detail on the member record, not a delivery channel. Reports go by
+            email only, so asking for this must not imply messages are coming — hence the
+            hint below, which also repeats the anti-impersonation line the emails carry.
+          */}
           <div className="mt-4">
-            <Label htmlFor="phone">Phone number — optional</Label>
+            <Label htmlFor="phone">WhatsApp or phone number</Label>
             <Input
               id="phone"
               type="tel"
               value={phoneNumber}
               autoComplete="tel"
               placeholder="+1 555 000 0000"
+              required
               onChange={(event) => setPhoneNumber(event.target.value)}
             />
-            <Hint>Include the country code. Reports are delivered by email.</Hint>
+            <Hint>
+              Include the country code. This is so we can reach you about your membership —
+              reports are delivered by email, and we will never message you first to ask for
+              money or offer to manage an account.
+            </Hint>
           </div>
 
           <FieldError>{error}</FieldError>
