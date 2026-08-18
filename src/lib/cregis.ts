@@ -17,14 +17,18 @@ export { cregisSign, signaturesMatch }
  * ---------------------------------------------------------------------------
  * OUTBOUND IP
  * ---------------------------------------------------------------------------
- * Cregis can allowlist the IP that calls its API, and Vercel serverless functions have
- * no static outbound IP — calls originate from a rotating pool. The owner has confirmed
- * a static outbound IP is not required for this account, so no proxy, Secure Compute
- * add-on or side service is wired up here.
+ * Cregis allowlists the IP that calls its API and will not disable that check.
+ * Vercel functions have no static outbound IP, so calls made directly from here
+ * are rejected with `E0001 — The IP is not added to the whitelist`.
  *
- * If a checkout ever starts failing with an authorisation or IP error while the
- * credentials are unchanged, this is the first thing to re-examine: a rejection on
- * source IP means the key is *correct* and the caller is simply not on the list.
+ * Production therefore routes this one call through a PHP relay on fixed-IP
+ * hosting; that server's address is on the Cregis allowlist. See
+ * CREGIS_RELAY_URL below. With the relay unset the call goes direct, which is
+ * correct for local development from an allowlisted machine.
+ *
+ * If checkouts start failing with an IP error, the relay host's address has
+ * changed and needs re-allowlisting. Open the relay URL in a browser — it
+ * prints its current outbound address.
  * ---------------------------------------------------------------------------
  */
 
