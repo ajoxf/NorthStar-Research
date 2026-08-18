@@ -155,3 +155,16 @@ async function topMembers(limit: number): Promise<MemberEngagement[]> {
     .sort((a, b) => b.read - a.read || b.opened - a.opened)
     .slice(0, limit)
 }
+
+/**
+ * Has any provider open-event ever landed?
+ *
+ * The honest way to ask "is open tracking configured", because it tests the thing that
+ * matters — events arriving — rather than whether a secret happens to be set. A webhook
+ * registered against the wrong URL, or with a mismatched secret, has the variable set and
+ * still delivers nothing.
+ */
+export async function openTrackingLive(): Promise<boolean> {
+  const opened = await db.deliveryLog.count({ where: { status: { in: ['opened', 'clicked'] } } })
+  return opened > 0
+}

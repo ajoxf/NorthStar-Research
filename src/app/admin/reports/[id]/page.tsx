@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Users } from 'lucide-react'
 
 import { ReportAdminPanel } from '@/app/admin/reports/[id]/report-admin-panel'
 import { ShareLinks } from '@/app/admin/reports/[id]/share-links'
@@ -59,6 +59,18 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
         <Stat label="Opens" value={opened} />
         <Stat label="Views" value={report._count.views} />
       </div>
+
+      {/*
+        The counts above say how many; this says who. That is the version an operator can
+        act on — a low read rate becomes a list of six people to call.
+      */}
+      <Link
+        href={`/admin/reports/${report.id}/audience`}
+        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+      >
+        <Users className="h-3.5 w-3.5" aria-hidden />
+        See who read it
+      </Link>
 
       {/*
         An uploaded PDF is enough to publish. The member's reader renders the pages as a

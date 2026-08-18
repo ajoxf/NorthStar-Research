@@ -40,17 +40,32 @@ export type DeliveryBreakdown = {
   total: number
 }
 
+/** One report's read rate, for the trend line. Chronological, oldest first. */
+export type ReadRatePoint = {
+  id: string
+  title: string
+  publishDate: Date
+  /** Readers over everyone the report actually reached, or null if it reached nobody. */
+  rate: number | null
+  reached: number
+}
+
+/** The membership split. Mutually exclusive, and together the whole list. */
+export type MemberSplit = { active: number; pending: number; lapsed: number }
+
 export type DashboardStats = {
   weeks: WeekPoint[]
   reads: ReportReads[]
   delivery: DeliveryBreakdown[]
+  readRates: ReadRatePoint[]
+  split: MemberSplit
 }
 
 export async function dashboardStats(now: Date = new Date()): Promise<DashboardStats> {
   const [members, reports] = await Promise.all([
     db.member.findMany({
       where: { role: 'member' },
-      select: { createdAt: true, subscriptionStartedAt: true },
+      select: { createdAt: true, subscriptionStartedAt: true, subscriptionStatus: true },
     }),
     db.report.findMany({
       where: { published: true },
@@ -111,7 +126,41 @@ export async function dashboardStats(now: Date = new Date()): Promise<DashboardS
     }
   })
 
+  /*
+   * Read rate per edition, oldest first.
+   *
+   * The denominator is who the report actually reached — failures and members who joined
+   * afterwards are excluded, because neither had the chance to read it. Including them
+   * would turn a reading-habit metric into a deliverability-and-growth metric, and the
+   * line would fall every time the list grew.
+   *
+   * `null` for an edition that reached nobody, so the chart can break the line there
+   * rather than drawing a drop to zero that never happened.
+   */
+  const readRates: ReadRatePoint[] = delivery
+    .map((report) => {
+      const reached = report.read + report.openedNotRead + report.deliveredNotOpened
+      return {
+        id: report.id,
+        title: report.title,
+        publishDate: reports.find((entry) => entry.id === report.id)?.publishDate ?? new Date(0),
+        rate: reached === 0 ? null : report.read / reached,
+        reached,
+      }
+    })
+    .sort((a, b) => a.publishDate.getTime() - b.publishDate.getTime())
+
+  const split: MemberSplit = {
+    active: members.filter((member) => member.subscriptionStatus === 'active').length,
+    pending: members.filter((member) => member.subscriptionStatus === 'pending').length,
+    lapsed: members.filter(
+      (member) => member.subscriptionStatus === 'expired' || member.subscriptionStatus === 'cancelled',
+    ).length,
+  }
+
   return {
+    readRates,
+    split,
     // Membership dates first from when the subscription began, falling back to when the
     // record was created — a comped member has no payment date but did join.
     weeks: toWeeklySeries(
