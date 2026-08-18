@@ -113,7 +113,12 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
     order_id: input.orderId,
     order_amount: input.amount ?? PLAN.amount,
     order_currency: input.currency ?? PLAN.currency,
-    payer_id: input.payerId ?? input.email,
+    
+    // Cregis documents payer_id as "no more than 32 characters" and plenty of real
+    // email addresses exceed that. The order id is a 25-character cuid, and the email
+    // is already carried properly in payer_email below.
+    payer_id: input.payerId ?? input.orderId,
+    
     payer_email: input.email,
     valid_time: CHECKOUT_VALID_MINUTES,
     remark: input.remark ?? PLAN.name,
