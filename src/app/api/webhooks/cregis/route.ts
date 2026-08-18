@@ -182,6 +182,38 @@ export async function POST(request: Request) {
       })
     })
 
+    /*
+     * A renewal is a payment, and a payment gets a receipt.
+     *
+     * This was missing: a returning member paid, their period was silently extended, and
+     * they received nothing at all. No receipt, no confirmation — the only evidence
+     * anything happened was a renewal date they would have to log in to see. It presents
+     * exactly like a failed payment, and it is the same person paying again who is most
+     * entitled to know it worked.
+     *
+     * No access code here, correctly: they already have an account, and a code would be
+     * an activation step they do not need and cannot use.
+     */
+    try {
+      const receipt = await getNotificationProvider().sendReceiptEmail(
+        { email: order.email, firstName: existingMember.firstName },
+        {
+          amount: order.amount,
+          currency: order.currency,
+          method: 'Crypto',
+          reference: cregisOrderId,
+          paidAt: new Date(),
+        },
+      )
+      if (receipt.status === 'failed') {
+        console.error(`[cregis:webhook] renewal receipt failed for ${order.email}: ${receipt.error}`)
+      }
+    } catch (error) {
+      // Same rule as everywhere else on this path: the money is real and the period is
+      // extended whatever the mail does.
+      console.error('[cregis:webhook] renewal receipt threw', error)
+    }
+
     console.info(`[cregis:webhook] renewal for ${order.email} — period extended`)
     return ack()
   }
