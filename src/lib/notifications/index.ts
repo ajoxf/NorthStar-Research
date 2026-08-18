@@ -1,4 +1,5 @@
 import { optionalEnv } from '@/lib/env'
+import { sendAndRecord } from '@/lib/notifications/record'
 import { ConsoleProvider } from '@/lib/notifications/console-provider'
 import { ResendProvider } from '@/lib/notifications/resend-provider'
 import { TwilioWhatsAppProvider } from '@/lib/notifications/twilio-provider'
@@ -44,6 +45,15 @@ function whatsappProvider(): NotificationProvider {
 /**
  * Presents the email provider and the WhatsApp provider as one `NotificationProvider`,
  * so callers never have to know that two different vendors are involved.
+ *
+ * It is also where every transactional email is written to EmailLog. Recording here
+ * rather than at the eight call sites means a new kind of email cannot be added and
+ * silently escape the record, which is exactly how the welcome email came to be
+ * unobservable in the first place.
+ *
+ * Report sends are the deliberate exception: they already write DeliveryLog, per member
+ * per report, and duplicating a bulk publish into this table would add hundreds of rows
+ * that answer a question DeliveryLog answers better.
  */
 class CompositeProvider implements NotificationProvider {
   private readonly email = emailProvider()
@@ -66,7 +76,9 @@ class CompositeProvider implements NotificationProvider {
     code: string,
     url: string,
   ) {
-    return this.email.sendRedemptionCodeEmail(recipient, code, url)
+    return sendAndRecord('redemption_code', recipient.email, () =>
+      this.email.sendRedemptionCodeEmail(recipient, code, url),
+    )
   }
 
   sendRedemptionCodeWhatsApp(recipient: { phoneNumber: string }, code: string, url: string) {
@@ -78,11 +90,15 @@ class CompositeProvider implements NotificationProvider {
     link: string,
     expiresInMinutes: number,
   ) {
-    return this.email.sendMagicLink(recipient, link, expiresInMinutes)
+    return sendAndRecord('magic_link', recipient.email, () =>
+      this.email.sendMagicLink(recipient, link, expiresInMinutes),
+    )
   }
 
   sendSampleReportRequest(request: { name: string; email: string; note?: string }) {
-    return this.email.sendSampleReportRequest(request)
+    return sendAndRecord('sample_request', request.email, () =>
+      this.email.sendSampleReportRequest(request),
+    )
   }
 
   sendWelcomeEmail(
@@ -90,14 +106,18 @@ class CompositeProvider implements NotificationProvider {
     dashboardUrl: string,
     latest?: LatestReport | null,
   ) {
-    return this.email.sendWelcomeEmail(recipient, dashboardUrl, latest)
+    return sendAndRecord('welcome', recipient.email, () =>
+      this.email.sendWelcomeEmail(recipient, dashboardUrl, latest),
+    )
   }
 
   sendReceiptEmail(
     recipient: { email: string; firstName?: string | null },
     details: ReceiptDetails,
   ) {
-    return this.email.sendReceiptEmail(recipient, details)
+    return sendAndRecord('receipt', recipient.email, () =>
+      this.email.sendReceiptEmail(recipient, details),
+    )
   }
 
   sendRenewalReminder(
@@ -105,12 +125,27 @@ class CompositeProvider implements NotificationProvider {
     daysRemaining: number,
     renewUrl: string,
   ) {
-    return this.email.sendRenewalReminder(recipient, daysRemaining, renewUrl)
+    return sendAndRecord('renewal_reminder', recipient.email, () =>
+      this.email.sendRenewalReminder(recipient, daysRemaining, renewUrl),
+    )
   }
 }
 
 export function getNotificationProvider(): NotificationProvider {
   return new CompositeProvider()
+}
+
+/**
+ * The email provider on its own, without the recording wrapper.
+ *
+ * Exists for the admin console's test send, which exercises the same vendor code every
+ * real email goes through but must be recorded as a probe rather than as a member's
+ * welcome. Routing it through the composite would file operator tests alongside genuine
+ * registrations, and a log that cannot tell those apart is worse than no log — it would
+ * show sends to members who never signed up.
+ */
+export function emailProviderForTesting(): NotificationProvider {
+  return emailProvider()
 }
 
 /**
