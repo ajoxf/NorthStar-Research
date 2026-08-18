@@ -125,12 +125,42 @@ export async function createCheckout(input: CreateCheckoutInput): Promise<Create
   }
   params.sign = cregisSign(params, apiKey)
 
-  const response = await fetch(`${baseUrl}/api/v2/checkout`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
-    cache: 'no-store',
-  })
+   /*
+   * Outbound call, optionally via the relay.
+   *
+   * Cregis allowlists the calling IP and Vercel has none that is stable, so in
+   * production this goes through a small PHP relay on fixed-IP hosting. With
+   * CREGIS_RELAY_URL unset the call goes direct, which is what local development
+   * and any allowlisted machine should do.
+   */
+  const relayUrl = process.env.CREGIS_RELAY_URL
+  const relaySecret = process.env.CREGIS_RELAY_SECRET
+
+  if (relayUrl && !relaySecret) {
+    // Failing loudly beats sending an unauthenticated request the relay will refuse
+    // with a 401 that reads like a Cregis credential problem.
+    throw new CregisError(
+      'CREGIS_RELAY_URL is set but CREGIS_RELAY_SECRET is not. Set both or neither.',
+    )
+  }
+
+  const response = relayUrl
+    ? await fetch(relayUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Relay-Secret': relaySecret as string,
+          'X-Relay-Path': '/api/v2/checkout',
+        },
+        body: JSON.stringify(params),
+        cache: 'no-store',
+      })
+    : await fetch(`${baseUrl}/api/v2/checkout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params),
+        cache: 'no-store',
+      })
 
   const raw = (await response.json().catch(() => null)) as Record<string, unknown> | null
 
