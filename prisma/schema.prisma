@@ -115,6 +115,49 @@ enum DeliveryStatus {
   clicked
 }
 
+/// Which transactional message this was. Report sends are absent on purpose — those
+/// already have DeliveryLog, which answers a different question (did *this member* get
+/// *this report*) and would otherwise write hundreds of duplicate rows per publish.
+enum EmailKind {
+  welcome
+  redemption_code
+  receipt
+  magic_link
+  renewal_reminder
+  sample_request
+  /// An operator's own probe from the admin console.
+  test
+}
+
+/// Every transactional email the app tried to send, and what the provider said.
+///
+/// This exists because the failure it records was previously invisible. A welcome email
+/// is sent fire-and-forget — deliberately, since a membership somebody paid for must not
+/// fail because a greeting could not be sent — and its outcome went to `console.error`
+/// and nowhere else. So "the client never got their email" had no answer anywhere in the
+/// product: not in the admin, not in the database, and the Resend dashboard shows only
+/// what was actually accepted, never what was never attempted.
+///
+/// The provider's own error text is stored verbatim. That string is the diagnosis —
+/// "domain is not verified", "you can only send testing emails to your own address" —
+/// and paraphrasing it into a friendly summary would throw away the one fact that
+/// identifies which of several identical-looking failures this is.
+model EmailLog {
+  id      String    @id @default(cuid())
+  kind    EmailKind
+  toEmail String
+
+  status            DeliveryStatus
+  provider          String?
+  providerMessageId String?
+  error             String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([status])
+}
+
 model Member {
   id           String  @id @default(cuid())
   email        String  @unique
