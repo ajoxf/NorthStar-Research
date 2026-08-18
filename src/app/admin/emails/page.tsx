@@ -3,6 +3,7 @@ import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 
 import { EmailPreviewList } from '@/app/admin/emails/email-preview-list'
 import { EmailTest } from '@/app/admin/emails/email-test'
+import { WebhookPanel } from '@/app/admin/emails/webhook-panel'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -11,6 +12,9 @@ import { DEFAULT_EMAIL_FROM } from '@/lib/notifications/from'
 import { providerNames } from '@/lib/notifications'
 import { emailPreviews } from '@/lib/notifications/previews'
 import { formatDate } from '@/lib/utils'
+import { isPlaceholder } from '@/lib/env'
+import { processorUrls } from '@/lib/payment-settings'
+import { webhookHealth } from '@/lib/webhook-log'
 
 export const metadata: Metadata = { title: 'Emails', robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
@@ -40,7 +44,12 @@ export default async function AdminEmailsPage() {
   const deskAddress = optionalEnv('SAMPLE_REPORT_REQUEST_TO', from)
   const live = provider !== 'console'
 
-  const recent = await db.emailLog.findMany({ orderBy: { createdAt: 'desc' }, take: 25 })
+  const [recent, health] = await Promise.all([
+    db.emailLog.findMany({ orderBy: { createdAt: 'desc' }, take: 25 }),
+    webhookHealth('resend'),
+  ])
+  const secret = process.env.RESEND_WEBHOOK_SECRET
+  const secretSet = Boolean(secret) && !isPlaceholder(secret as string)
   const failures = recent.filter((entry) => entry.status === 'failed').length
 
   return (
@@ -89,6 +98,19 @@ export default async function AdminEmailsPage() {
           unedited — that sentence is usually the whole diagnosis.
         </p>
         <EmailTest defaultTo={admin.email} />
+      </section>
+
+      <section className="mb-12">
+        <h2 className="mb-1 text-[19px] text-ink">Opens and clicks</h2>
+        <p className="mb-4 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+          Whether Resend is calling this deployment back, and what happens when it does. This is
+          what fills the Opened column — without it, every send stays at &ldquo;sent&rdquo; forever.
+        </p>
+        <WebhookPanel
+          health={health}
+          endpoint={`${processorUrls().base}/api/webhooks/resend`}
+          secretSet={secretSet}
+        />
       </section>
 
       <section className="mb-12">

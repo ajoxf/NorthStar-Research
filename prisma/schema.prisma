@@ -129,6 +129,51 @@ enum EmailKind {
   test
 }
 
+/// What happened to one inbound provider callback.
+///
+/// The distinction that matters is between `rejected_signature` and nothing arriving at
+/// all. Both leave the Opened column at zero and look identical from the admin, but one
+/// means "Resend is not calling us" and the other means "Resend is calling and we are
+/// turning it away" — completely different fixes, and guessing wrong costs an afternoon.
+enum WebhookOutcome {
+  /// Applied to a delivery log row.
+  applied
+  /// Verified, but nothing to apply it to — a welcome or receipt has no DeliveryLog row.
+  unmatched
+  /// Verified, but an older event than the one already recorded. Correctly discarded.
+  stale
+  /// An event type this app does not track. Acknowledged so the provider stops retrying.
+  ignored
+  /// Signature check failed. Either the secret is wrong, or it is not really the provider.
+  rejected_signature
+  /// No secret is set, so nothing can be verified and nothing is accepted.
+  not_configured
+  /// The body was not valid JSON.
+  invalid_payload
+}
+
+/// Every inbound provider callback, and what became of it.
+///
+/// Deliberately bounded in what it stores: an outcome, an event type and a message id —
+/// never the body. The payload carries recipient addresses and provider metadata, and a
+/// log table is the wrong place for a copy of it.
+model WebhookLog {
+  id       String         @id @default(cuid())
+  provider String
+  /// The provider's event name, e.g. `email.opened`. Empty when the body never parsed.
+  eventType String?
+  outcome  WebhookOutcome
+  /// The provider's message id, when the event carried one.
+  messageId String?
+  /// One short line of context — never the payload.
+  detail   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([provider, outcome])
+}
+
 /// Every transactional email the app tried to send, and what the provider said.
 ///
 /// This exists because the failure it records was previously invisible. A welcome email
