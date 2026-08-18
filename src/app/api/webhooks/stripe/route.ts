@@ -239,6 +239,38 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
       renewalReminderSentAt: null,
     },
   })
+
+  /*
+   * A receipt for the renewal — but never for the first invoice.
+   *
+   * `subscription_create` is the invoice raised by the original checkout, and
+   * `checkout.session.completed` has already sent a receipt for that one. Sending on
+   * every `invoice.paid` would give first-time buyers two receipts for one payment,
+   * which reads as a double charge and generates precisely the support message a receipt
+   * is meant to prevent. `billing_reason` is what tells the two apart.
+   *
+   * Every later renewal previously produced nothing from us at all: money left the
+   * member's card each month in silence unless they had Stripe's own receipts switched on.
+   */
+  if (invoice.billing_reason !== 'subscription_cycle') return
+
+  try {
+    const receipt = await getNotificationProvider().sendReceiptEmail(
+      { email: member.email, firstName: member.firstName },
+      {
+        amount: ((invoice.amount_paid ?? 0) / 100).toFixed(2),
+        currency: (invoice.currency ?? 'usd').toUpperCase(),
+        method: 'Card',
+        reference: invoice.id ?? '',
+        paidAt: new Date(),
+      },
+    )
+    if (receipt.status === 'failed') {
+      console.error(`[stripe:webhook] renewal receipt failed for ${member.email}: ${receipt.error}`)
+    }
+  } catch (error) {
+    console.error('[stripe:webhook] renewal receipt threw', error)
+  }
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
