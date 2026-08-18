@@ -62,6 +62,8 @@ export default async function PaymentSettingsPage() {
   const urls = processorUrls()
   const baseLooksWrong = urls.base !== CANONICAL_BASE_URL
   const stripeReady = stripeConfigured()
+  // Presence only. The URL itself is infrastructure and the secret is never surfaced.
+  const relayConfigured = Boolean(process.env.CREGIS_RELAY_URL)
 
   const pricingState: PricingState = {
     // Null while the site is still on the built-in plan: the first save creates the row.
@@ -214,11 +216,26 @@ export default async function PaymentSettingsPage() {
             <CopyableUrl label="Success URL" value={urls.checkoutSuccess} />
             <CopyableUrl label="Cancelled URL" value={urls.checkoutCancelled} />
           </div>
+          {/*
+            Two different directions, and conflating them is how an operator ends up
+            debugging the wrong one. Cregis calling *us* is the callback, and comes from
+            a rotating pool. Us calling *Cregis* is allowlisted at their end, which is
+            what the relay exists to satisfy.
+          */}
           <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
-            Cregis calls from a rotating pool of addresses, so no static outbound IP is involved.
-            If a checkout ever fails on authorisation while the credentials are unchanged, that is
-            the first thing to re-examine.
+            Cregis allowlists the address that calls their API, and Vercel has no fixed outbound
+            IP, so production sends that one call through a relay on fixed-IP hosting
+            (<code className="font-mono text-[12px]">CREGIS_RELAY_URL</code>). If checkouts start
+            failing on authorisation while the credentials are unchanged, the relay host&rsquo;s
+            address has probably moved and needs re-allowlisting with Cregis.
           </p>
+          {relayConfigured && (
+            <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">
+              The relay is configured, which means it — not the base URL above — decides which
+              Cregis host this app talks to. Editing the base URL will not change where checkouts
+              go while the relay is in front.
+            </p>
+          )}
         </Section>
 
         <Section
