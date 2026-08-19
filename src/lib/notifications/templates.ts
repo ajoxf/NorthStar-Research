@@ -1,4 +1,4 @@
-import { reportTypeLabel } from '@/lib/report-content'
+
 import type { ReportSummary } from '@/lib/notifications/types'
 import { CODE_VALIDITY_DAYS } from '@/lib/codes'
 
@@ -56,7 +56,7 @@ function button(href: string, label: string): string {
 }
 
 export function reportEmail(report: ReportSummary, reportUrl: string, firstName?: string | null) {
-  const typeLabel = reportTypeLabel(report.type)
+ 
   const greeting = firstName ? `${escapeHtml(firstName)},` : 'Good morning,'
   const published = new Date(report.publishDate).toLocaleDateString('en-US', {
     weekday: 'long',
@@ -67,7 +67,7 @@ export function reportEmail(report: ReportSummary, reportUrl: string, firstName?
 
   const body = `
     <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
-    <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:${ACCENT};margin-bottom:8px;">${escapeHtml(typeLabel)}</div>
+    
     <h1 style="margin:0 0 12px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">${escapeHtml(report.title)}</h1>
     <p style="margin:0 0 4px;color:${INK_DIM};font-size:13px;">${escapeHtml(published)}</p>
     ${report.summary ? `<p style="margin:16px 0 0;color:${INK};font-size:15px;line-height:1.65;">${escapeHtml(report.summary)}</p>` : ''}
@@ -76,10 +76,10 @@ export function reportEmail(report: ReportSummary, reportUrl: string, firstName?
   `
 
   return {
-    subject: `${typeLabel}: ${report.title}`,
+    subject: `${report.title}`, 
     html: shell(report.title, body),
     text:
-      `${typeLabel}\n${report.title}\n${published}\n\n` +
+      `${report.title}\n${published}\n\n` +
       `${report.summary ?? ''}\n\n` +
       `Read the report (sign-in required): ${reportUrl}\n\n` +
       `Educational and informational purposes only. Not financial advice.`,
