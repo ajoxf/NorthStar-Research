@@ -10,7 +10,7 @@ import { hashPassword, startSession } from '@/lib/auth'
 import { safeNext } from '@/lib/oauth'
 import { latestPublishedReport } from '@/lib/latest-report'
 import { isCodeExpired, normaliseCode } from '@/lib/codes'
-import { normalisePhone } from '@/lib/utils'
+import { resolveContactNumbers } from '@/lib/contact-numbers'
 import { recordReferralSignup, referralSlugFromCookie } from '@/lib/referral-attribution'
 import { appBaseUrl } from '@/lib/env'
 import { getNotificationProvider } from '@/lib/notifications'
@@ -31,14 +31,21 @@ const schema = z.object({
    * It is a contact detail, not a delivery channel — reports go by email only. The desk
    * needs a way to reach a paying member that does not depend on an email landing in a
    * spam folder, and asking later means never getting it.
+   *
+   * Redemption is the one point every member passes through, whichever way they arrived
+   * — card, crypto, gifted code or referral — so it is the only place a number can be
+   * asked for once and captured from everybody.
    */
   phoneNumber: z
     // `required_error` matters: a *missing* field never reaches .min(), so without this
     // an omitted number is reported to the member as the bare word "Required".
-    .string({ required_error: 'Enter your WhatsApp or phone number, including the country code.' })
+    .string({ required_error: 'Enter your mobile number, including the country code.' })
     .trim()
-    .min(6, 'Enter your WhatsApp or phone number, including the country code.')
+    .min(6, 'Enter your mobile number, including the country code.')
     .max(32, 'That number is too long.'),
+  /** False when they run WhatsApp on a different line. Defaults to the common case. */
+  whatsappSameAsPhone: z.boolean().default(true),
+  whatsappNumber: z.string().trim().max(32, 'That number is too long.').optional(),
 })
 
 /**
@@ -60,7 +67,11 @@ export async function POST(request: Request) {
 
   const code = normaliseCode(parsed.data.code)
   const email = parsed.data.email
-  const phoneNumber = normalisePhone(parsed.data.phoneNumber)
+  const numbers = resolveContactNumbers({
+    phoneNumber: parsed.data.phoneNumber,
+    whatsappSameAsPhone: parsed.data.whatsappSameAsPhone,
+    whatsappNumber: parsed.data.whatsappNumber,
+  })
 
   const existing = await db.member.findUnique({ where: { email } })
   if (existing?.passwordHash) {
@@ -121,7 +132,9 @@ export async function POST(request: Request) {
           passwordHash,
           firstName: parsed.data.firstName || null,
           lastName: parsed.data.lastName || null,
-          phoneNumber,
+          phoneNumber: numbers.phoneNumber,
+          whatsappNumber: numbers.whatsappNumber,
+          whatsappOptIn: numbers.whatsappOptIn,
           role: 'member',
           subscriptionStatus: 'active',
           subscriptionStartedAt: now,
@@ -134,7 +147,9 @@ export async function POST(request: Request) {
           passwordHash,
           firstName: parsed.data.firstName || undefined,
           lastName: parsed.data.lastName || undefined,
-          phoneNumber: phoneNumber ?? undefined,
+          phoneNumber: numbers.phoneNumber ?? undefined,
+          whatsappNumber: numbers.whatsappNumber ?? undefined,
+          whatsappOptIn: numbers.whatsappOptIn || undefined,
           subscriptionStatus: 'active',
           subscriptionStartedAt: now,
           subscriptionRenewsAt: renewsAt,

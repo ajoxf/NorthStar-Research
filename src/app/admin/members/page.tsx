@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 
 import { ActivateMemberButton } from '@/app/admin/members/member-status-action'
 import { Badge, statusTone } from '@/components/ui/badge'
+import { channelsFor } from '@/lib/contact-numbers'
 import { MemberFilters } from '@/app/admin/members/member-filters'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -140,9 +141,18 @@ export default async function AdminMembersPage({
                       )}
                     </div>
                   </td>
+                  {/*
+                    Was hardcoded to "Email" for everyone, so a captured number was
+                    invisible and the column said the same thing on every row — which is
+                    a column that trains you not to read it.
+                  */}
                   <td className="px-5 py-3.5">
                     <div className="flex flex-wrap gap-1.5">
-                      <Badge tone="muted">Email</Badge>
+                      {channelsFor(member).map((channel) => (
+                        <Badge key={channel} tone={channel === 'email' ? 'muted' : 'neutral'}>
+                          {channel === 'whatsapp' ? 'WhatsApp' : channel === 'phone' ? 'Phone' : 'Email'}
+                        </Badge>
+                      ))}
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-dim">

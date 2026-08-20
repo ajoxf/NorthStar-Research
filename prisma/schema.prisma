@@ -211,7 +211,13 @@ model Member {
   firstName String?
   lastName  String?
 
+  /// Mobile number. Captured at redemption, which every member passes through.
   phoneNumber      String?
+  /// WhatsApp number, when it differs from the mobile — plenty of people run WhatsApp on
+  /// a second line, and asking "WhatsApp *or* phone" got one number and no idea which it
+  /// was. Null means WhatsApp is on the mobile above, or was not given.
+  whatsappNumber   String?
+  /// True once a WhatsApp number is known, whichever field it lives in.
   whatsappOptIn    Boolean @default(false)
   whatsappVerified Boolean @default(false)
 
