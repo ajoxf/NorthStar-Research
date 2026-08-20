@@ -13,6 +13,8 @@ type CrmMember = {
   subscriptionStatus: string
   tags: string[]
   adminNotes: string | null
+  phoneNumber: string | null
+  whatsappNumber: string | null
 }
 
 export function MemberCrmPanel({ member }: { member: CrmMember }) {
@@ -23,6 +25,8 @@ export function MemberCrmPanel({ member }: { member: CrmMember }) {
   const [tags, setTags] = React.useState<string[]>(member.tags)
   const [tagDraft, setTagDraft] = React.useState('')
   const [notes, setNotes] = React.useState(member.adminNotes ?? '')
+  const [phoneNumber, setPhoneNumber] = React.useState(member.phoneNumber ?? '')
+  const [whatsappNumber, setWhatsappNumber] = React.useState(member.whatsappNumber ?? '')
   const [pending, setPending] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
@@ -44,7 +48,13 @@ export function MemberCrmPanel({ member }: { member: CrmMember }) {
       const response = await fetch(`/api/admin/members/${member.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriptionStatus: status, tags, adminNotes: notes }),
+        body: JSON.stringify({
+          subscriptionStatus: status,
+          tags,
+          adminNotes: notes,
+          phoneNumber: phoneNumber.trim() || null,
+          whatsappNumber: whatsappNumber.trim() || null,
+        }),
       })
       const data = await response.json()
 
@@ -67,6 +77,38 @@ export function MemberCrmPanel({ member }: { member: CrmMember }) {
       <h2 className="mb-5 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
         CRM record
       </h2>
+
+      {/*
+        Editable because these are missing on everyone who signed up before the fields
+        existed, and a contact detail that can never be added is one that stays lost.
+        Leave WhatsApp blank when it is the same line as the mobile — storing a duplicate
+        would make "has a separate WhatsApp number" unanswerable later.
+      */}
+      <div className="mb-5 grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="crm-phone">Mobile number</Label>
+          <Input
+            id="crm-phone"
+            type="tel"
+            value={phoneNumber}
+            placeholder="+1 555 000 0000"
+            autoComplete="off"
+            onChange={(event) => setPhoneNumber(event.target.value)}
+          />
+        </div>
+        <div>
+          <Label htmlFor="crm-whatsapp">WhatsApp number</Label>
+          <Input
+            id="crm-whatsapp"
+            type="tel"
+            value={whatsappNumber}
+            placeholder="Same as mobile"
+            autoComplete="off"
+            onChange={(event) => setWhatsappNumber(event.target.value)}
+          />
+          <Hint>Leave blank if WhatsApp is on the mobile number.</Hint>
+        </div>
+      </div>
 
       <div className="mb-5">
         <Label htmlFor="status">Subscription status</Label>

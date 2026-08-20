@@ -9,6 +9,7 @@ const LINKS = [
   { href: '/admin', label: 'Overview', exact: true },
   { href: '/admin/reports', label: 'Reports' },
   { href: '/admin/members', label: 'Members' },
+  { href: '/admin/engagement', label: 'Reading' },
   { href: '/admin/payments', label: 'Payments' },
   { href: '/admin/codes', label: 'Codes' },
   { href: '/admin/affiliates', label: 'Affiliates' },
