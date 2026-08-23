@@ -294,6 +294,51 @@ export function renewalReminderEmail(
  * Internal notification to the desk. Deliberately plain: it is read by us, and it
  * contains no link that could deliver research to the enquirer.
  */
+/**
+ * Pricing, sent to one person who asked.
+ *
+ * Reads as a reply from a desk rather than a broadcast, because that is what it is: the
+ * price is not on the site, somebody asked, and a person is answering. The link goes
+ * straight to a checkout page carrying the figure, so the number appears once, in the
+ * place where it can actually be acted on.
+ */
+export function pricingInviteEmail(input: {
+  name?: string | null
+  price: string
+  interval: string
+  joinUrl: string
+  message?: string | null
+}) {
+  const greeting = input.name ? `Hello ${escapeHtml(input.name)},` : 'Hello,'
+  const body = `
+    <p style="margin:0 0 18px;color:${INK};font-size:16px;">${greeting}</p>
+    <p style="margin:0 0 18px;color:${INK_DIM};font-size:15px;line-height:1.6;">
+      Thank you for asking about NordStar Pro. Membership is
+      <strong style="color:${INK};">${escapeHtml(input.price)} per ${escapeHtml(input.interval)}</strong>
+      — three research editions a week, the complete archive of everything published, and an
+      email the moment each one lands.
+    </p>
+    ${
+      input.message
+        ? `<p style="margin:0 0 18px;color:${INK_DIM};font-size:15px;line-height:1.6;">${escapeHtml(
+            input.message,
+          ).replace(/\n/g, '<br />')}</p>`
+        : ''
+    }
+    ${button(input.joinUrl, 'Join and pay')}
+    <p style="margin:18px 0 0;color:${INK_DIM};font-size:13px;line-height:1.6;">
+      That link is yours — it opens the payment page directly. You can pay by card, which renews
+      automatically, or in crypto, which you renew whenever you choose. Your access code arrives as
+      soon as the payment confirms.
+    </p>
+  `
+  return {
+    subject: 'Your NordStar Pro membership',
+    html: shell('Your NordStar Pro membership', body),
+    text: `${input.name ? `Hello ${input.name},` : 'Hello,'}\n\nMembership is ${input.price} per ${input.interval} — three research editions a week plus the full archive.\n\n${input.message ? `${input.message}\n\n` : ''}Join and pay: ${input.joinUrl}\n`,
+  }
+}
+
 export function sampleReportRequestEmail(request: {
   name: string
   email: string

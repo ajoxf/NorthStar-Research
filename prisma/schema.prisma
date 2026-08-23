@@ -125,8 +125,106 @@ enum EmailKind {
   magic_link
   renewal_reminder
   sample_request
+  /// Pricing sent to somebody who asked, from the enquiries screen.
+  pricing_invite
   /// An operator's own probe from the admin console.
   test
+}
+
+/// What happened to one inbound provider callback.
+///
+/// The distinction that matters is between `rejected_signature` and nothing arriving at
+/// all. Both leave the Opened column at zero and look identical from the admin, but one
+/// means "Resend is not calling us" and the other means "Resend is calling and we are
+/// turning it away" — completely different fixes, and guessing wrong costs an afternoon.
+enum WebhookOutcome {
+  /// Applied to a delivery log row.
+  applied
+  /// Verified, but nothing to apply it to — a welcome or receipt has no DeliveryLog row.
+  unmatched
+  /// Verified, but an older event than the one already recorded. Correctly discarded.
+  stale
+  /// An event type this app does not track. Acknowledged so the provider stops retrying.
+  ignored
+  /// Signature check failed. Either the secret is wrong, or it is not really the provider.
+  rejected_signature
+  /// No secret is set, so nothing can be verified and nothing is accepted.
+  not_configured
+  /// The body was not valid JSON.
+  invalid_payload
+}
+
+/// Every inbound provider callback, and what became of it.
+///
+/// Deliberately bounded in what it stores: an outcome, an event type and a message id —
+/// never the body. The payload carries recipient addresses and provider metadata, and a
+/// log table is the wrong place for a copy of it.
+model WebhookLog {
+  id       String         @id @default(cuid())
+  provider String
+  /// The provider's event name, e.g. `email.opened`. Empty when the body never parsed.
+  eventType String?
+  outcome  WebhookOutcome
+  /// The provider's message id, when the event carried one.
+  messageId String?
+  /// One short line of context — never the payload.
+  detail   String?
+
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([provider, outcome])
+}
+
+/// Where a pricing enquiry has got to. Nothing is ever deleted — an enquiry that went
+/// nowhere is still a record of somebody who asked.
+enum EnquiryStatus {
+  /// Asked, not yet sent anything.
+  new
+  /// Sent a private pricing link.
+  invited
+  /// Became a member.
+  converted
+  /// Deliberately set aside. Kept, not removed.
+  closed
+}
+
+/// Somebody who asked what it costs.
+///
+/// Exists because the price is not on the public site: the join page takes an enquiry
+/// instead, and the operator sends pricing individually. That makes this the top of the
+/// funnel and the only record of demand the product has — so it captures contact details
+/// properly rather than being a mail-to link that leaves nothing behind.
+model PricingEnquiry {
+  id    String @id @default(cuid())
+  name  String
+  email String
+
+  /// Same two numbers as a member, asked the same way. A prospect who gives a WhatsApp
+  /// number is reachable there before they are a member, which is the point of asking.
+  phoneNumber    String?
+  whatsappNumber String?
+
+  /// Whatever they typed. Often what they actually want to know.
+  note String?
+
+  status EnquiryStatus @default(new)
+
+  /// The unguessable half of the private pricing link. Not a credential — it reveals a
+  /// price, nothing more — but random so a link cannot be enumerated from a sequence.
+  inviteToken String  @unique
+  invitedAt   DateTime?
+  /// Set when a member appears with this email, so the funnel closes itself.
+  convertedAt DateTime?
+
+  /// Where they came from, when a referral cookie was set.
+  referralSlug String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
 }
 
 /// Every transactional email the app tried to send, and what the provider said.
@@ -166,7 +264,13 @@ model Member {
   firstName String?
   lastName  String?
 
+  /// Mobile number. Captured at redemption, which every member passes through.
   phoneNumber      String?
+  /// WhatsApp number, when it differs from the mobile — plenty of people run WhatsApp on
+  /// a second line, and asking "WhatsApp *or* phone" got one number and no idea which it
+  /// was. Null means WhatsApp is on the mobile above, or was not given.
+  whatsappNumber   String?
+  /// True once a WhatsApp number is known, whichever field it lives in.
   whatsappOptIn    Boolean @default(false)
   whatsappVerified Boolean @default(false)
 

@@ -7,6 +7,7 @@ import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatPrice, type PackageShape } from '@/lib/package-shape'
 import { defaultPackage } from '@/lib/packages'
+import { pricingMode } from '@/lib/pricing-mode'
 
 /**
  * The price quoted here is the default package's, falling back to the built-in plan when
@@ -15,14 +16,14 @@ import { defaultPackage } from '@/lib/packages'
  * homepage, the join page and checkout cannot drift apart.
  */
 export default async function LandingPage() {
-  const plan = await defaultPackage()
+  const [plan, mode] = await Promise.all([defaultPackage(), pricingMode()])
 
   return (
     <>
-      <Hero plan={plan} />
+      <Hero plan={plan} mode={mode} />
       <CoverageSection />
       <SampleReportSection />
-      <PricingSection plan={plan} />
+      <PricingSection plan={plan} mode={mode} />
     </>
   )
 }
@@ -32,7 +33,7 @@ function shortInterval(plan: PackageShape): string {
   return plan.interval === 'year' ? 'yr' : 'mo'
 }
 
-function Hero({ plan }: { plan: PackageShape }) {
+function Hero({ plan, mode }: { plan: PackageShape; mode: 'public' | 'enquiry' }) {
   return (
     <section className="relative overflow-hidden border-b border-line">
       {/* The still is the default. Setting NEXT_PUBLIC_HERO_VIDEO_URL replaces it with
@@ -90,7 +91,9 @@ function Hero({ plan }: { plan: PackageShape }) {
 
           <div className="mt-9 flex flex-wrap items-center gap-3">
             <ButtonLink href="/join" size="lg">
-              Become a member — {formatPrice(plan.priceCents, plan.currency)}/{shortInterval(plan)} intro
+              {mode === 'enquiry'
+                ? 'Request pricing'
+                : `Become a member — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)} intro`}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </ButtonLink>
             <ButtonLink href="#sample-report" size="lg" variant="secondary">
@@ -203,7 +206,7 @@ function SampleReportSection() {
   )
 }
 
-function PricingSection({ plan }: { plan: PackageShape }) {
+function PricingSection({ plan, mode }: { plan: PackageShape; mode: 'public' | 'enquiry' }) {
   return (
     <section id="pricing">
       <div className="mx-auto max-w-6xl px-5 py-20">
@@ -214,34 +217,54 @@ function PricingSection({ plan }: { plan: PackageShape }) {
           />
 
           <span className="eyebrow">Membership</span>
-          <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-2">
-            <span className="font-display text-5xl text-ink">
-              {formatPrice(plan.priceCents, plan.currency)}
-            </span>
-            <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
-              per {plan.interval}
-            </span>
-            {/*
-              Stated as a fact about the current price, not as a countdown. No fake
-              deadline, no struck-through "was" figure that never existed — both are the
-              kind of pressure a research product should not need, and the second is a
-              claim we would have to be able to stand behind.
-            */}
-            <Badge tone="accent">Introductory rate</Badge>
-          </div>
-          <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
-            One plan. Three reports a week, the complete archive of everything published, and an
-            email the moment each one lands. Pay by card and it renews itself — cancel any time —
-            or pay in crypto and renew whenever you choose.
-          </p>
-          <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
-            <span className="text-ink">
-              {formatPrice(plan.priceCents, plan.currency)} is an introductory rate
-            </span>{' '}
-            while the
-            desk builds out its coverage. It will rise for new members later; join now and yours
-            stays as it is for as long as your membership runs.
-          </p>
+
+          {mode === 'enquiry' ? (
+            <>
+              {/*
+                No figure, and no placeholder standing in for one. "Pricing on request"
+                said plainly is a normal way to sell research; a struck-out number or a
+                "from $X" would be the pressure this product does not need.
+              */}
+              <h2 className="mt-4 text-balance font-display text-4xl leading-tight text-ink">
+                Pricing on request
+              </h2>
+              <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
+                Membership is arranged directly with the desk. Tell us how to reach you and we
+                will send the figure and a payment link — by card or in crypto, whichever suits.
+                Three reports a week, the complete archive, and an email the moment each one lands.
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-2">
+                <span className="font-display text-5xl text-ink">
+                  {formatPrice(plan.priceCents, plan.currency)}
+                </span>
+                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
+                  per {plan.interval}
+                </span>
+                {/*
+                  Stated as a fact about the current price, not as a countdown. No fake
+                  deadline, no struck-through "was" figure that never existed — both are the
+                  kind of pressure a research product should not need, and the second is a
+                  claim we would have to be able to stand behind.
+                */}
+                <Badge tone="accent">Introductory rate</Badge>
+              </div>
+              <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
+                One plan. Three reports a week, the complete archive of everything published, and
+                an email the moment each one lands. Pay by card and it renews itself — cancel any
+                time — or pay in crypto and renew whenever you choose.
+              </p>
+              <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
+                <span className="text-ink">
+                  {formatPrice(plan.priceCents, plan.currency)} is an introductory rate
+                </span>{' '}
+                while the desk builds out its coverage. It will rise for new members later; join
+                now and yours stays as it is for as long as your membership runs.
+              </p>
+            </>
+          )}
 
           <ul className="mt-8 space-y-3 border-t border-line pt-7">
             {[
@@ -259,7 +282,7 @@ function PricingSection({ plan }: { plan: PackageShape }) {
           </ul>
 
           <ButtonLink href="/join" size="lg" className="mt-9 w-full">
-            Continue to payment
+            {mode === 'enquiry' ? 'Request pricing' : 'Continue to payment'}
             <ArrowRight className="h-4 w-4" aria-hidden />
           </ButtonLink>
 

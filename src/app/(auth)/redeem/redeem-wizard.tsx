@@ -40,6 +40,8 @@ export function RedeemWizard({
   const [lastName, setLastName] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [phoneNumber, setPhoneNumber] = React.useState('')
+  const [whatsappSameAsPhone, setWhatsappSameAsPhone] = React.useState(true)
+  const [whatsappNumber, setWhatsappNumber] = React.useState('')
 
   async function validateCode(event: React.FormEvent) {
     event.preventDefault()
@@ -96,6 +98,8 @@ export function RedeemWizard({
           firstName: firstName || undefined,
           lastName: lastName || undefined,
           phoneNumber,
+          whatsappSameAsPhone,
+          whatsappNumber: whatsappSameAsPhone ? undefined : whatsappNumber,
         }),
       })
       const data = await response.json()
@@ -230,7 +234,7 @@ export function RedeemWizard({
             hint below, which also repeats the anti-impersonation line the emails carry.
           */}
           <div className="mt-4">
-            <Label htmlFor="phone">WhatsApp or phone number</Label>
+            <Label htmlFor="phone">Mobile number</Label>
             <Input
               id="phone"
               type="tel"
@@ -245,6 +249,41 @@ export function RedeemWizard({
               reports are delivered by email, and we will never message you first to ask for
               money or offer to manage an account.
             </Hint>
+          </div>
+
+          {/*
+            Two questions, not one. The old field asked for "WhatsApp or phone" and got a
+            single number with no record of which it was, so the desk could not tell
+            whether it was reachable on WhatsApp without trying it. The common case — one
+            line for both — stays a single tick rather than typing the number twice.
+          */}
+          <div className="mt-4">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+                checked={whatsappSameAsPhone}
+                onChange={(event) => setWhatsappSameAsPhone(event.target.checked)}
+              />
+              <span className="text-[14px] leading-relaxed text-ink-dim">
+                WhatsApp is on this same number
+              </span>
+            </label>
+
+            {!whatsappSameAsPhone && (
+              <div className="mt-3 animate-fade-up">
+                <Label htmlFor="whatsapp">WhatsApp number</Label>
+                <Input
+                  id="whatsapp"
+                  type="tel"
+                  value={whatsappNumber}
+                  autoComplete="tel"
+                  placeholder="+1 555 000 0000"
+                  onChange={(event) => setWhatsappNumber(event.target.value)}
+                />
+                <Hint>Leave blank if you would rather not give one.</Hint>
+              </div>
+            )}
           </div>
 
           <FieldError>{error}</FieldError>

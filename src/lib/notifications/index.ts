@@ -120,6 +120,15 @@ class CompositeProvider implements NotificationProvider {
     )
   }
 
+  sendPricingInvite(
+    recipient: { email: string; name?: string | null },
+    invite: { price: string; interval: string; joinUrl: string; message?: string | null },
+  ) {
+    return sendAndRecord('pricing_invite', recipient.email, () =>
+      this.email.sendPricingInvite(recipient, invite),
+    )
+  }
+
   sendRenewalReminder(
     recipient: { email: string; firstName?: string | null },
     daysRemaining: number,

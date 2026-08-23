@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { parseSegment, segmentWhere } from '@/lib/member-segments'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
+import { whatsappNumberFor } from '@/lib/contact-numbers'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -49,9 +50,10 @@ export async function GET(request: Request) {
     'first_name',
     'last_name',
     'phone_number',
-    // Retained so historic exports stay comparable; WhatsApp delivery is descoped and
-    // these are no longer written to.
-    'whatsapp_opt_in_legacy',
+    'whatsapp_number',
+    // `whatsapp_opt_in` is now written again: it is true whenever a WhatsApp number is
+    // known, on either line. `verified` remains unused — nothing verifies a number.
+    'whatsapp_opt_in',
     'whatsapp_verified_legacy',
     'subscription_status',
     'subscription_started_at',
@@ -72,6 +74,7 @@ export async function GET(request: Request) {
       member.firstName ?? '',
       member.lastName ?? '',
       member.phoneNumber ?? '',
+      whatsappNumberFor(member) ?? '',
       member.whatsappOptIn ? 'true' : 'false',
       member.whatsappVerified ? 'true' : 'false',
       member.subscriptionStatus,

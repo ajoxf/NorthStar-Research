@@ -3,6 +3,7 @@ import Link from 'next/link'
 
 import { formatPrice } from '@/lib/package-shape'
 import { defaultPackage } from '@/lib/packages'
+import { pricingMode } from '@/lib/pricing-mode'
 
 export const metadata: Metadata = { title: 'FAQs' }
 
@@ -12,12 +13,12 @@ export const metadata: Metadata = { title: 'FAQs' }
  */
 // A function of the price rather than a module constant, so the answer below quotes
 // whatever the default package currently costs instead of a figure frozen at import time.
-const faqs = (price: string): { q: string; a: React.ReactNode }[] => [
+const faqs = (price: string | null): { q: string; a: React.ReactNode }[] => [
   {
     q: 'What do I get for the membership fee?',
     a: (
       <>
-        {price} per month gives you every weekly report — three a week, covering
+        {price ?? 'Membership'} gives you every weekly report — three a week, covering
         commodities, international markets and indices, options, crypto and spreads, and FX — plus
         access to the complete archive of everything published previously, including editions from
         before you joined.
@@ -111,8 +112,10 @@ const faqs = (price: string): { q: string; a: React.ReactNode }[] => [
 ]
 
 export default async function FaqsPage() {
-  const plan = await defaultPackage()
-  const FAQS = faqs(formatPrice(plan.priceCents, plan.currency))
+  const [plan, mode] = await Promise.all([defaultPackage(), pricingMode()])
+  // Null in enquiry mode: the answer then describes what membership includes without
+  // naming a figure, rather than a figure appearing in an FAQ nobody thought to check.
+  const FAQS = faqs(mode === 'enquiry' ? null : formatPrice(plan.priceCents, plan.currency))
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-20">

@@ -31,8 +31,8 @@ export async function EngagementPanel() {
         <h2 className="font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
           Engagement
         </h2>
-        <Link href="/admin/members" className="font-mono text-[12px] text-accent hover:underline">
-          All members
+        <Link href="/admin/engagement" className="font-mono text-[12px] text-accent hover:underline">
+          Who is reading
         </Link>
       </div>
 

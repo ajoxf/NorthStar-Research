@@ -9,6 +9,7 @@ import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { reportTypeLabel } from '@/lib/report-content'
 import { formatDate, formatDateTime, fullName } from '@/lib/utils'
+import { whatsappNumberFor } from '@/lib/contact-numbers'
 
 export const metadata: Metadata = { title: 'Member' }
 export const dynamic = 'force-dynamic'
@@ -69,7 +70,13 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
           value={member.subscriptionStartedAt ? formatDate(member.subscriptionStartedAt) : '—'}
         />
         <Detail label="Source" value={member.source} />
-        <Detail label="WhatsApp" value={member.phoneNumber ?? '—'} />
+        {/* Two separate facts. The old single "WhatsApp" row showed the mobile number
+            under a label nobody had verified — a guess presented as a record. */}
+        <Detail label="Mobile" value={member.phoneNumber ?? '—'} />
+        <Detail
+          label="WhatsApp"
+          value={whatsappNumberFor(member) ?? '—'}
+        />
         <Detail label="Last login" value={member.lastLoginAt ? formatDateTime(member.lastLoginAt) : '—'} />
         <Detail label="Messages sent" value={String(member.deliveryLogs.length)} />
         <Detail label="Reports opened" value={String(member.reportViews.length)} />
@@ -78,6 +85,8 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
 
       <MemberCrmPanel
         member={{
+          phoneNumber: member.phoneNumber,
+          whatsappNumber: member.whatsappNumber,
           id: member.id,
           subscriptionStatus: member.subscriptionStatus,
           tags: member.tags,
