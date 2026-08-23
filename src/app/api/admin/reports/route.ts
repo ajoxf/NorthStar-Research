@@ -10,10 +10,16 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const schema = z.object({
-  // Must stay in sync with REPORT_TYPES and the Prisma ReportType enum, both of which
-  // carry four values. Omitting fx_currencies made Report 4 impossible to upload: the
-  // form offered it and the API rejected it with a bare validation error.
-  type: z.enum(['commodities', 'international_markets', 'options_crypto_spread', 'fx_currencies']),
+  /*
+   * Optional, and no longer asked for at upload.
+   *
+   * Still accepted so an older client, or a future one that wants to categorise, can send
+   * it — but a report without one is normal now, not an error. Reports published before
+   * this keep the type they were given.
+   */
+  type: z
+    .enum(['commodities', 'international_markets', 'options_crypto_spread', 'fx_currencies'])
+    .optional(),
   title: z.string().trim().min(3).max(200),
   summary: z.string().trim().max(600).optional(),
   publishDate: z.string().min(4),
@@ -39,7 +45,10 @@ export async function POST(request: Request) {
 
   const form = await request.formData()
   const parsed = schema.safeParse({
-    type: form.get('type'),
+    // `|| undefined`, not the raw value: an absent field is null, and `.optional()`
+    // accepts undefined but rejects null — which would fail every upload now that the
+    // form no longer sends one.
+    type: form.get('type') || undefined,
     title: form.get('title'),
     summary: form.get('summary') || undefined,
     publishDate: form.get('publishDate'),

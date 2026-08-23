@@ -7,9 +7,8 @@ import { AlertTriangle, Upload } from 'lucide-react'
 import { upload } from '@vercel/blob/client'
 
 import { Button, Spinner } from '@/components/ui/button'
-import { FieldError, Hint, Input, Label, Select, Textarea } from '@/components/ui/field'
+import { FieldError, Hint, Input, Label, Textarea } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
-import { REPORT_TYPES } from '@/lib/report-content'
 import { compressReportPdf } from '@/lib/pdf-compress'
 import { MAX_PDF_BYTES, REPORT_BLOB_PREFIX, formatBytes, slugify } from '@/lib/report-upload'
 
@@ -68,7 +67,6 @@ export function ReportUploadForm() {
   const router = useRouter()
   const toast = useToast()
 
-  const [type, setType] = React.useState(REPORT_TYPES[0].value)
   const [pending, setPending] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [fileName, setFileName] = React.useState<string | null>(null)
@@ -219,26 +217,20 @@ export function ReportUploadForm() {
   return (
     <form onSubmit={handleSubmit} className="mt-8 space-y-6" noValidate>
       <div className="rounded-lg border border-line bg-panel p-6">
-        <div className="mb-4">
-          <Label htmlFor="type">Report type</Label>
-          <Select
-            id="type"
-            name="type"
-            value={type}
-            onChange={(event) => setType(event.target.value as typeof type)}
-          >
-            {REPORT_TYPES.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </Select>
-          <Hint>One of the four report types. Three are published in a typical week.</Hint>
-        </div>
-
+        {/*
+          No report-type picker. The desk numbers its own editions in the title, so a
+          fixed four-way category was a field to get past rather than a decision worth
+          making — and a wrong pick showed on the member's card for good.
+        */}
         <div className="mb-4">
           <Label htmlFor="title">Title</Label>
-          <Input id="title" name="title" required placeholder="Gold holds the weekly pivot" />
+          <Input
+            id="title"
+            name="title"
+            required
+            placeholder="Issue 12 — Gold holds the weekly pivot"
+          />
+          <Hint>Whatever the members should see. Include the issue number if you use one.</Hint>
         </div>
 
         <div className="mb-4">

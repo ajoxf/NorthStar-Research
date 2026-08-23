@@ -7,7 +7,6 @@ import { ReportCard, ReportRow } from '@/components/report-card'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember, hasActiveSubscription } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { REPORT_TYPES } from '@/lib/report-content'
 import { fullName } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Your reports' }
@@ -20,16 +19,21 @@ export default async function DashboardPage() {
   if (!hasActiveSubscription(member)) return <InactiveState />
 
   // Latest published report of each of the three types, plus a short recent archive.
-  const latest = await Promise.all(
-    REPORT_TYPES.map((type) =>
-      db.report.findFirst({
-        where: { type: type.value, published: true },
-        orderBy: { publishDate: 'desc' },
-        select: { id: true, type: true, title: true, summary: true, publishDate: true },
-      }),
-    ),
-  )
-  const current = latest.filter((report): report is NonNullable<typeof report> => report !== null)
+  /*
+   * The most recent editions, full stop — not one per type.
+   *
+   * This used to run a query per report type and show the newest of each. That only made
+   * sense while every report carried one of four fixed types; now that the desk numbers
+   * its own editions and uploads carry no type, a per-type query would return nothing for
+   * new reports and leave this section frozen on the last typed edition of each category
+   * forever, however much was published after.
+   */
+  const current = await db.report.findMany({
+    where: { published: true },
+    orderBy: { publishDate: 'desc' },
+    take: 4,
+    select: { id: true, type: true, title: true, summary: true, publishDate: true },
+  })
 
   const viewedIds = current.length
     ? new Set(
@@ -60,7 +64,7 @@ export default async function DashboardPage() {
           {name ? `Welcome back, ${name}.` : 'Welcome back.'}
         </h1>
         <p className="mt-3 max-w-lg text-[16px] leading-relaxed text-ink-dim">
-          The latest edition of each report. Everything published before is in the archive.
+          The latest editions. Everything published before is in the archive.
         </p>
       </div>
 
@@ -72,7 +76,12 @@ export default async function DashboardPage() {
             <ReportCard
               key={report.id}
               report={{ ...report, viewed: viewedIds.has(report.id) }}
-              index={REPORT_TYPES.findIndex((type) => type.value === report.type)}
+              /*
+                No index. It used to number the cards 1–4 by the report's position in the
+                type list, which was only ever a restatement of the category — and with
+                types gone it would number them by recency, implying an ordering the desk
+                never assigned.
+              */
             />
           ))}
         </div>

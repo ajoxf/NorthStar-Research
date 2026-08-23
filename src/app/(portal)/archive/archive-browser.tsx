@@ -11,7 +11,7 @@ import type { ReportType } from '@prisma/client'
 
 type ArchiveReport = {
   id: string
-  type: ReportType
+  type: ReportType | null
   title: string
   summary: string | null
   publishDate: string
