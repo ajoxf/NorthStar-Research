@@ -45,12 +45,33 @@ export const REPORT_TYPES: {
   },
 ]
 
-export function reportTypeMeta(type: ReportType) {
-  return REPORT_TYPES.find((t) => t.value === type) ?? REPORT_TYPES[0]
+/**
+ * The metadata for a type, or null when a report has none.
+ *
+ * Returning null rather than falling back to the first type is the whole point. The old
+ * fallback meant an unrecognised or missing type rendered as "Commodities" everywhere —
+ * a label nobody chose, on a member-facing card, indistinguishable from a real one.
+ */
+export function reportTypeMeta(type: ReportType | null | undefined) {
+  if (!type) return null
+  return REPORT_TYPES.find((t) => t.value === type) ?? null
 }
 
-export function reportTypeLabel(type: ReportType): string {
-  return reportTypeMeta(type).shortLabel
+export function reportTypeLabel(type: ReportType | null | undefined): string | null {
+  return reportTypeMeta(type)?.shortLabel ?? null
+}
+
+/**
+ * Instrument tabs to offer in the reader when a report specifies none of its own.
+ *
+ * A typed report gets its type's list; an untyped one gets the majors, which are the
+ * instruments most editions touch. Either way this is only a default — whatever the
+ * report actually carries wins.
+ */
+export const GENERAL_INSTRUMENTS = ['XAUUSD', 'DXY', 'SPX', 'BTCUSD', 'EURUSD']
+
+export function defaultInstrumentsFor(type: ReportType | null | undefined): string[] {
+  return reportTypeMeta(type)?.defaultInstruments ?? GENERAL_INSTRUMENTS
 }
 
 /**

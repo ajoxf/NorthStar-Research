@@ -8,7 +8,7 @@ import type { ReportType } from '@prisma/client'
 
 export type ReportCardData = {
   id: string
-  type: ReportType
+  type: ReportType | null
   title: string
   summary: string | null
   publishDate: Date
@@ -33,15 +33,19 @@ export function ReportCard({ report, index }: { report: ReportCardData; index?: 
       />
 
       <div className="mb-4 flex items-center justify-between gap-3">
+        {/* Nothing rather than a borrowed label: an untyped edition is identified by its
+            own title, which is where the desk now numbers its issues. */}
         <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
-          {typeof index === 'number' ? `Report ${index + 1}` : meta.shortLabel}
+          {typeof index === 'number' && index >= 0
+            ? `Report ${index + 1}`
+            : (meta?.shortLabel ?? 'Research')}
         </span>
         {report.viewed ? <Badge tone="muted">Read</Badge> : <Badge tone="accent">New</Badge>}
       </div>
 
       <h3 className="font-display text-xl leading-snug text-ink">{report.title}</h3>
 
-      {typeof index === 'number' && (
+      {typeof index === 'number' && index >= 0 && meta && (
         <p className="mt-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
           {meta.shortLabel}
         </p>
@@ -79,9 +83,11 @@ export function ReportRow({ report }: { report: ReportCardData }) {
       <span className="w-32 shrink-0 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
         {formatDate(report.publishDate)}
       </span>
-      <span className="w-44 shrink-0 font-mono text-[11px] uppercase tracking-[0.12em] text-accent">
-        {meta.shortLabel}
-      </span>
+      {meta && (
+        <span className="w-44 shrink-0 font-mono text-[11px] uppercase tracking-[0.12em] text-accent">
+          {meta.shortLabel}
+        </span>
+      )}
       <span className="flex-1 text-[15px] text-ink transition-colors group-hover:text-accent">
         {report.title}
       </span>

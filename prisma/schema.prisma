@@ -554,7 +554,10 @@ model Package {
 
 model Report {
   id          String     @id @default(cuid())
-  type        ReportType
+  /// Optional. The desk numbers its own editions in the title now, so new uploads carry
+  /// no type. Kept nullable rather than dropped: reports published before this have a
+  /// real type, the archive can still filter on it, and nothing is ever deleted.
+  type        ReportType?
   title       String
   summary     String?
   publishDate DateTime
