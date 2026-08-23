@@ -119,4 +119,14 @@ export class ConsoleProvider implements NotificationProvider {
     )
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
+
+  async sendPricingInvite(
+    recipient: { email: string; name?: string | null },
+    invite: { price: string; interval: string; joinUrl: string },
+  ): Promise<DeliveryResult> {
+    console.info(
+      `[notifications:console] PRICING → ${recipient.email} | ${invite.price} per ${invite.interval} | ${invite.joinUrl}`,
+    )
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
 }

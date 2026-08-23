@@ -169,6 +169,17 @@ export async function POST(request: Request) {
     // email may roll back a membership somebody has paid for.
     await recordReferralSignup(referralSlugFromCookie(), email, member.id)
 
+    // Close the funnel on anyone who asked for pricing before buying, so the enquiries
+    // queue empties itself rather than needing an operator to tick people off by hand.
+    try {
+      await db.pricingEnquiry.updateMany({
+        where: { email, status: { in: ['new', 'invited'] } },
+        data: { status: 'converted', convertedAt: new Date() },
+      })
+    } catch (error) {
+      console.error('[redeem] could not close the pricing enquiry', error)
+    }
+
     // The welcome fires here rather than from the payment webhooks because this is the
     // one point every route converges on — card, crypto, and gifted or referral codes.
     // Sending it from the webhooks would greet buyers and silently skip everybody who

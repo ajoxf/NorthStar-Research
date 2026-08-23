@@ -5,6 +5,7 @@ import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember } from '@/lib/auth'
 import { formatPrice } from '@/lib/package-shape'
 import { defaultPackage } from '@/lib/packages'
+import { pricingMode } from '@/lib/pricing-mode'
 
 export function Wordmark({ href = '/' }: { href?: string }) {
   return (
@@ -36,6 +37,7 @@ export async function SiteHeader() {
   // The header quotes the same package the join page sells. Hard-coding it here is how a
   // site ends up advertising last month's price in its own navigation.
   const plan = await defaultPackage()
+  const mode = await pricingMode()
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-md">
@@ -65,10 +67,16 @@ export async function SiteHeader() {
               {/* The price is the point of the button, but it is what makes it wide;
                   at phone width the label shortens rather than wrapping the header. */}
               <ButtonLink href="/join" size="sm" className="whitespace-nowrap">
-                <span className="sm:hidden">Join</span>
+                <span className="sm:hidden">{mode === 'enquiry' ? 'Pricing' : 'Join'}</span>
                 <span className="hidden sm:inline">
-                  Join — {formatPrice(plan.priceCents, plan.currency)}/
-                  {plan.interval === 'year' ? 'yr' : 'mo'}
+                  {mode === 'enquiry' ? (
+                    'Request pricing'
+                  ) : (
+                    <>
+                      Join — {formatPrice(plan.priceCents, plan.currency)}/
+                      {plan.interval === 'year' ? 'yr' : 'mo'}
+                    </>
+                  )}
                 </span>
               </ButtonLink>
             </>

@@ -125,6 +125,8 @@ enum EmailKind {
   magic_link
   renewal_reminder
   sample_request
+  /// Pricing sent to somebody who asked, from the enquiries screen.
+  pricing_invite
   /// An operator's own probe from the admin console.
   test
 }
@@ -172,6 +174,57 @@ model WebhookLog {
 
   @@index([createdAt])
   @@index([provider, outcome])
+}
+
+/// Where a pricing enquiry has got to. Nothing is ever deleted — an enquiry that went
+/// nowhere is still a record of somebody who asked.
+enum EnquiryStatus {
+  /// Asked, not yet sent anything.
+  new
+  /// Sent a private pricing link.
+  invited
+  /// Became a member.
+  converted
+  /// Deliberately set aside. Kept, not removed.
+  closed
+}
+
+/// Somebody who asked what it costs.
+///
+/// Exists because the price is not on the public site: the join page takes an enquiry
+/// instead, and the operator sends pricing individually. That makes this the top of the
+/// funnel and the only record of demand the product has — so it captures contact details
+/// properly rather than being a mail-to link that leaves nothing behind.
+model PricingEnquiry {
+  id    String @id @default(cuid())
+  name  String
+  email String
+
+  /// Same two numbers as a member, asked the same way. A prospect who gives a WhatsApp
+  /// number is reachable there before they are a member, which is the point of asking.
+  phoneNumber    String?
+  whatsappNumber String?
+
+  /// Whatever they typed. Often what they actually want to know.
+  note String?
+
+  status EnquiryStatus @default(new)
+
+  /// The unguessable half of the private pricing link. Not a credential — it reveals a
+  /// price, nothing more — but random so a link cannot be enumerated from a sequence.
+  inviteToken String  @unique
+  invitedAt   DateTime?
+  /// Set when a member appears with this email, so the funnel closes itself.
+  convertedAt DateTime?
+
+  /// Where they came from, when a referral cookie was set.
+  referralSlug String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([email])
 }
 
 /// Every transactional email the app tried to send, and what the provider said.

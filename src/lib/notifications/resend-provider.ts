@@ -9,6 +9,7 @@ import {
   renewalReminderEmail,
   welcomeEmail,
   reportEmail,
+  pricingInviteEmail,
   sampleReportRequestEmail,
 } from '@/lib/notifications/templates'
 import type {
@@ -131,5 +132,13 @@ export class ResendProvider implements NotificationProvider {
 
   async sendRedemptionCodeWhatsApp(): Promise<DeliveryResult> {
     return { status: 'failed', provider: this.name, error: 'Resend does not send WhatsApp messages.' }
+  }
+
+  async sendPricingInvite(
+    recipient: { email: string; name?: string | null },
+    invite: { price: string; interval: string; joinUrl: string; message?: string | null },
+  ): Promise<DeliveryResult> {
+    const { subject, html, text } = pricingInviteEmail({ ...invite, name: recipient.name })
+    return this.send(recipient.email, subject, html, text)
   }
 }

@@ -83,6 +83,11 @@ export interface NotificationProvider {
    * cause research to be delivered to an arbitrary address (build spec §5.5).
    */
   sendSampleReportRequest(request: SampleReportRequest): Promise<DeliveryResult>
+  /** Pricing, sent to one person who asked for it. See PricingEnquiry. */
+  sendPricingInvite(
+    recipient: { email: string; name?: string | null },
+    invite: { price: string; interval: string; joinUrl: string; message?: string | null },
+  ): Promise<DeliveryResult>
 
   /**
    * Transactional: welcome a member whose membership has just become active.
