@@ -70,15 +70,34 @@ test('the CSV survives commas and quotes in a name', () => {
       state: 'read',
       viewedAt: new Date('2026-08-17T09:00:00Z'),
       sentAt: new Date('2026-08-16T09:00:00Z'),
+      error: null,
     },
   ]
   const csv = audienceCsv(rows)
   const [header, line] = csv.split('\n')
 
-  assert.equal(header, '"Email","Name","State","Read at","Sent at"')
+  assert.equal(header, '"Email","Name","State","Read at","Sent at","Error"')
   assert.ok(line.includes('"Sam ""Sandy"" Doe, Jr"'))
   assert.ok(line.includes('"Read"'))
   assert.ok(line.includes('2026-08-17T09:00:00.000Z'))
+})
+
+test('a failed row carries the provider reason into the export', () => {
+  const csv = audienceCsv([
+    {
+      memberId: 'm3',
+      email: 'bounced@example.com',
+      name: null,
+      state: 'failed',
+      viewedAt: null,
+      sentAt: new Date('2026-08-16T09:00:00Z'),
+      error: 'The recipient\'s inbox is full, "try later"',
+    },
+  ])
+  const line = csv.split('\n')[1]
+  assert.ok(line.includes('"Failed"'))
+  // Escaped like every other field — a provider message often contains quotes.
+  assert.ok(line.includes('""try later""'))
 })
 
 test('a member who was never sent it has no dates to show', () => {
@@ -90,7 +109,8 @@ test('a member who was never sent it has no dates to show', () => {
       state: 'not_sent',
       viewedAt: null,
       sentAt: null,
+      error: null,
     },
   ])
-  assert.ok(csv.includes('"new@example.com","","Never sent","",""'))
+  assert.ok(csv.includes('"new@example.com","","Never sent","","",""'))
 })

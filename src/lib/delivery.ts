@@ -53,12 +53,24 @@ export type DeliverySummary = {
  * delivered silently suppressed every real send to members who had been "delivered" to
  * while the console provider was active.
  */
-export async function deliverReportToActiveMembers(report: Report): Promise<DeliverySummary> {
+export async function deliverReportToActiveMembers(
+  report: Report,
+  /**
+   * Narrow the send to specific members — used by the admin's "retry the failures"
+   * action, so a retry is exactly the people who failed rather than another pass over
+   * the whole list. Everyone still gets one row per member per channel, and the
+   * idempotency rules below are unchanged.
+   */
+  options: { onlyMemberIds?: string[] } = {},
+): Promise<DeliverySummary> {
   const provider = getNotificationProvider()
   const url = reportPortalUrl(report.id)
 
   const members = await db.member.findMany({
-    where: { subscriptionStatus: 'active' },
+    where: {
+      subscriptionStatus: 'active',
+      ...(options.onlyMemberIds ? { id: { in: options.onlyMemberIds } } : {}),
+    },
     select: {
       id: true,
       email: true,

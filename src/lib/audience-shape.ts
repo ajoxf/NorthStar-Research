@@ -77,6 +77,14 @@ export type AudienceRow = {
   viewedAt: Date | null
   /** When the email went out. Null when it never did. */
   sentAt: Date | null
+  /**
+   * The provider's own words about why it failed, verbatim.
+   *
+   * Only ever set on a failed row. It is the difference between "two people did not get
+   * it" and something actionable — a bounced address is a conversation with that member,
+   * an unverified domain is a config fix, a rate limit is a wait.
+   */
+  error: string | null
 }
 
 export type AudienceCounts = Record<AudienceState, number>
@@ -103,7 +111,7 @@ export function readRate(counts: AudienceCounts): number | null {
 
 /** CSV of the current view. Excel-safe: quotes doubled, every field quoted. */
 export function audienceCsv(rows: AudienceRow[]): string {
-  const header = ['Email', 'Name', 'State', 'Read at', 'Sent at']
+  const header = ['Email', 'Name', 'State', 'Read at', 'Sent at', 'Error']
   const lines = rows.map((row) =>
     [
       row.email,
@@ -111,6 +119,7 @@ export function audienceCsv(rows: AudienceRow[]): string {
       audienceLabel(row.state),
       row.viewedAt ? row.viewedAt.toISOString() : '',
       row.sentAt ? row.sentAt.toISOString() : '',
+      row.error ?? '',
     ]
       .map((field) => `"${String(field).replace(/"/g, '""')}"`)
       .join(','),
