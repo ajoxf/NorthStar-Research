@@ -38,6 +38,7 @@ export async function reportAudience(reportId: string): Promise<ReportAudience> 
         memberId: true,
         status: true,
         sentAt: true,
+        error: true,
         member: { select: { id: true, email: true, firstName: true, lastName: true } },
       },
     }),
@@ -57,7 +58,7 @@ export async function reportAudience(reportId: string): Promise<ReportAudience> 
 
   type Person = { id: string; email: string; firstName: string | null; lastName: string | null }
   const people = new Map<string, Person>()
-  const deliveryByMember = new Map<string, { status: string; sentAt: Date }>()
+  const deliveryByMember = new Map<string, { status: string; sentAt: Date; error: string | null }>()
   // Earliest view: when they first read it, not the last time they re-opened it.
   const firstViewByMember = new Map<string, Date>()
 
@@ -68,7 +69,11 @@ export async function reportAudience(reportId: string): Promise<ReportAudience> 
     // involved. The furthest-along status is the true one — a later `opened` must not be
     // overwritten by an earlier `sent` just because of row order.
     if (!existing || rank(log.status) > rank(existing.status)) {
-      deliveryByMember.set(log.memberId, { status: log.status, sentAt: log.sentAt })
+      deliveryByMember.set(log.memberId, {
+        status: log.status,
+        sentAt: log.sentAt,
+        error: log.error,
+      })
     }
   }
 
@@ -97,6 +102,8 @@ export async function reportAudience(reportId: string): Promise<ReportAudience> 
       }),
       viewedAt,
       sentAt: delivery?.sentAt ?? null,
+      // Only meaningful on a failure; a succeeded row carries no error to show.
+      error: delivery?.status === 'failed' ? (delivery.error ?? null) : null,
     }
   })
 

@@ -5,6 +5,8 @@ import { AlertTriangle, ArrowLeft, Download } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { AudienceBar } from '@/components/charts/audience-bar'
+import { RetryFailed } from '@/app/admin/reports/[id]/audience/retry-failed'
+import { ToastProvider } from '@/components/ui/toast'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { AUDIENCE_STATES, type AudienceState, isAudienceState, readRate } from '@/lib/audience-shape'
@@ -52,6 +54,7 @@ export default async function ReportAudiencePage({
   const rate = readRate(counts)
 
   return (
+    <ToastProvider>
     <div className="mx-auto max-w-4xl px-5 py-10">
       <Link
         href={`/admin/reports/${report.id}`}
@@ -123,9 +126,17 @@ export default async function ReportAudiencePage({
           </FilterChip>
         ))}
 
+        {counts.failed > 0 && (
+          <div className="ml-auto">
+            <RetryFailed reportId={report.id} count={counts.failed} />
+          </div>
+        )}
+
         <a
           href={`/api/admin/reports/${report.id}/audience.csv${filter === 'all' ? '' : `?state=${filter}`}`}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+          className={`inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink${
+            counts.failed > 0 ? '' : ' ml-auto'
+          }`}
         >
           <Download className="h-3 w-3" aria-hidden />
           CSV
@@ -169,11 +180,23 @@ export default async function ReportAudiencePage({
                 )}
                 <Badge tone={toneFor(row.state)}>{shortLabel(row.state)}</Badge>
               </div>
+
+              {/*
+                Verbatim, and on its own line so a long provider message does not squeeze
+                the name column. This sentence is the difference between "it failed" and
+                knowing whether to fix a config, a mailbox, or nothing at all.
+              */}
+              {row.error && (
+                <p className="w-full break-words text-[13px] leading-relaxed text-down">
+                  {row.error}
+                </p>
+              )}
             </li>
           ))}
         </ul>
       )}
     </div>
+    </ToastProvider>
   )
 }
 
