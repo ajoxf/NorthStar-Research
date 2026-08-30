@@ -55,6 +55,33 @@ export function codeExpiresAt(
 }
 
 /**
+ * Where a code's expiry moves to when an operator extends it by `days`.
+ *
+ * **The base is whichever is later, now or the current expiry** — never simply "now", and
+ * never simply the old date. That single choice is what makes the action safe to click:
+ *
+ * - A code that lapsed three weeks ago and is extended by 7 days becomes usable for the
+ *   next 7 days. Counting from the old expiry would hand back a code that is still dead,
+ *   which is precisely the complaint the operator is answering.
+ * - A code with 40 days left that is extended by 7 gets 47. Counting from now would take
+ *   33 days away from a member — an *extend* action must never shorten anything.
+ *
+ * `days` of null clears the expiry entirely: the code works until it is used.
+ */
+export function extendedExpiry(
+  current: Date | null,
+  days: number | null,
+  now: Date = new Date(),
+): Date | null {
+  if (days === null) return null
+
+  const base =
+    current !== null && current.getTime() > now.getTime() ? new Date(current) : new Date(now)
+  base.setDate(base.getDate() + days)
+  return base
+}
+
+/**
  * Expiry is read from the clock, never stored as a status.
  *
  * There is no job that sweeps codes into an `expired` state, because a code's validity is

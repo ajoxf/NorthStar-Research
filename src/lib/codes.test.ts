@@ -1,7 +1,13 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { CODE_VALIDITY_DAYS, codeExpiresAt, isCodeExpired, normaliseCode } from '@/lib/codes'
+import {
+  CODE_VALIDITY_DAYS,
+  codeExpiresAt,
+  extendedExpiry,
+  isCodeExpired,
+  normaliseCode,
+} from '@/lib/codes'
 
 /**
  * Access-code validity.
@@ -59,6 +65,44 @@ describe('code expiry', () => {
     const before = issued.getTime()
     codeExpiresAt(issued)
     assert.equal(issued.getTime(), before)
+  })
+})
+
+describe('extendedExpiry', () => {
+  const now = new Date('2026-08-30T12:00:00Z')
+
+  it('revives a lapsed code from today, not from the date it died', () => {
+    // The whole point of the action: somebody emailed to say their code stopped working.
+    // Counting 7 days from an expiry three weeks past would hand back a code still dead.
+    const lapsed = new Date('2026-08-09T12:00:00Z')
+    const extended = extendedExpiry(lapsed, 7, now)
+    assert.equal(extended?.toISOString(), '2026-09-06T12:00:00.000Z')
+    assert.equal(isCodeExpired({ expiresAt: extended }, now), false)
+  })
+
+  it('adds on to a code that is still live, rather than shortening it', () => {
+    // A code with 40 days left, extended by 7, must get 47 — not 7. An action called
+    // "extend" that takes 33 days away from a member would be a trap.
+    const live = new Date('2026-10-09T12:00:00Z')
+    assert.equal(extendedExpiry(live, 7, now)?.toISOString(), '2026-10-16T12:00:00.000Z')
+  })
+
+  it('treats an expiry falling exactly now as lapsed', () => {
+    // isCodeExpired counts <= now as expired, so this must count from now too or the two
+    // disagree at the boundary and the code stays unusable after an extend.
+    assert.equal(extendedExpiry(now, 1, now)?.toISOString(), '2026-08-31T12:00:00.000Z')
+  })
+
+  it('clears the expiry when asked for no expiry', () => {
+    assert.equal(extendedExpiry(new Date('2026-08-09T12:00:00Z'), null, now), null)
+    assert.equal(extendedExpiry(null, null, now), null)
+  })
+
+  it('does not mutate the date it was given', () => {
+    const current = new Date('2026-10-09T12:00:00Z')
+    const before = current.getTime()
+    extendedExpiry(current, 30, now)
+    assert.equal(current.getTime(), before)
   })
 })
 
