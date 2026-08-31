@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 
 import { CodeGenerator } from '@/app/admin/codes/code-generator'
+import { ExtendCode } from '@/app/admin/codes/extend-code'
 import { Badge } from '@/components/ui/badge'
+import { ToastProvider } from '@/components/ui/toast'
 import { requireAdmin } from '@/lib/auth'
 import { CODE_VALIDITY_DAYS, isCodeExpired } from '@/lib/codes'
 import { db } from '@/lib/db'
@@ -40,6 +42,7 @@ export default async function AdminCodesPage() {
   const offers = [...liveByOffer.entries()].sort((a, b) => b[0] - a[0])
 
   return (
+    <ToastProvider>
     <div className="mx-auto max-w-6xl px-5 py-12">
       <div className="mb-8">
         <span className="eyebrow">Gifted &amp; paid access</span>
@@ -117,7 +120,18 @@ export default async function AdminCodesPage() {
                     {formatDate(code.createdAt)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">
-                    {code.expiresAt ? formatDate(code.expiresAt) : 'No expiry'}
+                    <span className="mr-2">
+                      {code.expiresAt ? formatDate(code.expiresAt) : 'No expiry'}
+                    </span>
+                    {/* Not offered on a redeemed code: its expiry no longer governs
+                        anything, and the API refuses it for the same reason. */}
+                    {code.status !== 'redeemed' && (
+                      <ExtendCode
+                        codeId={code.id}
+                        code={code.code}
+                        expiresAt={code.expiresAt ? code.expiresAt.toISOString() : null}
+                      />
+                    )}
                   </td>
                   {/* The address captured at redemption, falling back to the member
                       record. Both are written now; the column survives a member being
@@ -132,5 +146,6 @@ export default async function AdminCodesPage() {
         </table>
       </div>
     </div>
+    </ToastProvider>
   )
 }
