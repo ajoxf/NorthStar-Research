@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
+import { Clock } from 'lucide-react'
 
 import { CodeGenerator } from '@/app/admin/codes/code-generator'
 import { ExtendCode } from '@/app/admin/codes/extend-code'
 import { Badge } from '@/components/ui/badge'
 import { ToastProvider } from '@/components/ui/toast'
 import { requireAdmin } from '@/lib/auth'
+import { EXPIRY_WARNING_DAYS, expiringSoonWhere } from '@/lib/code-expiry'
 import { CODE_VALIDITY_DAYS, isCodeExpired } from '@/lib/codes'
 import { db } from '@/lib/db'
 import { formatDate } from '@/lib/utils'
@@ -19,11 +21,18 @@ export const dynamic = 'force-dynamic'
 export default async function AdminCodesPage() {
   await requireAdmin()
 
-  const codes = await db.redemptionCode.findMany({
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-    include: { redeemedByMember: { select: { email: true } } },
-  })
+  const now = new Date()
+  const [codes, warningDue, warningUnreachable] = await Promise.all([
+    db.redemptionCode.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      include: { redeemedByMember: { select: { email: true } } },
+    }),
+    // Counted from the same `where` the nightly job selects on, so this figure is the set
+    // that will actually be walked tonight rather than a second guess at it.
+    db.redemptionCode.count({ where: expiringSoonWhere(now) }),
+    db.redemptionCode.count({ where: { ...expiringSoonWhere(now), email: null } }),
+  ])
 
   const gifted = codes.filter((code) => !code.cregisOrderId)
   // "Live" is unused *and* still in date — an expired code is not stock on the shelf.
@@ -52,6 +61,49 @@ export default async function AdminCodesPage() {
           {lapsed > 0 && ` · ${lapsed} expired unredeemed`}. Validity is set per batch —{' '}
           {CODE_VALIDITY_DAYS} days unless you choose otherwise.
         </p>
+
+        {/*
+          Who tonight's warning run reaches, and who it cannot. The second number is the
+          point of showing this at all: gifted codes carry an operator's note where an
+          address would be, so they get no warning, and they are exactly the codes most
+          likely to be forgotten. A reminder system that dropped them silently would be
+          worse than none.
+        */}
+        {warningDue > 0 && (
+          <p className="mt-4 flex items-start gap-2 rounded-lg border border-line bg-panel p-3.5 text-[13px] leading-relaxed text-ink-dim">
+            <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+            <span>
+              <strong className="font-medium text-ink">
+                {warningDue} code{warningDue === 1 ? '' : 's'} expiring within{' '}
+                {EXPIRY_WARNING_DAYS} days.
+              </strong>{' '}
+              {warningUnreachable === 0 ? (
+                <>Each holder is emailed a warning by tonight&rsquo;s job.</>
+              ) : warningUnreachable === warningDue ? (
+                <>
+                  <span className="text-ink">
+                    {warningDue === 1 ? 'It has no address on file' : 'None have an address on file'}
+                  </span>
+                  , so nobody is warned — gifted codes carry a note where an email would be.
+                  Extend {warningDue === 1 ? 'it' : 'them'} below, or chase{' '}
+                  {warningDue === 1 ? 'the holder' : 'the holders'} yourself.
+                </>
+              ) : (
+                <>
+                  {warningDue - warningUnreachable} holder
+                  {warningDue - warningUnreachable === 1 ? ' is' : 's are'} emailed a warning
+                  by tonight&rsquo;s job.{' '}
+                  <span className="text-ink">
+                    {warningUnreachable} {warningUnreachable === 1 ? 'has' : 'have'} no address
+                    on file
+                  </span>{' '}
+                  — gifted codes carry a note rather than an email, so nobody is told. Extend
+                  those below, or chase them yourself.
+                </>
+              )}
+            </span>
+          </p>
+        )}
 
         {offers.length > 0 && (
           <ul className="mt-4 flex flex-wrap gap-2">

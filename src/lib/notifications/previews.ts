@@ -1,5 +1,6 @@
 import { appBaseUrl } from '@/lib/env'
 import {
+  codeExpiringEmail,
   magicLinkEmail,
   receiptEmail,
   redemptionCodeEmail,
@@ -108,6 +109,15 @@ export function emailPreviews(): EmailPreview[] {
       trigger: 'When somebody asks for an email link instead of a password.',
       audience: 'member',
       render: () => magicLinkEmail(`${base}/api/auth/magic?token=SAMPLE`, 15, 'Sam'),
+    },
+    {
+      key: 'code-expiring',
+      name: 'Code about to expire',
+      trigger:
+        'Three days before an unredeemed code lapses. Only codes issued to a captured ' +
+        'address — gifted codes have nowhere to send.',
+      audience: 'member',
+      render: () => codeExpiringEmail('NSR-4KFP-9TQX', `${base}/redeem`, 3, 'Sam'),
     },
     {
       key: 'renewal',

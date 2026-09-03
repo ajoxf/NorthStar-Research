@@ -241,6 +241,56 @@ export function redemptionCodeEmail(code: string, redeemUrl: string, firstName?:
   }
 }
 
+/**
+ * Your code has not been used yet, and it stops working shortly.
+ *
+ * Sent to somebody who paid — or was sent a code at a captured address — and never got
+ * round to redeeming it. They have lost nothing yet: the paid period starts at
+ * redemption, so the membership they bought is still entirely ahead of them, and the
+ * copy must not imply otherwise or it reads as a threat over something they already own.
+ *
+ * The code is repeated in full rather than linked to, because the alternative is asking
+ * somebody to go and find an email from a fortnight ago in order to act on this one.
+ *
+ * It ends by saying the desk will sort it out if the code does lapse. That is true — an
+ * expiry is extendable from the codes list, and nothing is deleted — and saying so costs
+ * nothing: anybody willing to email us was never going to be stopped by a dead code, and
+ * the people who would have given up quietly are exactly who this is for.
+ */
+export function codeExpiringEmail(
+  code: string,
+  redeemUrl: string,
+  daysRemaining: number,
+  firstName?: string | null,
+) {
+  const greeting = firstName ? `${escapeHtml(firstName)},` : 'Hello,'
+  const when =
+    daysRemaining <= 1 ? 'tomorrow' : `in ${daysRemaining} days`
+
+  const body = `
+    <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your access code stops working ${escapeHtml(when)}</h1>
+    <p style="margin:0 0 20px;color:${INK};font-size:15px;line-height:1.65;">It has not been used yet. Redeeming it takes a minute and starts your membership from that moment — you lose none of what you paid for by activating today rather than the day you bought it.</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#060606;border:1px solid ${LINE};border-radius:10px;padding:20px;">
+      <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:24px;letter-spacing:.14em;color:${ACCENT};">${escapeHtml(code)}</div>
+    </td></tr></table>
+    ${button(redeemUrl, 'Activate my membership')}
+    <p style="margin:14px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">If the code does lapse before you get to it, reply to this email and we will issue you a working one. Nothing you have paid for is lost.</p>
+  `
+
+  return {
+    subject: `Your NordStar Pro access code expires ${when}`,
+    html: shell('Your access code is about to expire', body),
+    text:
+      `Your NordStar Pro access code stops working ${when}, and it has not been used yet.\n\n` +
+      `Access code: ${code}\n\n` +
+      `Activate your membership: ${redeemUrl}\n\n` +
+      `Redeeming starts your membership from that moment, so nothing is lost by ` +
+      `activating today. If the code lapses first, reply to this email and we will ` +
+      `issue you a working one.`,
+  }
+}
+
 export function magicLinkEmail(link: string, expiresInMinutes: number, firstName?: string | null) {
   const greeting = firstName ? `${escapeHtml(firstName)},` : 'Hello,'
 

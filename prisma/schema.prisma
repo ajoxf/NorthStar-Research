@@ -127,6 +127,8 @@ enum EmailKind {
   sample_request
   /// Pricing sent to somebody who asked, from the enquiries screen.
   pricing_invite
+  /// Warning that an unredeemed access code is about to stop working.
+  code_expiring
   /// An operator's own probe from the admin console.
   test
 }
@@ -357,6 +359,14 @@ model RedemptionCode {
   /// existed keep working, because retroactively killing a code already in someone's
   /// inbox is worse than an old code living on.
   expiresAt DateTime?
+
+  /// When we warned the holder that this code was about to lapse.
+  ///
+  /// Cleared whenever the expiry is extended, so each expiry date warns once — the same
+  /// shape as `Member.renewalReminderSentAt`. Without the reset, a code extended after a
+  /// warning would sail silently into its new expiry, which is the one case where the
+  /// holder has already shown they need the reminder.
+  expiryReminderSentAt DateTime?
 
   createdAt  DateTime  @default(now())
   redeemedAt DateTime?

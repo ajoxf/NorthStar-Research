@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { receiptEmail, welcomeEmail } from '@/lib/notifications/templates'
+import { codeExpiringEmail, receiptEmail, welcomeEmail } from '@/lib/notifications/templates'
 
 /**
  * The two emails a new member gets on day one.
@@ -56,5 +56,39 @@ describe('receiptEmail', () => {
     // The reference comes from a payment processor's callback payload.
     const email = receiptEmail({ ...details, reference: '<script>x</script>' })
     assert.ok(!email.html.includes('<script>'), 'unescaped markup reached the HTML')
+  })
+})
+
+describe('codeExpiringEmail', () => {
+  const url = 'https://nordstarpro.com/redeem'
+
+  it('carries the code itself, in both parts', () => {
+    // The alternative is asking somebody to go and find an email from a fortnight ago in
+    // order to act on this one.
+    const email = codeExpiringEmail('NSR-4KFP-9TQX', url, 3, 'Sam')
+    assert.ok(email.html.includes('NSR-4KFP-9TQX'), 'HTML part is missing the code')
+    assert.ok(email.text.includes('NSR-4KFP-9TQX'), 'text part is missing the code')
+    assert.ok(email.html.includes(url) && email.text.includes(url), 'missing the redeem link')
+  })
+
+  it('says tomorrow rather than "in 1 days"', () => {
+    assert.match(codeExpiringEmail('NSR-A', url, 1).subject, /expires tomorrow$/)
+    assert.match(codeExpiringEmail('NSR-A', url, 3).subject, /expires in 3 days$/)
+  })
+
+  it('never claims the membership itself is expiring', () => {
+    // The paid period starts at redemption, so nothing bought has been lost yet. Wording
+    // that implies otherwise turns a helpful nudge into a threat about something the
+    // reader already owns.
+    const email = codeExpiringEmail('NSR-A', url, 2, 'Sam')
+    for (const part of [email.html, email.text, email.subject]) {
+      assert.ok(!/membership (expires|has expired|is expiring)/i.test(part), part.slice(0, 120))
+    }
+    assert.match(email.text, /nothing is lost by activating today/i)
+  })
+
+  it('escapes a name rather than interpolating it into the markup', () => {
+    const email = codeExpiringEmail('NSR-A', url, 2, '<script>alert(1)</script>')
+    assert.ok(!email.html.includes('<script>'), 'a name was interpolated unescaped')
   })
 })
