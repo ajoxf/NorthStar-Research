@@ -18,7 +18,6 @@ export default async function DashboardPage() {
 
   if (!hasActiveSubscription(member)) return <InactiveState />
 
-  // Latest published report of each of the three types, plus a short recent archive.
   /*
    * The most recent editions, full stop — not one per type.
    *
@@ -59,7 +58,12 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
       <div className="mb-10">
-        <span className="eyebrow">This week</span>
+        {/*
+          "Latest", not "This week". The query below takes the four most recent editions
+          whenever they were published — so in a quiet week this heading would have sat
+          above reports from a fortnight ago and called them this week's.
+        */}
+        <span className="eyebrow">Latest</span>
         <h1 className="mt-3 text-3xl text-ink sm:text-4xl">
           {name ? `Welcome back, ${name}.` : 'Welcome back.'}
         </h1>

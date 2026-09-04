@@ -114,6 +114,20 @@ export interface NotificationProvider {
     details: ReceiptDetails,
   ): Promise<DeliveryResult>
 
+  /**
+   * Transactional: warn the holder of an unredeemed code that it is about to lapse.
+   *
+   * Only reaches codes issued to a captured address. Gifted codes carry an operator's
+   * note where an address would be, so they have nowhere to send — the admin console
+   * counts those rather than letting them vanish.
+   */
+  sendCodeExpiring(
+    recipient: { email: string; firstName?: string | null },
+    code: string,
+    redeemUrl: string,
+    daysRemaining: number,
+  ): Promise<DeliveryResult>
+
   /** Transactional: warn a crypto member that their period is about to lapse. */
   sendRenewalReminder(
     recipient: { email: string; firstName?: string | null },

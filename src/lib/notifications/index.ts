@@ -129,6 +129,17 @@ class CompositeProvider implements NotificationProvider {
     )
   }
 
+  sendCodeExpiring(
+    recipient: { email: string; firstName?: string | null },
+    code: string,
+    redeemUrl: string,
+    daysRemaining: number,
+  ) {
+    return sendAndRecord('code_expiring', recipient.email, () =>
+      this.email.sendCodeExpiring(recipient, code, redeemUrl, daysRemaining),
+    )
+  }
+
   sendRenewalReminder(
     recipient: { email: string; firstName?: string | null },
     daysRemaining: number,

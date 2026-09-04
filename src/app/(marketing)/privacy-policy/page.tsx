@@ -29,10 +29,12 @@ export default function PrivacyPolicyPage() {
           <h2 className="mb-3 text-2xl text-ink">What we collect</h2>
           <p>
             When you buy a membership we receive the email address you provide at checkout and a
-            payment confirmation from our crypto payment processor. We never receive or store your
-            card details, wallet keys or any payment credentials. When you activate your account we
-            store your email address, a securely hashed password, and — only if you choose to
-            provide it — your name and a phone number so we can reach you about your account.
+            payment confirmation from our payment processor — the card processor or the crypto one,
+            depending on how you paid. We never receive or store your card details, wallet keys or
+            any payment credentials. When you activate your account we store your email address,
+            your name and a mobile number, all of which are required, and either a securely hashed
+            password or, if you sign in with Google, an identifier from that account. A separate
+            WhatsApp number is optional.
           </p>
         </section>
 

@@ -111,9 +111,11 @@ export default async function JoinPage({
             {multiple ? 'Choose your membership.' : 'One plan. Three reports a week.'}
           </h1>
           <p className="mt-5 max-w-md text-[16px] leading-relaxed text-ink-dim">
-            Pay by card and your membership renews itself each month. Prefer crypto? You can pay
-            that way too — it just needs renewing by hand each period. Either way we email you an
-            access code to set up your account.
+            {/* The interval comes from the selected package. Hard-coding "month" here is how a
+                yearly plan ends up described as monthly two lines above its own price. */}
+            Pay by card and your membership renews itself every {selected.interval}. Prefer crypto?
+            You can pay that way too — it just needs renewing by hand each period. Either way we
+            email you an access code to set up your account.
           </p>
 
           <ol className="mt-10 space-y-5 border-t border-line pt-8">

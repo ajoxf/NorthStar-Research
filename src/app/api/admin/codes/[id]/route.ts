@@ -83,7 +83,13 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const updated = await db.redemptionCode.update({
     where: { id: code.id },
-    data: { expiresAt },
+    data: {
+      expiresAt,
+      // A new expiry date deserves its own warning. Leaving the stamp would mean a code
+      // extended after its warning sails silently into the new date — and the holder of
+      // that code has already demonstrated they need the reminder.
+      expiryReminderSentAt: null,
+    },
     select: { id: true, code: true, expiresAt: true },
   })
 

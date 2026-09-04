@@ -138,11 +138,11 @@ function LockedOverlay() {
         </div>
         <h3 className="mb-2 font-display text-xl text-ink">Members only</h3>
         <p className="mb-5 text-[14px] leading-relaxed text-ink-dim">
-          Every instrument is covered in the weekly reports. This preview shows the format only —
+          Every instrument is covered in the reports. This preview shows the format only —
           the numbers are illustrative and are not a recommendation.
         </p>
         <ButtonLink href="/join" size="md">
-          Unlock Full Report
+          Unlock the full report
         </ButtonLink>
       </div>
     </div>

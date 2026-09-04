@@ -109,6 +109,18 @@ export class ConsoleProvider implements NotificationProvider {
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
 
+  async sendCodeExpiring(
+    recipient: { email: string; firstName?: string | null },
+    code: string,
+    redeemUrl: string,
+    daysRemaining: number,
+  ): Promise<DeliveryResult> {
+    console.info(
+      `[notifications:console] CODE EXPIRING → ${recipient.email} | ${code} | ${daysRemaining}d left | ${redeemUrl}`,
+    )
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
   async sendRenewalReminder(
     recipient: { email: string; firstName?: string | null },
     daysRemaining: number,

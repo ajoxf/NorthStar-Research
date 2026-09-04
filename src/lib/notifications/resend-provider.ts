@@ -3,6 +3,7 @@ import { Resend } from 'resend'
 import { optionalEnv, requireEnv } from '@/lib/env'
 import { DEFAULT_EMAIL_FROM } from '@/lib/notifications/from'
 import {
+  codeExpiringEmail,
   magicLinkEmail,
   receiptEmail,
   redemptionCodeEmail,
@@ -115,6 +116,21 @@ export class ResendProvider implements NotificationProvider {
     const to = optionalEnv('SAMPLE_REPORT_REQUEST_TO', this.from())
     const { subject, html, text } = sampleReportRequestEmail(request)
     return this.send(to, subject, html, text)
+  }
+
+  async sendCodeExpiring(
+    recipient: { email: string; firstName?: string | null },
+    code: string,
+    redeemUrl: string,
+    daysRemaining: number,
+  ): Promise<DeliveryResult> {
+    const { subject, html, text } = codeExpiringEmail(
+      code,
+      redeemUrl,
+      daysRemaining,
+      recipient.firstName,
+    )
+    return this.send(recipient.email, subject, html, text)
   }
 
   async sendRenewalReminder(

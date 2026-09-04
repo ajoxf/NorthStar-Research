@@ -268,7 +268,7 @@ function PricingSection({ plan, mode }: { plan: PackageShape; mode: 'public' | '
 
           <ul className="mt-8 space-y-3 border-t border-line pt-7">
             {[
-              'Every weekly report',
+              'Every report, three a week',
               'Full archive of every past report',
               'Mobile-ready reading view',
               'Emailed the moment each report lands',
