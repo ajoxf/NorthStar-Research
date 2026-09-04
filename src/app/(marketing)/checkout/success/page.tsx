@@ -13,7 +13,21 @@ export const metadata: Metadata = { title: 'Payment received' }
  * verified server-to-server webhook (build spec §5, requirement 5), so this page can
  * only tell the buyer to watch their inbox.
  */
-export default function CheckoutSuccessPage() {
+export default function CheckoutSuccessPage({
+  searchParams,
+}: {
+  searchParams: { session_id?: string }
+}) {
+  /*
+   * Card and crypto both land here, and they do not settle the same way.
+   *
+   * Stripe appends `session_id` to its return URL; Cregis does not. That one difference is
+   * enough to stop telling a card buyer their payment is confirming "on-chain" and may be
+   * held up by "network congestion" — which was the previous copy, shown to everybody, and
+   * which reads as though a Visa payment were sitting in a mempool.
+   */
+  const paidByCard = Boolean(searchParams.session_id)
+
   return (
     <div className="mx-auto max-w-lg px-5 py-24 text-center">
       <div className="mx-auto mb-7 flex h-14 w-14 items-center justify-center rounded-full border border-accent/40 bg-accent/10">
@@ -22,12 +36,16 @@ export default function CheckoutSuccessPage() {
 
       <h1 className="text-3xl text-ink">Thank you — check your email</h1>
       <p className="mt-5 text-[16px] leading-relaxed text-ink-dim">
-        As soon as your payment confirms on-chain we will email your one-time access code to the
-        address you gave at checkout. Confirmation usually takes a few minutes, occasionally longer
-        during network congestion.
+        {paidByCard
+          ? 'As soon as your payment confirms we will email your one-time access code to the ' +
+            'address you gave at checkout. That is usually immediate, but it can take a minute ' +
+            'or two to reach you.'
+          : 'As soon as your payment confirms on-chain we will email your one-time access code ' +
+            'to the address you gave at checkout. Confirmation usually takes a few minutes, ' +
+            'occasionally longer during network congestion.'}
       </p>
       <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
-        When it arrives, redeem it to create your account and unlock this week&apos;s reports and the
+        When it arrives, redeem it to create your account and unlock the latest reports and the
         full archive.
       </p>
 

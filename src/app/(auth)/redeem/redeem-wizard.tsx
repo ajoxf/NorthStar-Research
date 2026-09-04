@@ -150,7 +150,7 @@ export function RedeemWizard({
               required
             />
             <FieldError>{error}</FieldError>
-            <Hint>Codes look like NSR-4KFP-9TQX and can be redeemed once.</Hint>
+            <Hint>Codes look like NSR-4KFP-9TQX and can only be redeemed once.</Hint>
           </div>
 
           <Button type="submit" size="lg" className="mt-6 w-full" disabled={pending || !code.trim()}>
@@ -319,7 +319,7 @@ export function RedeemWizard({
           </div>
           <h1 className="text-3xl text-ink">You&apos;re in</h1>
           <p className="mx-auto mt-4 max-w-xs text-[15px] leading-relaxed text-ink-dim">
-            Your membership is active. Taking you to this week&apos;s reports…
+            Your membership is active. Taking you to your reports…
           </p>
           <div className="mt-6 flex justify-center">
             <Spinner className="text-accent" />

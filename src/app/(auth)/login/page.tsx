@@ -40,7 +40,7 @@ export default async function LoginPage({
       <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
         {next
           ? 'Sign in to open the report you were sent.'
-          : 'Access this week’s reports and the full archive.'}
+          : 'Access the latest reports and the full archive.'}
       </p>
 
       {searchParams.error && ERRORS[searchParams.error] && (

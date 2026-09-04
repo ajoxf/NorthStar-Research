@@ -57,7 +57,9 @@ function button(href: string, label: string): string {
 
 export function reportEmail(report: ReportSummary, reportUrl: string, firstName?: string | null) {
  
-  const greeting = firstName ? `${escapeHtml(firstName)},` : 'Good morning,'
+  // Not "Good morning": the send goes out at a fixed UTC hour to a list that is not in one
+  // timezone, and a manual publish can happen at any hour of the day.
+  const greeting = firstName ? `${escapeHtml(firstName)},` : 'Hello,'
   const published = new Date(report.publishDate).toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -223,7 +225,7 @@ export function redemptionCodeEmail(code: string, redeemUrl: string, firstName?:
   const body = `
     <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">${greeting}</p>
     <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:25px;line-height:1.25;font-weight:500;color:${INK};">Your membership is confirmed</h1>
-    <p style="margin:0 0 20px;color:${INK};font-size:15px;line-height:1.65;">Payment received. Use the code below to create your account and unlock every weekly report plus the full archive.</p>
+    <p style="margin:0 0 20px;color:${INK};font-size:15px;line-height:1.65;">Payment received. Use the code below to create your account and unlock every report plus the full archive.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="background:#060606;border:1px solid ${LINE};border-radius:10px;padding:20px;">
       <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:24px;letter-spacing:.14em;color:${ACCENT};">${escapeHtml(code)}</div>
     </td></tr></table>
