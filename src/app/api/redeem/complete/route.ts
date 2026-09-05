@@ -4,6 +4,12 @@ import { z } from 'zod'
 import { emailSchema } from '@/lib/validation'
 
 import { db } from '@/lib/db'
+import {
+  entitlementFields,
+  extendedRenewal,
+  grantFor,
+  memberSubscriptionFields,
+} from '@/lib/section-grant'
 import { addPeriod, isFallbackPackage } from '@/lib/package-shape'
 import { defaultPackage, packageById } from '@/lib/packages'
 import { hashPassword, startSession } from '@/lib/auth'
@@ -86,13 +92,49 @@ export async function POST(request: Request) {
   // Which membership this code grants, read before the claim below. The code's package
   // never changes, so reading it outside the transaction races with nothing — and a
   // gifted code, which carries none, falls back to whatever is currently on sale.
-  const codePackage = await db.redemptionCode.findUnique({
+  const codeGrant = await db.redemptionCode.findUnique({
     where: { code },
-    select: { packageId: true },
+    select: { packageId: true, sectionId: true },
   })
-  const chosen = codePackage?.packageId ? await packageById(codePackage.packageId) : null
+  const chosen = codeGrant?.packageId ? await packageById(codeGrant.packageId) : null
   const pkg = chosen ?? (await defaultPackage())
   const packageId = isFallbackPackage(pkg) ? null : pkg.id
+
+  /*
+   * A code naming a section grants that section and nothing else.
+   *
+   * The distinction is load-bearing rather than cosmetic: Member.subscriptionStatus *is*
+   * the all-access membership, so a section buyer must leave this route with an
+   * Entitlement row and those columns untouched. `memberSubscriptionFields` returns an
+   * empty object for a section grant, which is what enforces that below.
+   */
+  const section = codeGrant?.sectionId
+    ? await db.section.findUnique({
+        where: { id: codeGrant.sectionId },
+        select: { id: true, interval: true },
+      })
+    : null
+
+  /*
+   * The Stripe subscription behind a section purchase, if there was one.
+   *
+   * Attached to the entitlement rather than to the member, so a later invoice or
+   * cancellation for this subscription is routed to this section and not to whatever
+   * membership the person also holds.
+   */
+  const paidOrder = codeGrant?.sectionId
+    ? await db.redemptionCode
+        .findUnique({ where: { code }, select: { cregisOrderId: true } })
+        .then((row) =>
+          row?.cregisOrderId
+            ? db.checkoutOrder.findUnique({
+                where: { cregisOrderId: row.cregisOrderId },
+                select: { stripeSubscriptionId: true, provider: true },
+              })
+            : null,
+        )
+    : null
+  const grant = grantFor({ sectionId: codeGrant?.sectionId ?? null }, { interval: pkg.interval, packageId }, section)
 
   try {
     const member = await db.$transaction(async (tx) => {
@@ -123,7 +165,8 @@ export async function POST(request: Request) {
       const now = new Date()
       // First paid period starts now. Stripe members then have this extended
       // automatically by each `invoice.paid`; Cregis members extend it by paying again.
-      const renewsAt = addPeriod(pkg.interval, now)
+      const renewsAt = addPeriod(grant.interval, now)
+      const subscription = memberSubscriptionFields(grant, now, renewsAt)
 
       const created = await tx.member.upsert({
         where: { email },
@@ -136,12 +179,10 @@ export async function POST(request: Request) {
           whatsappNumber: numbers.whatsappNumber,
           whatsappOptIn: numbers.whatsappOptIn,
           role: 'member',
-          subscriptionStatus: 'active',
-          subscriptionStartedAt: now,
-          subscriptionRenewsAt: renewsAt,
           billingProvider: 'cregis',
           source: 'cregis_checkout',
-          packageId,
+          // Empty for a section grant, so a section buyer is never marked all-access.
+          ...subscription,
         },
         update: {
           passwordHash,
@@ -150,12 +191,55 @@ export async function POST(request: Request) {
           phoneNumber: numbers.phoneNumber ?? undefined,
           whatsappNumber: numbers.whatsappNumber ?? undefined,
           whatsappOptIn: numbers.whatsappOptIn || undefined,
-          subscriptionStatus: 'active',
-          subscriptionStartedAt: now,
-          subscriptionRenewsAt: renewsAt,
-          packageId: packageId ?? undefined,
+          // Also empty for a section grant — an existing all-access member who buys a
+          // section must not have their own membership rewritten by it.
+          ...subscription,
         },
       })
+
+      /*
+       * The entitlement, for a section grant.
+       *
+       * Upserted on (memberId, sectionId): re-redeeming for a section somebody already
+       * holds extends it rather than creating a second row, and the new date is measured
+       * from whichever is later — now, or what they already had — so renewing early never
+       * costs them the time they had left.
+       */
+      const entitlement = entitlementFields(grant, now, renewsAt)
+      if (entitlement) {
+        const held = await tx.entitlement.findUnique({
+          where: { memberId_sectionId: { memberId: created.id, sectionId: entitlement.sectionId } },
+          select: { renewsAt: true },
+        })
+        const until = extendedRenewal(
+          held?.renewsAt ?? null,
+          (from) => addPeriod(grant.interval, from),
+          now,
+        )
+        await tx.entitlement.upsert({
+          where: { memberId_sectionId: { memberId: created.id, sectionId: entitlement.sectionId } },
+          create: {
+            memberId: created.id,
+            sectionId: entitlement.sectionId,
+            status: 'active',
+            startedAt: now,
+            renewsAt: until,
+            billingProvider: paidOrder?.provider ?? 'cregis',
+            stripeSubscriptionId: paidOrder?.stripeSubscriptionId ?? null,
+          },
+          update: {
+            status: 'active',
+            renewsAt: until,
+            cancelAtPeriodEnd: false,
+            ...(paidOrder?.stripeSubscriptionId
+              ? {
+                  billingProvider: paidOrder.provider,
+                  stripeSubscriptionId: paidOrder.stripeSubscriptionId,
+                }
+              : {}),
+          },
+        })
+      }
 
       await tx.redemptionCode.update({
         where: { code },

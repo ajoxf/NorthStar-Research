@@ -172,7 +172,13 @@ export async function createStripeTestCheckout(
  */
 export async function createStripeCheckout(
   email: string,
-  options: { priceId?: string | null; planName?: string; packageId?: string } = {},
+  options: {
+    priceId?: string | null
+    planName?: string
+    packageId?: string
+    /** Set when this is a single section rather than the all-access plan. */
+    sectionId?: string
+  } = {},
 ): Promise<{ url: string; sessionId: string }> {
   const stripe = stripeClient()
   const priceId = options.priceId || requireEnv('STRIPE_PRICE_ID', 'Card billing (Stripe)')
@@ -190,6 +196,7 @@ export async function createStripeCheckout(
       metadata: {
         plan: options.planName ?? PLAN.name,
         ...(options.packageId ? { packageId: options.packageId } : {}),
+        ...(options.sectionId ? { sectionId: options.sectionId } : {}),
       },
     },
     allow_promotion_codes: false,
