@@ -5,15 +5,17 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { CalendarPlus } from 'lucide-react'
 
-import { Spinner } from '@/components/ui/button'
+import { Button, Spinner } from '@/components/ui/button'
+import { Input } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
+import { MAX_CODE_VALIDITY_DAYS } from '@/lib/codes'
 import { formatDate } from '@/lib/utils'
 
-/** The three answers to "how long do they need?", plus the fourth: indefinitely. */
+/** The common answers, one click away. Any other number is typed in below them. */
 const PRESETS = [7, 14, 30, 90]
 
 /** Roughly how tall the menu is, used only to decide whether it opens up or down. */
-const MENU_HEIGHT = 230
+const MENU_HEIGHT = 300
 
 /**
  * Give one code more time, from the row it is on.
@@ -22,10 +24,10 @@ const MENU_HEIGHT = 230
  * lives beside the expiry date rather than behind a code detail page nobody would think to
  * open. One click, from the list, while reading the reply.
  *
- * The days are presets rather than a free number field. An operator answering that email
- * is choosing between "a couple of weeks" and "the rest of the quarter", not computing a
- * date, and a number input on every row of a 200-row table is a lot of chrome for a
- * decision with four sensible answers.
+ * Presets for the common answers, and a field for any other number. The presets are what
+ * an operator reaches for nine times in ten — "a fortnight", "the rest of the quarter" —
+ * but four buttons cannot express "until the 31st", and a menu that silently cannot do
+ * what you need is worse than one extra input.
  *
  * No confirm dialog: extending a code sends no email, charges nobody, and is undone by
  * extending it again. The one irreversible-feeling choice — clearing the expiry — says
@@ -44,6 +46,7 @@ export function ExtendCode({
   const router = useRouter()
   const toast = useToast()
   const [pending, setPending] = React.useState(false)
+  const [custom, setCustom] = React.useState('')
   // Where to draw the menu, in viewport coordinates. Null means closed.
   //
   // The menu is portalled to the body and positioned rather than laid out next to the
@@ -169,6 +172,37 @@ export function ExtendCode({
                     Add {days} days
                   </button>
                 ))}
+                {/*
+                  Any other number. The presets cover the common answers, but an operator
+                  answering a real email sometimes needs "until the end of the quarter",
+                  and a menu of four buttons cannot say that.
+                */}
+                <div className="my-1 border-t border-line" />
+                <form
+                  className="flex items-center gap-1.5 px-2 py-1.5"
+                  onSubmit={(event) => {
+                    event.preventDefault()
+                    const days = Number.parseInt(custom, 10)
+                    if (!Number.isFinite(days) || days < 1) {
+                      toast('Enter a number of days.', 'error')
+                      return
+                    }
+                    extend({ extendDays: Math.min(days, MAX_CODE_VALIDITY_DAYS) })
+                  }}
+                >
+                  <Input
+                    value={custom}
+                    onChange={(event) => setCustom(event.target.value)}
+                    inputMode="numeric"
+                    placeholder="Days"
+                    aria-label={`Days to add to ${code}`}
+                    className="h-8 w-20 text-[13px]"
+                  />
+                  <Button type="submit" size="sm" disabled={pending || !custom.trim()}>
+                    Add
+                  </Button>
+                </form>
+
                 <div className="my-1 border-t border-line" />
                 <button
                   type="button"

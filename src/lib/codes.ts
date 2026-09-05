@@ -33,8 +33,15 @@ export function generateRedemptionCode(): string {
  */
 export const CODE_VALIDITY_DAYS = 14
 
-/** Longest validity the operator may set, so a typo cannot mint a decade-long code. */
-export const MAX_CODE_VALIDITY_DAYS = 365
+/**
+ * Longest validity the operator may set, in days.
+ *
+ * Generous rather than tight. This is not the guard against an accidentally immortal
+ * code — "never expires" is a named choice for that, made deliberately — it is only a
+ * bound that keeps a number field from accepting something meaningless. Ten years is far
+ * past any real offer while still rejecting a stray paste.
+ */
+export const MAX_CODE_VALIDITY_DAYS = 3650
 
 /**
  * When a code issued at `from` stops working.
