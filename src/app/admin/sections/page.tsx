@@ -3,9 +3,11 @@ import type { Metadata } from 'next'
 import { AuthorManager } from '@/app/admin/sections/author-manager'
 import { SectionManager } from '@/app/admin/sections/section-manager'
 import { TopicManager } from '@/app/admin/sections/topic-manager'
+import { VisibilityToggle } from '@/app/admin/sections/visibility-toggle'
 import { ToastProvider } from '@/components/ui/toast'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { sectionsPublic } from '@/lib/sections-mode'
 
 export const metadata: Metadata = { title: 'Sections', robots: { index: false, follow: false } }
 export const dynamic = 'force-dynamic'
@@ -21,7 +23,8 @@ export const dynamic = 'force-dynamic'
 export default async function AdminSectionsPage() {
   await requireAdmin()
 
-  const [topics, authors, sections] = await Promise.all([
+  const [visible, topics, authors, sections] = await Promise.all([
+    sectionsPublic(),
     db.topic.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: { _count: { select: { sections: true } } },
@@ -54,11 +57,7 @@ export default async function AdminSectionsPage() {
             then belongs to one person, so there is no split to agree.
             {live > 0 && ` ${live} section${live === 1 ? '' : 's'} set up so far.`}
           </p>
-          <p className="mt-3 max-w-2xl rounded-lg border border-line bg-panel p-3.5 text-[13px] leading-relaxed text-ink-dim">
-            <span className="text-ink">Nothing here is on sale yet.</span> Sections can be set up,
-            priced and have reports filed under them before members can buy one — checkout comes
-            separately. Members currently see exactly what they saw before.
-          </p>
+          <VisibilityToggle visible={visible} ready={live > 0} />
         </div>
 
         <TopicManager

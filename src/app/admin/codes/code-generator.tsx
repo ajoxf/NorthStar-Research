@@ -23,7 +23,18 @@ export function CodeGenerator() {
   const [note, setNote] = React.useState('')
   // 100% — a free code — is what an operator wants nine times out of ten.
   const [discountPercent, setDiscountPercent] = React.useState(100)
-  const [validityDays, setValidityDays] = React.useState(CODE_VALIDITY_DAYS)
+  /*
+   * Held as a string, not a number.
+   *
+   * It used to be a number clamped on every keystroke with `Number(value) || 1`, which
+   * meant the field could not be emptied: clearing it snapped to "1", so typing 9 next
+   * produced 19 and typing 30 produced 130. Every number the operator entered silently
+   * gained a leading 1, and the field looked like it had a maximum of 19 days.
+   *
+   * A string lets it be empty while somebody is mid-type. It is clamped once, on submit,
+   * where clamping is actually meaningful.
+   */
+  const [validityText, setValidityText] = React.useState(String(CODE_VALIDITY_DAYS))
   // Separate from the days field rather than encoded as 0 or a huge number: an unlimited
   // code should be something the operator decided, not something they typed.
   const [neverExpires, setNeverExpires] = React.useState(false)
@@ -31,6 +42,13 @@ export function CodeGenerator() {
   const [codes, setCodes] = React.useState<string[]>([])
   const [error, setError] = React.useState('')
   const [copied, setCopied] = React.useState(false)
+
+  /** What the field currently means, once. Empty or nonsense falls back to the default. */
+  function validityDays(): number {
+    const parsed = Number.parseInt(validityText, 10)
+    if (!Number.isFinite(parsed) || parsed < 1) return CODE_VALIDITY_DAYS
+    return Math.min(MAX_CODE_VALIDITY_DAYS, parsed)
+  }
 
   async function create() {
     setBusy(true)
@@ -45,7 +63,7 @@ export function CodeGenerator() {
           count,
           note: note.trim() || undefined,
           discountPercent,
-          validityDays: neverExpires ? null : validityDays,
+          validityDays: neverExpires ? null : validityDays(),
         }),
       })
       const data = await response.json()
@@ -115,14 +133,11 @@ export function CodeGenerator() {
               type="number"
               min={1}
               max={MAX_CODE_VALIDITY_DAYS}
-              value={neverExpires ? '' : validityDays}
+              value={neverExpires ? '' : validityText}
               disabled={neverExpires}
               placeholder="—"
-              onChange={(event) =>
-                setValidityDays(
-                  Math.max(1, Math.min(MAX_CODE_VALIDITY_DAYS, Number(event.target.value) || 1)),
-                )
-              }
+              // Accepted as typed, including empty. Clamped on submit, not per keystroke.
+              onChange={(event) => setValidityText(event.target.value)}
               className="w-full sm:w-20"
             />
             <span className="shrink-0 text-[14px] text-ink-dim">days</span>
@@ -181,7 +196,7 @@ export function CodeGenerator() {
           <div className="flex items-center justify-between gap-4">
             <span className="eyebrow">
               {codes.length} code{codes.length === 1 ? '' : 's'} ready to share ·{' '}
-              {neverExpires ? 'no expiry' : `valid ${validityDays} days`}
+              {neverExpires ? 'no expiry' : `valid ${validityDays()} days`}
             </span>
             <Button
               size="sm"

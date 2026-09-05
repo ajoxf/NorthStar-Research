@@ -2,12 +2,15 @@ import Link from 'next/link'
 import { Archive, ArrowRight, Check, FileText, Lock, Smartphone } from 'lucide-react'
 
 import { SampleReportForm } from '@/app/(marketing)/sample-report-form'
+import { AuthorAvatar } from '@/components/author-avatar'
 import { HeroMedia } from '@/components/hero-media'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { formatPrice, type PackageShape } from '@/lib/package-shape'
 import { defaultPackage } from '@/lib/packages'
+import { db } from '@/lib/db'
 import { pricingMode } from '@/lib/pricing-mode'
+import { sectionsPublic } from '@/lib/sections-mode'
+import { formatPrice, type PackageShape } from '@/lib/package-shape'
 
 /**
  * The price quoted here is the default package's, falling back to the built-in plan when
@@ -16,15 +19,171 @@ import { pricingMode } from '@/lib/pricing-mode'
  * homepage, the join page and checkout cannot drift apart.
  */
 export default async function LandingPage() {
-  const [plan, mode] = await Promise.all([defaultPackage(), pricingMode()])
+  const [plan, mode, showSections] = await Promise.all([
+    defaultPackage(),
+    pricingMode(),
+    sectionsPublic(),
+  ])
+
+  /*
+   * The desk, when there is one to show.
+   *
+   * Loaded only when the sections surface is public, so this page is byte-for-byte what it
+   * was until the operator turns it on — and so a half-configured contributors band is
+   * never one deploy away from the front page. `sectionsPublic` is the same switch that
+   * gates /coverage and /experts, deliberately: three places that could disagree about
+   * whether the desk exists would be three places to remember.
+   */
+  const topics = showSections
+    ? await db.topic.findMany({
+        where: { archivedAt: null },
+        orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+        include: {
+          sections: {
+            where: { archivedAt: null },
+            orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
+            include: { topic: true, author: true },
+          },
+        },
+      })
+    : []
+
+  const covered = topics.filter((topic) => topic.sections.length > 0)
+
+  // One card per author, cheapest section first — the figure under a name should be the
+  // lowest price at which you can read them, not whichever section sorted first.
+  const authors = [...new Map(
+    covered
+      .flatMap((topic) => topic.sections)
+      .map((section) => [section.author.id, section.author]),
+  ).values()]
+
+  const cheapest = covered
+    .flatMap((topic) => topic.sections)
+    .reduce<number | null>(
+      (low, section) => (low === null || section.priceCents < low ? section.priceCents : low),
+      null,
+    )
 
   return (
     <>
-      <Hero plan={plan} mode={mode} />
-      <CoverageSection />
+      <Hero plan={plan} mode={mode} hasSections={authors.length > 0} />
+      {covered.length > 0 ? <TopicCoverage topics={covered} /> : <CoverageSection />}
+      {authors.length > 0 && <ContributorsSection authors={authors} />}
       <SampleReportSection />
-      <PricingSection plan={plan} mode={mode} />
+      <PricingSection plan={plan} mode={mode} cheapestSectionCents={cheapest} />
     </>
+  )
+}
+
+/**
+ * The coverage cards, built from the topics that actually have somebody writing in them.
+ *
+ * Replaces the three hand-written cards below once there is real coverage to describe.
+ * Those were accurate when one desk wrote everything; with named experts they became a
+ * claim about a product shape that no longer matches, and a visitor comparing this to the
+ * contributors band would have found two different answers on one page.
+ */
+function TopicCoverage({
+  topics,
+}: {
+  topics: {
+    id: string
+    name: string
+    blurb: string | null
+    sections: { id: string; author: { name: string } }[]
+  }[]
+}) {
+  return (
+    <section className="border-b border-line">
+      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+        <div className="max-w-2xl">
+          <span className="eyebrow">Coverage</span>
+          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
+            Every edition works the same way.
+          </h2>
+          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
+            Charts first. Technical structure read against the macro backdrop, with the
+            reasoning shown — so you can weigh it against your own view rather than take it on
+            trust.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 md:grid-cols-3">
+          {topics.map((topic) => (
+            <div
+              key={topic.id}
+              className="flex flex-col rounded-lg border border-line bg-panel p-6 transition-colors hover:border-accent/40"
+            >
+              <h3 className="text-[18px] text-ink">{topic.name}</h3>
+              {topic.blurb && (
+                <p className="mt-2 flex-1 text-[14px] leading-relaxed text-ink-dim">{topic.blurb}</p>
+              )}
+              <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
+                {/* Named, because the name is the reason to trust the card. */}
+                {[...new Set(topic.sections.map((s) => s.author.name))].join(' · ')}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <Link
+          href="/coverage"
+          className="mt-8 inline-flex items-center gap-1.5 text-[15px] text-accent underline underline-offset-4"
+        >
+          See every subject and who covers it
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </Link>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * The people, above the price.
+ *
+ * Placed here rather than at the top on purpose: the hero still sells the research, and
+ * the experts are the evidence for it. Faces and one line each — the biography is a click
+ * away, and a paragraph per person on a landing page is a wall nobody reads.
+ */
+function ContributorsSection({
+  authors,
+}: {
+  authors: { id: string; slug: string; name: string; headline: string | null; photoUrl: string | null }[]
+}) {
+  return (
+    <section className="border-b border-line bg-panel-2/40">
+      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+        <div className="max-w-2xl">
+          <span className="eyebrow">Written by</span>
+          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
+            Independent experts, each covering what they know.
+          </h2>
+          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
+            Every report carries a name and the reasoning behind it. Subscribe to the people you
+            follow rather than to everything at once.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {authors.map((author) => (
+            <Link
+              key={author.id}
+              href={`/experts/${author.slug}`}
+              className="group flex items-center gap-4 rounded-lg border border-line bg-panel p-5 transition-colors hover:border-accent/40"
+            >
+              <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={52} />
+              <div className="min-w-0">
+                <h3 className="text-[16px] text-ink">{author.name}</h3>
+                {author.headline && (
+                  <p className="mt-0.5 text-[13px] leading-snug text-ink-dim">{author.headline}</p>
+                )}
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -33,7 +192,15 @@ function shortInterval(plan: PackageShape): string {
   return plan.interval === 'year' ? 'yr' : 'mo'
 }
 
-function Hero({ plan, mode }: { plan: PackageShape; mode: 'public' | 'enquiry' }) {
+function Hero({
+  plan,
+  mode,
+  hasSections,
+}: {
+  plan: PackageShape
+  mode: 'public' | 'enquiry'
+  hasSections: boolean
+}) {
   return (
     <section className="relative overflow-hidden border-b border-line">
       {/* The still is the default. Setting NEXT_PUBLIC_HERO_VIDEO_URL replaces it with
@@ -70,7 +237,10 @@ function Hero({ plan, mode }: { plan: PackageShape; mode: 'public' | 'enquiry' }
             NordStar Pro publishes three reports a week, covering commodities, international
             markets and indices, options, crypto and spreads, and FX. Each one sets out the
             technical structure and the macro context behind it, with the reasoning shown. No
-            noise, no upsells, one price.
+            noise and no upsells.{' '}
+            {hasSections
+              ? 'Take the whole desk, or just the expert you follow.'
+              : 'One price.'}
           </p>
 
           {/* Icon + uppercase meta row, sitting between the copy and the actions. */}
@@ -206,7 +376,16 @@ function SampleReportSection() {
   )
 }
 
-function PricingSection({ plan, mode }: { plan: PackageShape; mode: 'public' | 'enquiry' }) {
+function PricingSection({
+  plan,
+  mode,
+  cheapestSectionCents,
+}: {
+  plan: PackageShape
+  mode: 'public' | 'enquiry'
+  /** Lowest live section price, or null when sections are off or none are on sale. */
+  cheapestSectionCents: number | null
+}) {
   return (
     <section id="pricing">
       <div className="mx-auto max-w-6xl px-5 py-20">
@@ -296,6 +475,23 @@ function PricingSection({ plan, mode }: { plan: PackageShape; mode: 'public' | '
             {mode === 'enquiry' ? 'Request pricing' : 'Continue to payment'}
             <ArrowRight className="h-4 w-4" aria-hidden />
           </ButtonLink>
+
+          {/*
+            A second door, not a replacement.
+            
+            The card above is unchanged — this is the all-access plan and the people on it
+            keep it. Sections sit underneath as an additional route, priced from the
+            cheapest one actually on sale rather than from a figure typed in here.
+          */}
+          {cheapestSectionCents !== null && (
+            <p className="mt-6 border-t border-line pt-6 text-center text-[14px] leading-relaxed text-ink-dim">
+              Only follow one subject?{' '}
+              <Link href="/coverage" className="text-accent underline underline-offset-4">
+                Subscribe to a single expert from{' '}
+                {formatPrice(cheapestSectionCents, plan.currency)}/month
+              </Link>
+            </p>
+          )}
 
           <p className="mt-4 text-center text-[13px] text-ink-dim">
             Already paid?{' '}

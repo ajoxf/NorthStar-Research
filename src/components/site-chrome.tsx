@@ -6,6 +6,7 @@ import { getCurrentMember } from '@/lib/auth'
 import { formatPrice } from '@/lib/package-shape'
 import { defaultPackage } from '@/lib/packages'
 import { pricingMode } from '@/lib/pricing-mode'
+import { sectionsPublic } from '@/lib/sections-mode'
 
 export function Wordmark({ href = '/' }: { href?: string }) {
   return (
@@ -87,7 +88,11 @@ export async function SiteHeader() {
   )
 }
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  // Hidden entirely until the desk turns the surface on, so a half-configured
+  // contributors page is never one click from the footer of every page.
+  const showSections = await sectionsPublic()
+
   return (
     <footer className="border-t border-line bg-panel-2">
       <div className="mx-auto max-w-6xl px-5 py-14">
@@ -109,6 +114,16 @@ export function SiteFooter() {
               <Link href="/login" className="text-ink-dim hover:text-ink">
                 Member sign-in
               </Link>
+              {showSections && (
+                <>
+                  <Link href="/coverage" className="text-ink-dim hover:text-ink">
+                    Coverage
+                  </Link>
+                  <Link href="/experts" className="text-ink-dim hover:text-ink">
+                    Contributors
+                  </Link>
+                </>
+              )}
               <Link href="/redeem" className="text-ink-dim hover:text-ink">
                 Redeem a code
               </Link>

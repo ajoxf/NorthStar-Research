@@ -66,18 +66,46 @@ export async function deliverReportToActiveMembers(
   const provider = getNotificationProvider()
   const url = reportPortalUrl(report.id)
 
-  const members = await db.member.findMany({
+  /*
+   * Who this edition is owed to.
+   *
+   * A report with no section is an all-access report — every report published before
+   * sections is one — and goes to active members exactly as it always did. A report filed
+   * in a section goes to that section's live subscribers *and* to all-access members, who
+   * bought everything.
+   *
+   * The two groups are unioned by id rather than fetched in one query, because "active
+   * legacy membership" and "live entitlement for this section" live in different tables
+   * and an OR across them would be a join whose behaviour is harder to read than this is.
+   */
+  const allAccess = await db.member.findMany({
     where: {
       subscriptionStatus: 'active',
       ...(options.onlyMemberIds ? { id: { in: options.onlyMemberIds } } : {}),
     },
-    select: {
-      id: true,
-      email: true,
-      firstName: true,
-      lastName: true,
-    },
+    select: { id: true, email: true, firstName: true, lastName: true },
   })
+
+  const subscribers = report.sectionId
+    ? (
+        await db.entitlement.findMany({
+          where: {
+            sectionId: report.sectionId,
+            status: 'active',
+            // Null renewal is an open-ended comp, and must not be read as lapsed.
+            OR: [{ renewsAt: null }, { renewsAt: { gt: new Date() } }],
+            ...(options.onlyMemberIds ? { memberId: { in: options.onlyMemberIds } } : {}),
+          },
+          select: {
+            member: { select: { id: true, email: true, firstName: true, lastName: true } },
+          },
+        })
+      ).map((entitlement) => entitlement.member)
+    : []
+
+  // De-duplicated: an all-access member who also holds this section is one person and
+  // must receive one email, not two.
+  const members = [...new Map([...allAccess, ...subscribers].map((m) => [m.id, m])).values()]
 
   const summary: DeliverySummary = {
     reportId: report.id,
