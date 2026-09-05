@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { ArrowUpRight, LineChart } from 'lucide-react'
 
-import { getCurrentMember, hasActiveSubscription } from '@/lib/auth'
+import { getCurrentMember, memberHasAnyAccess } from '@/lib/auth'
 
 export const metadata: Metadata = { title: 'Tools' }
 export const dynamic = 'force-dynamic'
@@ -25,7 +25,7 @@ const TOOLS = [
 export default async function ToolsPage() {
   const member = await getCurrentMember()
   if (!member) redirect('/login?next=/tools')
-  if (!hasActiveSubscription(member)) redirect('/dashboard')
+  if (!(await memberHasAnyAccess(member))) redirect('/dashboard')
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">

@@ -6,7 +6,7 @@ import { PortalNav } from '@/app/(portal)/portal-nav'
 import { Wordmark } from '@/components/site-chrome'
 import { Badge } from '@/components/ui/badge'
 import { ToastProvider } from '@/components/ui/toast'
-import { getCurrentMember, hasActiveSubscription } from '@/lib/auth'
+import { getCurrentMember, memberHasAnyAccess } from '@/lib/auth'
 import { initials } from '@/lib/utils'
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +25,7 @@ export default async function PortalLayout({ children }: { children: React.React
     redirect(pathname ? `/login?next=${encodeURIComponent(pathname)}` : '/login')
   }
 
-  const active = hasActiveSubscription(member)
+  const active = await memberHasAnyAccess(member)
 
   return (
     <ToastProvider>

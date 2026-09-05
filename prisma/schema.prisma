@@ -162,15 +162,15 @@ enum WebhookOutcome {
 /// never the body. The payload carries recipient addresses and provider metadata, and a
 /// log table is the wrong place for a copy of it.
 model WebhookLog {
-  id       String         @id @default(cuid())
-  provider String
+  id        String         @id @default(cuid())
+  provider  String
   /// The provider's event name, e.g. `email.opened`. Empty when the body never parsed.
   eventType String?
-  outcome  WebhookOutcome
+  outcome   WebhookOutcome
   /// The provider's message id, when the event carried one.
   messageId String?
   /// One short line of context — never the payload.
-  detail   String?
+  detail    String?
 
   createdAt DateTime @default(now())
 
@@ -214,7 +214,7 @@ model PricingEnquiry {
 
   /// The unguessable half of the private pricing link. Not a credential — it reveals a
   /// price, nothing more — but random so a link cannot be enumerated from a sequence.
-  inviteToken String  @unique
+  inviteToken String    @unique
   invitedAt   DateTime?
   /// Set when a member appears with this email, so the funnel closes itself.
   convertedAt DateTime?
@@ -298,6 +298,12 @@ model Member {
   source MemberSource @default(cregis_checkout)
 
   // Flat string[] + free text: maps 1:1 onto ESP tags / custom fields on migration.
+  /// Sections this member has bought, each with its own period and renewal.
+  ///
+  /// Empty for every member who exists today, and empty is the legacy all-access case —
+  /// the access check reads the subscription fields above first and unchanged.
+  entitlements Entitlement[]
+
   tags       String[] @default([])
   adminNotes String?
 
@@ -317,10 +323,10 @@ model Member {
   reportViews     ReportView[]
   deliveryLogs    DeliveryLog[]
   reportsCreated  Report[]         @relation("ReportAuthor")
+  appSettings     AppSetting[]
 
   @@index([subscriptionStatus])
   @@index([createdAt])
-  appSettings AppSetting[]
 }
 
 model RedemptionCode {
@@ -354,6 +360,12 @@ model RedemptionCode {
   /// back to the default package at redemption.
   packageId String?
   package   Package? @relation(fields: [packageId], references: [id])
+
+  /// Which section this code grants. Null grants the all-access membership, which is what
+  /// every code issued so far does — so an unredeemed code minted before sections existed
+  /// still means exactly what it meant when it was sent.
+  sectionId String?
+  section   Section? @relation(fields: [sectionId], references: [id])
 
   /// Codes stop working after this. Null means no expiry — codes issued before validity
   /// existed keep working, because retroactively killing a code already in someone's
@@ -485,6 +497,15 @@ model CheckoutOrder {
   packageId String?
   package   Package? @relation(fields: [packageId], references: [id])
 
+  /// Which section was bought, when the sale was a section rather than all-access.
+  ///
+  /// This is the field the author revenue share is computed from: a section has exactly
+  /// one author, so a paid order carrying a section id is money owed to one person, with
+  /// no split rule to agree. `amount` stays the record of what was charged, so editing a
+  /// section's price later cannot rewrite what anybody actually paid.
+  sectionId String?
+  section   Section? @relation(fields: [sectionId], references: [id])
+
   /// An operator's own live-mode probe, not a sale.
   ///
   /// This flag is load-bearing in the webhooks: a test order is acknowledged and recorded
@@ -563,7 +584,7 @@ model Package {
 }
 
 model Report {
-  id          String     @id @default(cuid())
+  id          String      @id @default(cuid())
   /// Optional. The desk numbers its own editions in the title now, so new uploads carry
   /// no type. Kept nullable rather than dropped: reports published before this have a
   /// real type, the archive can still filter on it, and nothing is ever deleted.
@@ -592,15 +613,23 @@ model Report {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// Which section this edition belongs to, and therefore who can read it.
+  ///
+  /// Null on every report published before sections existed. That is not a gap to be
+  /// backfilled away — an untagged report is an all-access report, readable by the
+  /// members who bought all-access and by nobody who bought a single section. The desk
+  /// tags what fits and leaves the rest.
+  sectionId String?
+  section   Section? @relation(fields: [sectionId], references: [id])
+
   views        ReportView[]
   deliveryLogs DeliveryLog[]
+  /// One line written for sharing — the hook that makes somebody open the link.
+  /// Distinct from `summary`, which is written for members who already subscribe.
+  shareHook    String?
 
   @@index([type, publishDate])
   @@index([publishDate])
-  /// One line written for sharing — the hook that makes somebody open the link.
-  /// Distinct from `summary`, which is written for members who already subscribe.
-  shareHook String?
-
 }
 
 model ReportView {
@@ -659,4 +688,146 @@ model AppSetting {
   updatedAt        DateTime @updatedAt
   updatedByAdminId String?
   updatedByAdmin   Member?  @relation(fields: [updatedByAdminId], references: [id])
+}
+
+/// A subject the desk covers — Energy, Indices, Crypto.
+///
+/// Shared across authors on purpose. "Energy by Sarah" and "Energy by Tom" are two
+/// products, but a visitor interested in energy wants to find both, and free text would
+/// have made "Energy" and "Energy & Commodities" different subjects by accident.
+///
+/// Never deleted. `archivedAt` retires a topic from new sections while every section and
+/// report already filed under it keeps working.
+model Topic {
+  id        String  @id @default(cuid())
+  name      String
+  slug      String  @unique
+  /// One line under the topic name on the browse page. Optional.
+  blurb     String?
+  sortOrder Int     @default(0)
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  sections Section[]
+
+  @@index([archivedAt, sortOrder])
+}
+
+/// An expert whose work is published here.
+///
+/// Deliberately NOT a login. An author is content — a name, a face, a biography and a
+/// public page — and the desk publishes on their behalf. Giving outside contributors
+/// accounts means a permission model, a way to reach the member list, and a review
+/// process; none of that is needed to put someone's name and credentials on a report.
+/// When author logins are wanted later they attach to this record rather than replacing it.
+model Author {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  /// The one-line "who is this" that sits under the name. "Twenty years on the LME floor."
+  headline    String?
+  bio         String?
+  photoUrl    String?
+  /// Free-form lines — qualifications, prior desks, publications.
+  credentials String[] @default([])
+
+  /// Public profile links. Kept as plain columns rather than JSON so they can be validated.
+  websiteUrl  String?
+  linkedinUrl String?
+  xUrl        String?
+
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  sections Section[]
+
+  @@index([archivedAt])
+}
+
+/// One topic, by one author — "Energy by Sarah Chen". The thing a member actually buys.
+///
+/// **Exactly one author.** That single constraint is what keeps the commercials simple:
+/// every payment for a section belongs to one person, so the revenue share is an
+/// attribution rather than a split, and no percentage has to be agreed, stored, or argued
+/// about. Two experts covering energy is two sections, not one section with a 60/40 rule.
+///
+/// Price lives here rather than on Package: a section is its own product with its own
+/// Stripe price. Package remains what it always was — the all-access plan — and is
+/// untouched by any of this.
+model Section {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  /// Overrides the generated "Topic by Author" name when the desk wants something else.
+  displayName String?
+  description String?
+
+  topicId  String
+  topic    Topic  @relation(fields: [topicId], references: [id])
+  authorId String
+  author   Author @relation(fields: [authorId], references: [id])
+
+  priceCents Int
+  currency   String          @default("USD")
+  interval   BillingInterval @default(month)
+
+  /// Set once the section is wired to Stripe. Null means crypto-only, exactly like a
+  /// package with no price id.
+  stripePriceId   String?
+  stripeProductId String?
+
+  /// Off the shelf without being deleted — existing subscribers keep reading.
+  archivedAt DateTime?
+  sortOrder  Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reports      Report[]
+  entitlements Entitlement[]
+  orders       CheckoutOrder[]
+  codes        RedemptionCode[]
+
+  /// One section per topic per author. A second "Energy by Sarah" is a mistake, not a product.
+  @@unique([topicId, authorId])
+  @@index([archivedAt, sortOrder])
+}
+
+/// One member's access to one section, with its own period and its own Stripe subscription.
+///
+/// This is the record that lets somebody hold Energy-by-Sarah and Crypto-by-Tom at once,
+/// bought months apart and cancellable separately — which the Member table cannot express,
+/// holding as it does a single renewal date and a single Stripe subscription.
+///
+/// Those Member fields are left exactly as they are. They now mean "the legacy all-access
+/// membership", which is what every current member holds, and the access check reads them
+/// first and unchanged. A member with no entitlements behaves today precisely as they did
+/// before this table existed — that is the property that makes this safe to deploy to a
+/// live site.
+model Entitlement {
+  id String @id @default(cuid())
+
+  memberId  String
+  member    Member  @relation(fields: [memberId], references: [id])
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  status            SubscriptionStatus @default(pending)
+  startedAt         DateTime?
+  /// End of the paid period. Null means open-ended — a comp, granted by hand.
+  renewsAt          DateTime?
+  cancelAtPeriodEnd Boolean            @default(false)
+
+  billingProvider      BillingProvider?
+  stripeSubscriptionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// One row per member per section; renewing updates it rather than adding another.
+  @@unique([memberId, sectionId])
+  @@index([status, renewsAt])
+  @@index([sectionId])
 }

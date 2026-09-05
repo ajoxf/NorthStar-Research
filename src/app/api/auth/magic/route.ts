@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { emailSchema } from '@/lib/validation'
 
 import { db } from '@/lib/db'
-import { hasActiveSubscription, startSession } from '@/lib/auth'
+import { memberHasAnyAccess, startSession } from '@/lib/auth'
 import { appBaseUrl } from '@/lib/env'
 import { getNotificationProvider, providerNames } from '@/lib/notifications'
 import {
@@ -101,6 +101,6 @@ export async function GET(request: Request) {
   const next = safeNext(payload.next)
   if (next) return NextResponse.redirect(`${base}${next}`)
   if (member.role === 'admin') return NextResponse.redirect(`${base}/admin`)
-  if (!hasActiveSubscription(member)) return NextResponse.redirect(`${base}/redeem`)
+  if (!(await memberHasAnyAccess(member))) return NextResponse.redirect(`${base}/redeem`)
   return NextResponse.redirect(`${base}/dashboard`)
 }

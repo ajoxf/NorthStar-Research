@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react'
 
 import { ReportReader } from '@/components/report-reader'
 import { Badge } from '@/components/ui/badge'
-import { getCurrentMember, hasActiveSubscription, requestFingerprint } from '@/lib/auth'
+import { getCurrentMember, memberCanReadReport, memberHasAnyAccess, requestFingerprint } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { mintReportToken } from '@/lib/report-access'
 import { parseInstruments, reportTypeMeta } from '@/lib/report-content'
@@ -24,13 +24,25 @@ export const dynamic = 'force-dynamic'
 export default async function ReportPage({ params }: { params: { id: string } }) {
   const member = await getCurrentMember()
   if (!member) redirect(`/login?next=${encodeURIComponent(`/reports/${params.id}`)}`)
-  if (!hasActiveSubscription(member)) redirect('/dashboard')
+  if (!(await memberHasAnyAccess(member))) redirect('/dashboard')
 
   const report = await db.report.findUnique({ where: { id: params.id } })
   if (!report) notFound()
 
   // Admins can preview an unpublished report; members cannot see it at all.
   if (!report.published && member.role !== 'admin') notFound()
+
+  /*
+   * Checked after the report is loaded, because the question is about this edition and
+   * not about membership in general — somebody who bought "Energy by Sarah" is a paying
+   * member looking at a report they have not paid for.
+   *
+   * Sent to the dashboard rather than shown a 404: they exist, this report exists, and
+   * pretending otherwise to a paying member is a worse answer than showing them what
+   * they do have. The ReportView below is only written once this passes, so a blocked
+   * attempt never lands in the read statistics.
+   */
+  if (!(await memberCanReadReport(member, report))) redirect('/dashboard?locked=1')
 
   const { tokenId } = await mintReportToken(member.id, report.id)
   const { ipAddress, userAgent } = requestFingerprint()
