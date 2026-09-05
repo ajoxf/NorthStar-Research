@@ -266,13 +266,24 @@ function PricingSection({ plan, mode }: { plan: PackageShape; mode: 'public' | '
             </>
           )}
 
+          {/*
+            Noun phrases, one fact each. The first two are deliberately parallel — new
+            against past — because together they are the whole offer: everything from here
+            on, and everything before it.
+
+            "Cancel any time" is not on the payment line. It is true of a card
+            subscription and meaningless for crypto, where there is nothing on file to
+            cancel and you simply do not renew — which is what the FAQ says, and a bullet
+            promising a cancellation that does not exist is the kind of small untruth a
+            reader finds out about at exactly the wrong moment.
+          */}
           <ul className="mt-8 space-y-3 border-t border-line pt-7">
             {[
-              'Every report, three a week',
+              'Three new reports every week',
               'Full archive of every past report',
               'Mobile-ready reading view',
               'Emailed the moment each report lands',
-              'Card or crypto — cancel any time',
+              'Pay by card or in crypto — no lock-in',
             ].map((item) => (
               <li key={item} className="flex items-center gap-2.5 text-[15px] text-ink">
                 <Check className="h-4 w-4 shrink-0 text-up" aria-hidden />

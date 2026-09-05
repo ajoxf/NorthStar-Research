@@ -138,7 +138,9 @@ function LockedOverlay() {
         </div>
         <h3 className="mb-2 font-display text-xl text-ink">Members only</h3>
         <p className="mb-5 text-[14px] leading-relaxed text-ink-dim">
-          Every instrument is covered in the reports. This preview shows the format only —
+          {/* "here" ties the sentence to the table it is sitting on top of; without it
+              "the reports" floats free of anything the reader can see. */}
+          Every instrument here is covered in the research. This preview shows the format only —
           the numbers are illustrative and are not a recommendation.
         </p>
         <ButtonLink href="/join" size="md">
