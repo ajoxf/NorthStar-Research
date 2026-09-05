@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft, Users } from 'lucide-react'
 
 import { ReportAdminPanel } from '@/app/admin/reports/[id]/report-admin-panel'
+import { sectionName } from '@/lib/section-shape'
 import { ShareLinks } from '@/app/admin/reports/[id]/share-links'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
@@ -23,6 +24,17 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
     include: { _count: { select: { views: true, deliveryLogs: true } } },
   })
   if (!report) notFound()
+
+  /*
+   * Every live section, plus this report's own even if it has since been taken off sale —
+   * otherwise editing an old report would silently reassign it to "all-access only" the
+   * moment its section was retired.
+   */
+  const sections = await db.section.findMany({
+    where: { OR: [{ archivedAt: null }, { id: report.sectionId ?? '' }] },
+    orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
+    include: { topic: true, author: true },
+  })
 
   const [sent, failed, opened] = await Promise.all([
     db.deliveryLog.count({ where: { reportId: report.id, status: { in: ['sent', 'delivered', 'opened'] } } }),
@@ -101,7 +113,12 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
           instruments: report.instruments ? JSON.stringify(report.instruments, null, 2) : '',
           published: report.published,
           hasPdf: Boolean(report.pdfBlobUrl),
+          sectionId: report.sectionId,
         }}
+        sections={sections.map((section) => ({
+          id: section.id,
+          name: sectionName(section),
+        }))}
       />
 
       {/*

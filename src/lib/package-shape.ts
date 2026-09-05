@@ -177,14 +177,24 @@ export const stripePriceIdSchema = z
   .trim()
   .regex(/^price_[A-Za-z0-9]+$/, 'A Stripe price ID looks like price_1A2b3C…  (not a product or payment link ID).')
 
+/**
+ * The band a sellable price has to fall in.
+ *
+ * Exported so packages and sections share one definition. They are both "a thing with a
+ * price that Stripe charges", and two copies of these numbers would drift the first time
+ * one was adjusted.
+ */
+export const MIN_PRICE_CENTS = 100
+export const MAX_PRICE_CENTS = 100_000_00
+
 export const packageInputSchema = z.object({
   name: z.string().trim().min(2, 'Give the package a name.').max(60, 'Keep the name under 60 characters.'),
   description: z.string().trim().max(160, 'Keep the description under 160 characters.').optional(),
   priceCents: z
     .number({ required_error: 'Enter a price.' })
     .int('Prices are held in whole cents.')
-    .min(100, 'The lowest price this can sell for is 1.00.')
-    .max(100_000_00, 'That price looks like a typo. The maximum is 100,000.'),
+    .min(MIN_PRICE_CENTS, 'The lowest price this can sell for is 1.00.')
+    .max(MAX_PRICE_CENTS, 'That price looks like a typo. The maximum is 100,000.'),
   currency: z.enum(['USD'], { required_error: 'Choose a currency.' }),
   interval: z.enum(['month', 'year'], { required_error: 'Choose a billing interval.' }),
   /**

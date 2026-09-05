@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { Send, Trash2 } from 'lucide-react'
 
 import { Button, Spinner } from '@/components/ui/button'
-import { FieldError, Hint, Input, Label, Textarea } from '@/components/ui/field'
+import { FieldError, Hint, Input, Label, Select, Textarea } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 
 type EditableReport = {
@@ -19,9 +19,19 @@ type EditableReport = {
   instruments: string
   published: boolean
   hasPdf: boolean
+  /** Null means the all-access catalogue — see the note on the picker below. */
+  sectionId: string | null
 }
 
-export function ReportAdminPanel({ report }: { report: EditableReport }) {
+export type SectionOption = { id: string; name: string }
+
+export function ReportAdminPanel({
+  report,
+  sections,
+}: {
+  report: EditableReport
+  sections: SectionOption[]
+}) {
   const router = useRouter()
   const toast = useToast()
 
@@ -49,6 +59,10 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
           publishDate: String(form.get('publishDate') ?? ''),
           htmlContent: String(form.get('htmlContent') ?? ''),
           instruments: String(form.get('instruments') ?? ''),
+          // '' is the "All-access only" option, which is a real choice and must be sent
+          // as null rather than dropped — otherwise a report can be filed into a section
+          // but never taken back out of one.
+          sectionId: String(form.get('sectionId') ?? '') || null,
         }),
       })
       const data = await response.json()
@@ -236,6 +250,23 @@ export function ReportAdminPanel({ report }: { report: EditableReport }) {
         </div>
 
         <div className="mb-4">
+          <Label htmlFor="sectionId">Section</Label>
+          <Select id="sectionId" name="sectionId" defaultValue={report.sectionId ?? ''}>
+            <option value="">All-access only — no section</option>
+            {sections.map((section) => (
+              <option key={section.id} value={section.id}>
+                {section.name}
+              </option>
+            ))}
+          </Select>
+          <Hint>
+            Who can read this edition. A report with no section is readable by all-access
+            members only, which is where every report published so far sits. Changing this on a
+            published report changes who can open it, straight away and in both directions.
+          </Hint>
+        </div>
+
+        <div>
           <Label htmlFor="summary">Summary</Label>
           <Textarea id="summary" name="summary" rows={3} defaultValue={report.summary ?? ''} />
         </div>

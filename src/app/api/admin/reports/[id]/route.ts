@@ -17,6 +17,13 @@ const schema = z.object({
   publishDate: z.string().optional(),
   htmlContent: z.string().nullable().optional(),
   instruments: z.string().optional(),
+  /**
+   * Which section this edition belongs to, and therefore who may read it.
+   *
+   * Explicitly nullable so a report can be moved back to the all-access catalogue. Null
+   * is a real answer here, not a missing one — see the note on Report.sectionId.
+   */
+  sectionId: z.string().min(1).nullable().optional(),
 })
 
 /**
@@ -54,6 +61,23 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       return NextResponse.json({ error: 'Enter a valid publish date.' }, { status: 400 })
     }
     data.publishDate = publishDate
+  }
+
+  if (parsed.data.sectionId !== undefined) {
+    if (parsed.data.sectionId !== null) {
+      const section = await db.section.findUnique({ where: { id: parsed.data.sectionId } })
+      if (!section) {
+        return NextResponse.json({ error: 'That section no longer exists.' }, { status: 400 })
+      }
+    }
+    /*
+     * Moving a published report between sections changes who can read it, immediately and
+     * in both directions. That is the intended behaviour — a report filed in the wrong
+     * place should be fixable — but it is worth being clear that this is an access change
+     * and not only a label: members of the old section lose it, members of the new one
+     * gain it, and the delivery already sent to the old section is not recalled.
+     */
+    data.sectionId = parsed.data.sectionId
   }
 
   if (parsed.data.instruments !== undefined) {
