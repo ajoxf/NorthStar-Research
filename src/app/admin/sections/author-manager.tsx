@@ -4,11 +4,13 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 
+import { AuthorAvatar } from '@/components/author-avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button, Spinner } from '@/components/ui/button'
 import { Hint, Input, Label, Textarea } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
-import { authorInitials, parseCredentials } from '@/lib/section-shape'
+import { PhotoField } from '@/app/admin/sections/photo-field'
+import { parseCredentials } from '@/lib/section-shape'
 
 export type AuthorRow = {
   id: string
@@ -181,10 +183,17 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
             />
           </div>
 
+          <div className="mt-5">
+            <PhotoField
+              name={form.name}
+              value={form.photoUrl}
+              onChange={(photoUrl) => setForm({ ...form, photoUrl })}
+            />
+          </div>
+
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {(
               [
-                ['photoUrl', 'Photograph URL', 'https://…'],
                 ['websiteUrl', 'Website', 'https://…'],
                 ['linkedinUrl', 'LinkedIn', 'https://linkedin.com/in/…'],
                 ['xUrl', 'X', 'https://x.com/…'],
@@ -228,12 +237,9 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
         <ul className="mt-6 divide-y divide-line border-t border-line">
           {authors.map((author) => (
             <li key={author.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
-              <span
-                aria-hidden
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-panel-2 font-mono text-[12px] text-ink-dim"
-              >
-                {authorInitials(author.name)}
-              </span>
+              {/* The real photograph in the list, so a wrong or broken one is visible
+                  from the admin screen rather than only on the public page. */}
+              <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={36} />
               <div className="min-w-0 flex-1">
                 <span className="text-[15px] text-ink">{author.name}</span>
                 <span className="ml-2 font-mono text-[11px] text-ink-dim">/{author.slug}</span>

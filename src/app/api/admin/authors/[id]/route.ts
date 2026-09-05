@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { del } from '@vercel/blob'
+
 import { adminInput } from '@/app/api/admin/_admin-route'
+import { isAuthorPhotoUrl } from '@/lib/author-photo'
 import { db } from '@/lib/db'
 import { authorInputSchema } from '@/lib/section-shape'
 
@@ -42,5 +45,22 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       ...(archived === undefined ? {} : { archivedAt: archived ? new Date() : null }),
     },
   })
+  /*
+   * Tidy up the photograph this one replaced.
+   *
+   * Best-effort and never allowed to fail the save: an orphaned blob costs a few pence a
+   * year, and refusing to save an author profile because a cleanup call timed out would
+   * be the wrong trade by a wide margin. Only blobs we uploaded are touched — a pasted
+   * URL points at somebody else's server and is none of our business.
+   */
+  const replaced = existing.photoUrl
+  if (replaced && replaced !== author.photoUrl && isAuthorPhotoUrl(replaced)) {
+    try {
+      await del(replaced)
+    } catch (error) {
+      console.error('[admin:authors] could not remove the replaced photograph', error)
+    }
+  }
+
   return NextResponse.json({ ok: true, author })
 }
