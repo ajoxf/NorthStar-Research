@@ -5,11 +5,12 @@ import { ExternalLink, Lock } from 'lucide-react'
 
 import { SectionBuy } from '@/app/(marketing)/coverage/section-buy'
 import { AuthorAvatar } from '@/components/author-avatar'
+import { PreviewBanner } from '@/components/preview-banner'
 import { ToastProvider } from '@/components/ui/toast'
 import { db } from '@/lib/db'
 import { formatPrice } from '@/lib/package-shape'
 import { sectionName } from '@/lib/section-shape'
-import { sectionsPublic } from '@/lib/sections-mode'
+import { sectionsVisibility } from '@/lib/sections-mode'
 import { formatDate } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -37,7 +38,8 @@ export async function generateMetadata({
  * exists and how often it lands.
  */
 export default async function ExpertPage({ params }: { params: { slug: string } }) {
-  if (!(await sectionsPublic())) notFound()
+  const { visible, preview } = await sectionsVisibility()
+  if (!visible) notFound()
 
   const author = await db.author.findUnique({
     where: { slug: params.slug },
@@ -70,6 +72,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
 
   return (
     <ToastProvider>
+      {preview && <PreviewBanner />}
       <div className="mx-auto max-w-3xl px-5 py-16 sm:py-20">
         <Link
           href="/experts"

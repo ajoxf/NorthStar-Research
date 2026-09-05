@@ -3,10 +3,11 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { AuthorAvatar } from '@/components/author-avatar'
+import { PreviewBanner } from '@/components/preview-banner'
 import { db } from '@/lib/db'
 import { formatPrice } from '@/lib/package-shape'
 import { sectionName } from '@/lib/section-shape'
-import { sectionsPublic } from '@/lib/sections-mode'
+import { sectionsVisibility } from '@/lib/sections-mode'
 
 export const metadata: Metadata = { title: 'Contributors' }
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,8 @@ export const dynamic = 'force-dynamic'
  * than no contributors page.
  */
 export default async function ExpertsPage() {
-  if (!(await sectionsPublic())) notFound()
+  const { visible, preview } = await sectionsVisibility()
+  if (!visible) notFound()
 
   const authors = await db.author.findMany({
     where: { archivedAt: null },
@@ -41,7 +43,9 @@ export default async function ExpertsPage() {
   if (listed.length === 0) notFound()
 
   return (
-    <div className="mx-auto max-w-5xl px-5 py-20">
+    <>
+      {preview && <PreviewBanner />}
+      <div className="mx-auto max-w-5xl px-5 py-20">
       <span className="eyebrow">The desk</span>
       <h1 className="mt-3 text-balance text-4xl leading-tight text-ink sm:text-5xl">
         Independent experts, each covering what they know.
@@ -86,5 +90,6 @@ export default async function ExpertsPage() {
         ))}
       </div>
     </div>
+    </>
   )
 }

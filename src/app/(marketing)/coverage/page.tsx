@@ -4,11 +4,12 @@ import { notFound } from 'next/navigation'
 
 import { SectionBuy } from '@/app/(marketing)/coverage/section-buy'
 import { AuthorAvatar } from '@/components/author-avatar'
+import { PreviewBanner } from '@/components/preview-banner'
 import { ToastProvider } from '@/components/ui/toast'
 import { db } from '@/lib/db'
 import { formatPrice } from '@/lib/package-shape'
 import { sectionName } from '@/lib/section-shape'
-import { sectionsPublic } from '@/lib/sections-mode'
+import { sectionsVisibility } from '@/lib/sections-mode'
 
 export const metadata: Metadata = { title: 'Coverage' }
 export const dynamic = 'force-dynamic'
@@ -22,7 +23,8 @@ export const dynamic = 'force-dynamic'
  * the page where that reads as a choice rather than as a duplicate.
  */
 export default async function CoveragePage() {
-  if (!(await sectionsPublic())) notFound()
+  const { visible, preview } = await sectionsVisibility()
+  if (!visible) notFound()
 
   const topics = await db.topic.findMany({
     where: { archivedAt: null },
@@ -42,6 +44,7 @@ export default async function CoveragePage() {
 
   return (
     <ToastProvider>
+      {preview && <PreviewBanner />}
       <div className="mx-auto max-w-4xl px-5 py-20">
         <span className="eyebrow">Coverage</span>
         <h1 className="mt-3 text-balance text-4xl leading-tight text-ink sm:text-5xl">

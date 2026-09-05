@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { getCurrentMember } from '@/lib/auth'
 import { readSetting, writeSetting } from '@/lib/secure-settings'
 
 /**
@@ -32,4 +33,24 @@ export async function sectionsPublic(): Promise<boolean> {
 
 export async function setSectionsPublic(value: boolean, adminId: string): Promise<void> {
   await writeSetting(SECTIONS_PUBLIC_KEY, value ? 'true' : 'false', adminId)
+}
+
+/**
+ * What the person currently looking should see.
+ *
+ * An admin sees the sections pages even while they are hidden, which is the whole point
+ * of hiding them: setting up authors, prices and descriptions and then flipping a switch
+ * blind — discovering what the pages look like at the same moment your visitors do — is
+ * not a launch, it is a gamble. The first version of this flag 404'd the pages for
+ * everybody including the operator, which made "preview before publishing" impossible.
+ *
+ * `preview` is true only in that case, so the pages can say plainly that what is on
+ * screen is not what the public can reach.
+ */
+export async function sectionsVisibility(): Promise<{ visible: boolean; preview: boolean }> {
+  if (await sectionsPublic()) return { visible: true, preview: false }
+
+  const member = await getCurrentMember()
+  const isAdmin = member?.role === 'admin'
+  return { visible: isAdmin, preview: isAdmin }
 }
