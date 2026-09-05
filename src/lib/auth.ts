@@ -1,4 +1,11 @@
 import 'server-only'
+import {
+  type EntitlementAccess,
+  canReadReport,
+  hasAnyAccess,
+  isAllAccess,
+  reportVisibilityWhere,
+} from '@/lib/entitlements'
 
 import { cookies, headers } from 'next/headers'
 import { SignJWT, jwtVerify } from 'jose'
@@ -115,6 +122,16 @@ export async function requireAdmin(): Promise<Member> {
 }
 
 /**
+ * The legacy all-access membership.
+ *
+ * This is what every member who joined before sections holds, and its logic is unchanged
+ * — deliberately, because changing it would change who can read what on a live site.
+ * `isAllAccess` in @/lib/entitlements is the same rule in a testable module, and a test
+ * asserts the two agree across every combination of role, status and renewal date.
+ *
+ * Prefer `memberHasAnyAccess` / `memberCanReadReport` at new call sites: this one cannot
+ * see section entitlements, so on its own it locks out somebody who bought a section.
+ *
  * An active subscription is what gates report content, separately from being logged in.
  *
  * The renewal date is checked here, not just the status column. The nightly expiry job
@@ -129,6 +146,58 @@ export function hasActiveSubscription(
   // A null renewal date means a legacy or comped account with no expiry.
   if (!member.subscriptionRenewsAt) return true
   return member.subscriptionRenewsAt.getTime() > Date.now()
+}
+
+/**
+ * The section entitlements to evaluate for this member.
+ *
+ * **Returns an empty list without querying for anyone who already has all-access**, which
+ * is every member on the live site. `isAllAccess` short-circuits every check below before
+ * entitlements are consulted, so loading them would be a database round trip whose result
+ * cannot change any answer. The practical effect is that this whole feature adds exactly
+ * zero queries to the existing member's page loads.
+ *
+ * Only `active` rows are fetched; the date is then checked in memory, for the same reason
+ * the legacy check does it — access must not depend on the nightly expiry job having run.
+ */
+export async function loadEntitlements(
+  member: Pick<Member, 'id' | 'role' | 'subscriptionStatus' | 'subscriptionRenewsAt'>,
+): Promise<EntitlementAccess[]> {
+  if (isAllAccess(member)) return []
+  return db.entitlement.findMany({
+    where: { memberId: member.id, status: 'active' },
+    select: { sectionId: true, status: true, renewsAt: true },
+  })
+}
+
+/** May this member see the portal at all — by all-access, or by holding a live section? */
+export async function memberHasAnyAccess(
+  member: Pick<Member, 'id' | 'role' | 'subscriptionStatus' | 'subscriptionRenewsAt'>,
+): Promise<boolean> {
+  if (isAllAccess(member)) return true
+  return hasAnyAccess(member, await loadEntitlements(member))
+}
+
+/** May this member read this particular report? The only question a report gate should ask. */
+export async function memberCanReadReport(
+  member: Pick<Member, 'id' | 'role' | 'subscriptionStatus' | 'subscriptionRenewsAt'>,
+  report: { sectionId: string | null },
+): Promise<boolean> {
+  if (isAllAccess(member)) return true
+  return canReadReport(member, report, await loadEntitlements(member))
+}
+
+/**
+ * A Prisma `where` fragment limiting a report query to what this member may read.
+ *
+ * Empty for an all-access member, so their queries are byte-for-byte the ones they were
+ * before this existed.
+ */
+export async function memberReportWhere(
+  member: Pick<Member, 'id' | 'role' | 'subscriptionStatus' | 'subscriptionRenewsAt'>,
+): Promise<{ sectionId?: { in: string[] } }> {
+  if (isAllAccess(member)) return {}
+  return reportVisibilityWhere(member, await loadEntitlements(member))
 }
 
 /** Days left in the current paid period; negative once lapsed. Null when open-ended. */

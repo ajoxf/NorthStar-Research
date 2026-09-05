@@ -5,7 +5,7 @@ import { FileQuestion, Lock } from 'lucide-react'
 
 import { ReportCard, ReportRow } from '@/components/report-card'
 import { ButtonLink } from '@/components/ui/button'
-import { getCurrentMember, hasActiveSubscription } from '@/lib/auth'
+import { getCurrentMember, memberHasAnyAccess, memberReportWhere } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { fullName } from '@/lib/utils'
 
@@ -16,7 +16,13 @@ export default async function DashboardPage() {
   const member = await getCurrentMember()
   if (!member) redirect('/login?next=/dashboard')
 
-  if (!hasActiveSubscription(member)) return <InactiveState />
+  if (!(await memberHasAnyAccess(member))) return <InactiveState />
+
+  /*
+   * What this member may read. Empty for an all-access member, so their two queries
+   * below are exactly the queries they were before sections existed.
+   */
+  const visible = await memberReportWhere(member)
 
   /*
    * The most recent editions, full stop — not one per type.
@@ -28,7 +34,7 @@ export default async function DashboardPage() {
    * forever, however much was published after.
    */
   const current = await db.report.findMany({
-    where: { published: true },
+    where: { published: true, ...visible },
     orderBy: { publishDate: 'desc' },
     take: 4,
     select: { id: true, type: true, title: true, summary: true, publishDate: true },
@@ -47,7 +53,7 @@ export default async function DashboardPage() {
     : new Set<string>()
 
   const recent = await db.report.findMany({
-    where: { published: true, id: { notIn: current.map((r) => r.id) } },
+    where: { published: true, ...visible, id: { notIn: current.map((r) => r.id) } },
     orderBy: { publishDate: 'desc' },
     take: 8,
     select: { id: true, type: true, title: true, summary: true, publishDate: true },

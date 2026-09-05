@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 
 import { WithdrawalPlanner } from '@/app/(portal)/tools/withdrawal-planner/planner'
-import { getCurrentMember, hasActiveSubscription } from '@/lib/auth'
+import { getCurrentMember, memberHasAnyAccess } from '@/lib/auth'
 
 export const metadata: Metadata = { title: 'Systematic withdrawal planner' }
 export const dynamic = 'force-dynamic'
@@ -14,7 +14,7 @@ export default async function WithdrawalPlannerPage() {
   if (!member) redirect('/login?next=/tools/withdrawal-planner')
   // Tools are part of what the membership buys, so they sit behind the same gate as
   // the research itself.
-  if (!hasActiveSubscription(member)) redirect('/dashboard')
+  if (!(await memberHasAnyAccess(member))) redirect('/dashboard')
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
