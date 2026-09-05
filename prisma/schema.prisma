@@ -506,6 +506,14 @@ model CheckoutOrder {
   sectionId String?
   section   Section? @relation(fields: [sectionId], references: [id])
 
+  /// The Stripe subscription this checkout created, when it was a card sale.
+  ///
+  /// Recorded so a section entitlement can be tied to its own subscription at redemption.
+  /// One customer can now hold several subscriptions at once — all-access plus a section,
+  /// or two sections — so the subscription, not the customer, is what identifies which
+  /// thing a later invoice or cancellation is about.
+  stripeSubscriptionId String?
+
   /// An operator's own live-mode probe, not a sale.
   ///
   /// This flag is load-bearing in the webhooks: a test order is acknowledged and recorded

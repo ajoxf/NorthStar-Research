@@ -158,18 +158,65 @@ export async function POST(request: Request) {
   const existingMember = await db.member.findUnique({ where: { email: order.email } })
 
   if (existingMember?.passwordHash) {
-    // The period this renewal buys is the one their package sells, not a fixed month.
-    const interval = await intervalForPackage(order.packageId ?? existingMember.packageId)
-    const from =
-      existingMember.subscriptionRenewsAt && existingMember.subscriptionRenewsAt > new Date()
-        ? existingMember.subscriptionRenewsAt // stack onto unused time rather than truncating it
-        : new Date()
+    /*
+     * Which thing is being renewed?
+     *
+     * An order carrying a section renews that section. Extending the member's own period
+     * instead would quietly upgrade a single-section subscriber to the whole archive —
+     * the same trap the Stripe renewal path has, arriving by crypto.
+     */
+    const renewingSection = order.sectionId
+      ? await db.section.findUnique({
+          where: { id: order.sectionId },
+          select: { id: true, interval: true },
+        })
+      : null
+
+    const interval = renewingSection
+      ? renewingSection.interval
+      : await intervalForPackage(order.packageId ?? existingMember.packageId)
+
+    const held = renewingSection
+      ? await db.entitlement.findUnique({
+          where: {
+            memberId_sectionId: { memberId: existingMember.id, sectionId: renewingSection.id },
+          },
+          select: { renewsAt: true },
+        })
+      : null
+
+    // Stack onto unused time rather than truncating it, whichever is being renewed.
+    const current = renewingSection ? (held?.renewsAt ?? null) : existingMember.subscriptionRenewsAt
+    const from = current && current > new Date() ? current : new Date()
 
     await db.$transaction(async (tx) => {
       await tx.checkoutOrder.update({
         where: { id: order.id },
         data: { status: 'paid', paidAt: new Date(), cregisOrderId, rawCallback: payload as never },
       })
+
+      if (renewingSection) {
+        await tx.entitlement.upsert({
+          where: {
+            memberId_sectionId: { memberId: existingMember.id, sectionId: renewingSection.id },
+          },
+          create: {
+            memberId: existingMember.id,
+            sectionId: renewingSection.id,
+            status: 'active',
+            startedAt: new Date(),
+            renewsAt: addPeriod(interval, from),
+            billingProvider: 'cregis',
+          },
+          update: {
+            status: 'active',
+            renewsAt: addPeriod(interval, from),
+            cancelAtPeriodEnd: false,
+          },
+        })
+        return
+      }
+
       await tx.member.update({
         where: { id: existingMember.id },
         data: {
@@ -246,6 +293,9 @@ export async function POST(request: Request) {
         // Carried from the order so the buyer is granted the package they paid for,
         // whatever the default has become by the time they redeem.
         packageId: order.packageId,
+        // Likewise the section, when a single section was what was bought. Null keeps its
+        // old meaning: this code grants the all-access membership.
+        sectionId: order.sectionId,
       },
     })
 
@@ -259,11 +309,12 @@ export async function POST(request: Request) {
         phoneNumber: order.phoneNumber,
         source: 'cregis_checkout',
         subscriptionStatus: 'pending',
-        packageId: order.packageId,
+        // packageId describes the all-access plan, so a section purchase leaves it alone.
+        packageId: order.sectionId ? null : order.packageId,
       },
       update: {
         phoneNumber: order.phoneNumber ?? undefined,
-        packageId: order.packageId ?? undefined,
+        ...(order.sectionId ? {} : { packageId: order.packageId ?? undefined }),
       },
     })
   })

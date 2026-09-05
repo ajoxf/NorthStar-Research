@@ -119,6 +119,9 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }
 
   const code = generateRedemptionCode()
+  // The order is authoritative; the session metadata catches a callback that arrives
+  // before the order row landed.
+  const sectionId = existingOrder?.sectionId ?? session.metadata?.sectionId ?? null
 
   await db.$transaction(async (tx) => {
     await tx.checkoutOrder.upsert({
@@ -132,8 +135,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         status: 'paid',
         paidAt: new Date(),
         rawCallback: session as never,
+        stripeSubscriptionId: subscriptionId ?? null,
       },
-      update: { status: 'paid', paidAt: new Date(), rawCallback: session as never },
+      update: {
+        status: 'paid',
+        paidAt: new Date(),
+        rawCallback: session as never,
+        stripeSubscriptionId: subscriptionId ?? undefined,
+      },
     })
 
     await tx.redemptionCode.create({
@@ -150,9 +159,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         // where the package the buyer chose was recorded, and it is what carries that
         // choice forward to the membership they end up with.
         packageId: existingOrder?.packageId ?? null,
+        /*
+         * Which section was bought, carried code-first.
+         *
+         * Read from the session metadata as well as the order: the order is written when
+         * checkout starts and is authoritative, but a session created before that row
+         * landed would otherwise lose the section and silently grant all-access.
+         */
+        sectionId,
       },
     })
 
+    /*
+     * A section purchase must not rewrite the member's own membership.
+     *
+     * `stripeSubscriptionId` and `packageId` on Member describe the all-access
+     * subscription. An existing all-access member buying a section would otherwise have
+     * theirs overwritten by the section's, and the billing portal would then manage — or
+     * cancel — the wrong one. The section's subscription is carried on the order instead,
+     * and attached to the entitlement at redemption.
+     */
+    const boughtSection = Boolean(sectionId)
     await tx.member.upsert({
       where: { email },
       create: {
@@ -161,14 +188,18 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         subscriptionStatus: 'pending',
         billingProvider: 'stripe',
         stripeCustomerId: customerId ?? null,
-        stripeSubscriptionId: subscriptionId ?? null,
-        packageId: existingOrder?.packageId ?? null,
+        stripeSubscriptionId: boughtSection ? null : (subscriptionId ?? null),
+        packageId: boughtSection ? null : (existingOrder?.packageId ?? null),
       },
       update: {
         billingProvider: 'stripe',
         stripeCustomerId: customerId ?? undefined,
-        stripeSubscriptionId: subscriptionId ?? undefined,
-        packageId: existingOrder?.packageId ?? undefined,
+        ...(boughtSection
+          ? {}
+          : {
+              stripeSubscriptionId: subscriptionId ?? undefined,
+              packageId: existingOrder?.packageId ?? undefined,
+            }),
       },
     })
   })
@@ -210,6 +241,23 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 
 /**
+ * Which thing is this Stripe subscription?
+ *
+ * One customer can now hold several at once — all-access plus a section, or two sections
+ * — so the customer no longer identifies what an invoice or a cancellation is about. The
+ * subscription does. An id matching an Entitlement is a section; anything else is the
+ * member's own all-access membership, which is what every subscription was before
+ * sections existed.
+ */
+async function entitlementForSubscription(subscriptionId: string | null | undefined) {
+  if (!subscriptionId) return null
+  return db.entitlement.findFirst({
+    where: { stripeSubscriptionId: subscriptionId },
+    select: { id: true, memberId: true, renewsAt: true, startedAt: true },
+  })
+}
+
+/**
  * Every successful charge, including the first — extend the paid period.
  *
  * This is what makes the subscription recurring from the member's point of view: their
@@ -230,15 +278,38 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const periodEnd = invoice.lines?.data?.[0]?.period?.end
   const renewsAt = periodEnd ? new Date(periodEnd * 1000) : addBillingPeriod()
 
-  await db.member.update({
-    where: { id: member.id },
-    data: {
-      subscriptionStatus: 'active',
-      subscriptionRenewsAt: renewsAt,
-      subscriptionStartedAt: member.subscriptionStartedAt ?? new Date(),
-      renewalReminderSentAt: null,
-    },
-  })
+  /*
+   * Extend the thing that was actually billed.
+   *
+   * Without this branch a section's second invoice would set subscriptionStatus active on
+   * the member and hand a single-section buyer the entire archive — the exact upgrade the
+   * access model exists to prevent, arriving through the renewal door.
+   */
+  const subscriptionId =
+    typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id
+  const entitlement = await entitlementForSubscription(subscriptionId)
+
+  if (entitlement) {
+    await db.entitlement.update({
+      where: { id: entitlement.id },
+      data: {
+        status: 'active',
+        renewsAt,
+        startedAt: entitlement.startedAt ?? new Date(),
+        cancelAtPeriodEnd: false,
+      },
+    })
+  } else {
+    await db.member.update({
+      where: { id: member.id },
+      data: {
+        subscriptionStatus: 'active',
+        subscriptionRenewsAt: renewsAt,
+        subscriptionStartedAt: member.subscriptionStartedAt ?? new Date(),
+        renewalReminderSentAt: null,
+      },
+    })
+  }
 
   /*
    * A receipt for the renewal — but never for the first invoice.
@@ -281,6 +352,21 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const member = await db.member.findFirst({ where: { stripeCustomerId: customerId } })
   if (!member) return
 
+  const entitlement = await entitlementForSubscription(subscription.id)
+  if (entitlement) {
+    await db.entitlement.update({
+      where: { id: entitlement.id },
+      data: {
+        cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        renewsAt: subscription.current_period_end
+          ? new Date(subscription.current_period_end * 1000)
+          : entitlement.renewsAt,
+        ...(subscription.status === 'canceled' ? { status: 'cancelled' as const } : {}),
+      },
+    })
+    return
+  }
+
   await db.member.update({
     where: { id: member.id },
     data: {
@@ -304,6 +390,16 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
   const member = await db.member.findFirst({ where: { stripeCustomerId: customerId } })
   if (!member) return
+
+  // Cancelling one section must not cancel the member, nor their other sections.
+  const entitlement = await entitlementForSubscription(subscription.id)
+  if (entitlement) {
+    await db.entitlement.update({
+      where: { id: entitlement.id },
+      data: { status: 'cancelled', cancelAtPeriodEnd: true },
+    })
+    return
+  }
 
   await db.member.update({
     where: { id: member.id },
