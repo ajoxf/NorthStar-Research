@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
 import { AuthorAvatar } from '@/components/author-avatar'
+import { EmptyPreview } from '@/components/empty-preview'
 import { PreviewBanner } from '@/components/preview-banner'
 import { db } from '@/lib/db'
 import { formatPrice } from '@/lib/package-shape'
@@ -40,7 +41,10 @@ export default async function ExpertsPage() {
   // not listed — a profile you cannot subscribe to is a dead end from a marketing page.
   const listed = authors.filter((author) => author.sections.length > 0)
 
-  if (listed.length === 0) notFound()
+  if (listed.length === 0) {
+    if (preview) return <EmptyPreview what="contributors" />
+    notFound()
+  }
 
   return (
     <>

@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 
 import { SectionBuy } from '@/app/(marketing)/coverage/section-buy'
 import { AuthorAvatar } from '@/components/author-avatar'
+import { EmptyPreview } from '@/components/empty-preview'
 import { PreviewBanner } from '@/components/preview-banner'
 import { ToastProvider } from '@/components/ui/toast'
 import { db } from '@/lib/db'
@@ -40,7 +41,11 @@ export default async function CoveragePage() {
 
   // A topic nobody writes in yet is not a gap to explain, it is a thing to leave out.
   const covered = topics.filter((topic) => topic.sections.length > 0)
-  if (covered.length === 0) notFound()
+  // Empty means "not for you" to a visitor and "not yet" to the person building it.
+  if (covered.length === 0) {
+    if (preview) return <EmptyPreview what="coverage" />
+    notFound()
+  }
 
   return (
     <ToastProvider>
