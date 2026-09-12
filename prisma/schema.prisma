@@ -316,6 +316,7 @@ model Member {
   /// Empty for every member who exists today, and empty is the legacy all-access case —
   /// the access check reads the subscription fields above first and unchanged.
   entitlements Entitlement[]
+  productAccounts ProductAccount[]
 
   tags       String[] @default([])
   adminNotes String?
@@ -875,6 +876,10 @@ model Item {
   /// without joining out to two different tables depending on kind.
   name String
 
+  /// Where a member actually opens this, for a product that lives on its own domain.
+  /// Null for a research section, which is read here.
+  url String?
+
   /// Withdrawn from sale; existing entitlements keep working, exactly as an archived
   /// package or section does.
   archivedAt DateTime?
@@ -885,6 +890,7 @@ model Item {
   section      Section?
   entitlements Entitlement[]
   packages     PackageItem[]
+  accounts     ProductAccount[]
 
   @@index([kind, archivedAt])
 }
@@ -952,5 +958,43 @@ model Entitlement {
   @@unique([memberId, itemId])
   @@index([status, renewsAt])
   @@index([sectionId])
+  @@index([itemId])
+}
+
+/// A member's account in a product's own sign-in system.
+///
+/// Nexus RAMP authenticates with Supabase and knows nothing about this site. Rather than
+/// rebuild its sign-in — the desk uses it daily and it works — the portal creates the
+/// account there when it grants the entitlement, with the email and password the person
+/// just chose here. One set of credentials, two sites, and RAMP unchanged.
+///
+/// `externalId` is that system's own id for the user, kept so a later password change or
+/// a revocation addresses the right account without having to search by email.
+model ProductAccount {
+  id       String @id @default(cuid())
+  memberId String
+  itemId   String
+
+  /// The id in the product's auth system. Supabase's user uuid, for RAMP.
+  externalId String
+
+  /// Set when access was withdrawn — the entitlement lapsed, or the desk revoked it.
+  /// The account is disabled there rather than deleted, so the person's own data
+  /// survives a renewal.
+  disabledAt DateTime?
+
+  /// Set when the account already existed in the product and was linked rather than
+  /// created. Their password there stays theirs — overwriting it would mean anyone who
+  /// knows an email address could take over that account by starting a trial — so the
+  /// portal has to tell them their two passwords are different.
+  adoptedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  member Member @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  item   Item   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@unique([memberId, itemId])
   @@index([itemId])
 }

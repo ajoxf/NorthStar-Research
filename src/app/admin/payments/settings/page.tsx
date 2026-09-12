@@ -19,6 +19,7 @@ import { db } from '@/lib/db'
 import { cregisConfigured } from '@/lib/cregis'
 import { stripeConfigured } from '@/lib/stripe'
 import { pricingMode } from '@/lib/pricing-mode'
+import { productAuthConfigured, productAuthItemSlug } from '@/lib/product-auth'
 import { trialSettings } from '@/lib/trial'
 import { isFallbackPackage, priceLine } from '@/lib/package-shape'
 import { defaultPackage, sellablePackages } from '@/lib/packages'
@@ -194,6 +195,39 @@ export default async function PaymentSettingsPage() {
             </Link>{' '}
             under the Free trial source.
           </p>
+        </Section>
+
+        <Section
+          title="Product sign-in"
+          note="Nexus RAMP has its own sign-in. This is what makes a trial or a redeemed code actually open it."
+        >
+          <div className="rounded-lg border border-line bg-panel p-5">
+            <p className="flex items-center gap-2 text-[15px] text-ink">
+              {productAuthConfigured() ? 'Connected' : 'Not connected'}
+              {productAuthConfigured() && (
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                  live
+                </span>
+              )}
+            </p>
+            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-ink-dim">
+              {productAuthConfigured() ? (
+                <>
+                  Granting <span className="font-mono text-[12px]">{productAuthItemSlug()}</span>{' '}
+                  creates the account in the product with the same email and password, and access
+                  ending disables it there — their own data is kept, not deleted. A password changed
+                  on the account page follows through to the product.
+                </>
+              ) : (
+                <>
+                  Entitlements are still granted and recorded, but nobody can sign into the product
+                  with them. Set <span className="font-mono text-[12px]">RAMP_SUPABASE_URL</span> and{' '}
+                  <span className="font-mono text-[12px]">RAMP_SUPABASE_SERVICE_ROLE_KEY</span> in
+                  Vercel and redeploy; the nightly job then connects everyone already granted.
+                </>
+              )}
+            </p>
+          </div>
         </Section>
 
         <Section
@@ -453,5 +487,5 @@ async function buildTrialState(): Promise<TrialState> {
     }),
   ])
 
-  return { ...settings, products }
+  return { ...settings, products, productAuthReady: productAuthConfigured() }
 }

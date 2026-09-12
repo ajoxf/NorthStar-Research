@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { emailSchema } from '@/lib/validation'
 
 import { db } from '@/lib/db'
+import { syncProductAccess } from '@/lib/product-auth'
 import {
   entitlementFields,
   extendedRenewal,
@@ -320,6 +321,16 @@ export async function POST(request: Request) {
 
       return created
     })
+
+    /*
+     * Open the product's own door, if this code granted one.
+     *
+     * Outside the transaction for the same reason as everything below it: a product's
+     * auth system being unreachable must not roll back a membership somebody has paid
+     * for. It never throws, it is safe to repeat, and the nightly job reconciles anything
+     * that did not land.
+     */
+    await syncProductAccess(member.id, { password: parsed.data.password })
 
     // After the transaction, and never inside it: neither attribution nor a welcome
     // email may roll back a membership somebody has paid for.

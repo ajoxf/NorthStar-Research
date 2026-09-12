@@ -135,6 +135,22 @@ function EmptyReports() {
   )
 }
 
+type HeldItem = {
+  name: string
+  url: string | null
+  endsAt: Date | null
+  /** `same` — the credentials they just chose. `existing` — the ones they already had
+   *  in that product. `pending` — no account there yet, which is a configuration
+   *  problem on our side rather than anything they can fix. */
+  signIn: 'same' | 'existing' | 'pending'
+}
+
+const SIGN_IN_NOTE: Record<HeldItem['signIn'], string> = {
+  same: 'Sign in there with this email address and the password you set here.',
+  existing: 'You already had an account — sign in there with the password you set in it, not this one.',
+  pending: 'We are still setting up your sign-in. Contact the desk if it is not ready shortly.',
+}
+
 /**
  * The products this member holds a live entitlement to.
  *
@@ -142,17 +158,36 @@ function EmptyReports() {
  * queries it always has. Sections are excluded: those are research access, and if this
  * member held a live one they would not be on this path at all.
  */
-async function heldItems(memberId: string): Promise<{ name: string; endsAt: Date | null }[]> {
+async function heldItems(memberId: string): Promise<HeldItem[]> {
   const rows = await db.entitlement.findMany({
     where: { memberId, status: 'active', itemId: { not: null }, item: { kind: 'product' } },
-    select: { renewsAt: true, item: { select: { name: true } } },
+    select: {
+      renewsAt: true,
+      item: {
+        select: {
+          name: true,
+          url: true,
+          // Their account in the product, if the portal has managed to open one. Its
+          // absence and its origin change what we can honestly tell them about signing in.
+          accounts: { where: { memberId }, select: { adoptedAt: true, disabledAt: true } },
+        },
+      },
+    },
     orderBy: { startedAt: 'desc' },
   })
 
   const now = Date.now()
   return rows
     .filter((row) => row.item && (!row.renewsAt || row.renewsAt.getTime() > now))
-    .map((row) => ({ name: row.item!.name, endsAt: row.renewsAt }))
+    .map((row) => {
+      const account = row.item!.accounts[0] ?? null
+      return {
+        name: row.item!.name,
+        url: row.item!.url,
+        endsAt: row.renewsAt,
+        signIn: !account || account.disabledAt ? 'pending' : account.adoptedAt ? 'existing' : 'same',
+      }
+    })
 }
 
 /**
@@ -164,7 +199,7 @@ async function heldItems(memberId: string): Promise<{ name: string; endsAt: Date
  * their membership is not active would be technically true and read as a failed signup.
  * So what they hold is stated first, and the research offer follows as an offer.
  */
-function InactiveState({ held = [] }: { held?: { name: string; endsAt: Date | null }[] }) {
+function InactiveState({ held = [] }: { held?: HeldItem[] }) {
   if (held.length > 0) {
     return (
       <div className="mx-auto max-w-md px-5 py-24 text-center">
@@ -174,17 +209,29 @@ function InactiveState({ held = [] }: { held?: { name: string; endsAt: Date | nu
         <h1 className="text-3xl text-ink">You're all set</h1>
         <ul className="mt-6 flex flex-col gap-2">
           {held.map((item) => (
-            <li key={item.name} className="rounded-lg border border-line bg-panel px-4 py-3">
+            <li key={item.name} className="rounded-lg border border-line bg-panel px-4 py-3 text-left">
               <span className="text-[15px] text-ink">{item.name}</span>
               <span className="mt-0.5 block text-[13px] text-ink-dim">
                 {item.endsAt ? `Runs until ${formatDate(item.endsAt)}` : 'No end date'}
               </span>
+              <span className="mt-1.5 block text-[13px] leading-relaxed text-ink-dim">
+                {SIGN_IN_NOTE[item.signIn]}
+              </span>
+              {item.url && (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-[13px] text-accent underline underline-offset-4"
+                >
+                  Open {item.name}
+                </a>
+              )}
             </li>
           ))}
         </ul>
         <p className="mt-6 text-[15px] leading-relaxed text-ink-dim">
-          Sign-in details are emailed separately. This page is the research desk's reports, which
-          are a separate subscription.
+          This page is the research desk's reports, which are a separate subscription.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <ButtonLink href="/join" variant="secondary">

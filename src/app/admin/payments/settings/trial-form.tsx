@@ -12,6 +12,8 @@ export type TrialState = {
   days: number
   itemSlug: string
   products: { slug: string; name: string }[]
+  /** Whether a granted entitlement actually opens the product's own sign-in. */
+  productAuthReady: boolean
 }
 
 /**
@@ -143,6 +145,15 @@ export function TrialForm({ state }: { state: TrialState }) {
           Changing these does not shorten a trial somebody is already on.
         </span>
       </div>
+
+      {enabled && !state.productAuthReady && (
+        <p className="mt-4 rounded-lg border border-down/35 bg-down/10 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink">
+          Trials are open, but the sign-in bridge is not configured — so a trialist gets an
+          entitlement here and cannot sign into the product. Set RAMP_SUPABASE_URL and
+          RAMP_SUPABASE_SERVICE_ROLE_KEY in Vercel, then redeploy. Everyone who signed up in the
+          meantime is connected by the nightly job.
+        </p>
+      )}
 
       {noProducts && (
         <p className="mt-4 text-[13px] leading-relaxed text-down">

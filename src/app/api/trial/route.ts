@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { getCurrentMember, hashPassword, startSession } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { syncProductAccess } from '@/lib/product-auth'
 import { refusalMessage, trialEndsAt, trialRefusal, trialSettings } from '@/lib/trial'
 
 /**
@@ -123,9 +124,23 @@ export async function POST(request: Request) {
     return fail(refusalMessage('already_trialled'), 409)
   }
 
+  /*
+   * Open the door the trial just paid for.
+   *
+   * The product has its own sign-in, so an entitlement here is not on its own something
+   * anybody can log into. This creates the account there with the password they chose a
+   * moment ago — the same credentials, both sites.
+   *
+   * Deliberately not awaited into the response's success: it never throws, and a trial
+   * that was granted is granted whether or not the product's auth system answered. The
+   * nightly job reconciles, and the outcome is returned for the logs.
+   */
+  const access = await syncProductAccess(member.id, { password: parsed?.password ?? null })
+
   if (!existing) await startSession(member)
 
   return NextResponse.json({
+    access: access.action,
     ok: true,
     item: item.name,
     days: settings.days,
