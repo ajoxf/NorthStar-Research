@@ -111,6 +111,15 @@ export async function SiteFooter() {
               <Link href="/join" className="text-ink-dim hover:text-ink">
                 Membership
               </Link>
+              {/* A separate application with its own sign-in, so it opens in its own tab. */}
+              <a
+                href="https://nexus-funds.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-ink-dim hover:text-ink"
+              >
+                Nexus · RAMP
+              </a>
               <Link href="/login" className="text-ink-dim hover:text-ink">
                 Member sign-in
               </Link>
