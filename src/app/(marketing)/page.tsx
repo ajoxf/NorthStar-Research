@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Archive, ArrowRight, ArrowUpRight, Check, FileText, Gauge, Lock } from 'lucide-react'
+import { Archive, ArrowRight, ArrowUpRight, Check, FileText, Lock, Smartphone } from 'lucide-react'
 
 import { SampleReportForm } from '@/app/(marketing)/sample-report-form'
 import { AuthorAvatar } from '@/components/author-avatar'
@@ -69,12 +69,11 @@ export default async function LandingPage() {
 
   return (
     <>
-      <Hero plan={plan} mode={mode} />
-      <LinesSection mode={mode} plan={plan} />
-      <ProductSection />
+      <Hero plan={plan} mode={mode} hasSections={authors.length > 0} />
       {covered.length > 0 ? <TopicCoverage topics={covered} /> : <CoverageSection />}
       {authors.length > 0 && <ContributorsSection authors={authors} />}
       <SampleReportSection />
+      <ProductSection />
       <PricingSection plan={plan} mode={mode} cheapestSectionCents={cheapest} />
     </>
   )
@@ -199,9 +198,11 @@ function shortInterval(plan: PackageShape): string {
 function Hero({
   plan,
   mode,
+  hasSections,
 }: {
   plan: PackageShape
   mode: 'public' | 'enquiry'
+  hasSections: boolean
 }) {
   return (
     <section className="relative overflow-hidden border-b border-line">
@@ -224,7 +225,7 @@ function Hero({
       <div className="relative mx-auto max-w-6xl px-5 py-24 sm:py-36 lg:py-44">
         <div className="max-w-2xl animate-fade-up lg:max-w-[52%]">
           <Badge tone="accent" className="mb-6">
-            Research · Risk systems
+            Three reports · Every week
           </Badge>
 
           {/* Oversized and tightly tracked, per the reference: the headline is the
@@ -232,14 +233,17 @@ function Hero({
               steps back down at the large breakpoint, where the photograph takes the
               right of the frame and the headline has half the width to live in. */}
           <h1 className="text-balance font-display text-[2.75rem] font-semibold tracking-[-0.035em] text-ink sm:text-6xl md:text-7xl lg:text-[3.5rem] xl:text-[4rem]">
-            Research and risk systems for institutional desks.
+            Independent technical and macro research.
           </h1>
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
-            Three research reports a week, each setting out the technical structure and the macro
-            context behind it, with the reasoning shown. And the software the desk runs on itself:
-            margin, risk and positions across every broker account, in one book. Take either, or
-            both.
+            NordStar Pro publishes three reports a week, covering commodities, international
+            markets and indices, options, crypto and spreads, and FX. Each one sets out the
+            technical structure and the macro context behind it, with the reasoning shown. No
+            noise and no upsells.{' '}
+            {hasSections
+              ? 'Take the whole desk, or just the expert you follow.'
+              : 'One price.'}
           </p>
 
           {/* Icon + uppercase meta row, sitting between the copy and the actions. */}
@@ -247,7 +251,7 @@ function Hero({
             {[
               { icon: FileText, label: '3 reports / week' },
               { icon: Archive, label: 'Full archive' },
-              { icon: Gauge, label: 'Risk & margin platform' },
+              { icon: Smartphone, label: 'Mobile friendly' },
             ].map((item) => (
               <li key={item.label} className="flex items-center gap-2">
                 <item.icon className="h-3.5 w-3.5 text-accent" aria-hidden />
@@ -265,8 +269,8 @@ function Hero({
                 : `Become a member — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)} intro`}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </ButtonLink>
-            <ButtonLink href="#product" size="lg" variant="secondary">
-              See the platform
+            <ButtonLink href="#sample-report" size="lg" variant="secondary">
+              Request a sample report
             </ButtonLink>
           </div>
         </div>
@@ -275,139 +279,6 @@ function Hero({
   )
 }
 
-/**
- * The two lines of business, side by side and the same size.
- *
- * The homepage used to open with a research pitch and mention the software two thirds of
- * the way down, which told a visitor who came for risk systems that they were in the wrong
- * place. This is the correction: whichever of the two somebody came for, it is named
- * above the fold and one click from the detail.
- *
- * Deliberately equal — same card, same weight, same kind of CTA. A "primary" and a
- * "secondary" here would be a claim about which business matters, and that is a decision
- * for the desk rather than a layout accident.
- */
-async function LinesSection({ mode, plan }: { mode: 'public' | 'enquiry'; plan: PackageShape }) {
-  /*
-   * The trial is advertised here only when it is actually open AND grants a product.
-   * A section trial is a different offer with different copy, and claiming "14 days free"
-   * beside the platform card while the trial in fact grants research would be worse than
-   * saying nothing.
-   */
-  const trial = await trialSettings()
-  const productTrial = trial.enabled
-    ? PRODUCTS.find((product) => product.packageSlug === trial.itemSlug)
-    : undefined
-
-  return (
-    <section className="border-b border-line bg-panel/40">
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
-        <div className="grid gap-5 md:grid-cols-2">
-          <Line
-            eyebrow="Research"
-            title="Three reports a week, with the reasoning shown."
-            points={[
-              'Commodities, indices and FX, options, crypto and spreads',
-              'The full archive, including editions published before you joined',
-              'Written by named experts, each covering what they know',
-            ]}
-            foot={
-              mode === 'enquiry'
-                ? 'Pricing on request'
-                : `${formatPrice(plan.priceCents, plan.currency)} / ${plan.interval === 'year' ? 'year' : 'month'}`
-            }
-            cta={{ label: mode === 'enquiry' ? 'Request pricing' : 'Become a member', href: '/join' }}
-            second={{ label: 'See a sample report', href: '#sample-report' }}
-          />
-
-          <Line
-            eyebrow="Platform"
-            title="The risk and margin system the desk runs on."
-            points={[
-              'Positions and margin across every broker account, in one book',
-              'Import fills straight from TT or MT5 — spreads, legs and all',
-              'Stress a move against you before you put the trade on',
-            ]}
-            foot={
-              productTrial
-                ? `Free for ${trial.days} days, then ${formatPrice(productTrial.fallbackPriceCents, 'USD')}/month`
-                : `From ${formatPrice(PRODUCTS[0].fallbackPriceCents, 'USD')} / month`
-            }
-            cta={
-              productTrial
-                ? { label: `Start ${trial.days}-day free trial`, href: '/trial' }
-                : { label: 'See the platform', href: '#product' }
-            }
-            second={{ label: 'What it does', href: '#product' }}
-          />
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function Line({
-  eyebrow,
-  title,
-  points,
-  foot,
-  cta,
-  second,
-}: {
-  eyebrow: string
-  title: string
-  points: string[]
-  foot: string
-  cta: { label: string; href: string }
-  second: { label: string; href: string }
-}) {
-  return (
-    <div className="flex flex-col rounded-lg border border-line bg-panel p-6 sm:p-8">
-      <span className="eyebrow">{eyebrow}</span>
-      <h2 className="mt-3 text-balance font-display text-[26px] leading-tight tracking-[-0.02em] text-ink sm:text-[30px]">
-        {title}
-      </h2>
-
-      <ul className="mt-6 flex flex-col gap-2.5">
-        {points.map((point) => (
-          <li key={point} className="flex gap-2.5 text-[15px] leading-relaxed text-ink-dim">
-            <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
-            {point}
-          </li>
-        ))}
-      </ul>
-
-      {/* mt-auto so both cards' footers line up however unequal the copy above them is. */}
-      <div className="mt-auto pt-7">
-        <p className="font-mono text-[13px] text-ink">{foot}</p>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <ButtonLink href={cta.href} size="sm">
-            {cta.label}
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-          </ButtonLink>
-          <Link
-            href={second.href}
-            className="text-[14px] text-ink-dim underline underline-offset-4 transition-colors hover:text-ink"
-          >
-            {second.label}
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/**
- * What is covered, in three cards.
- *
- * Asset classes rather than tickers, deliberately. A symbol list reads as a watchlist —
- * "these are the instruments you will be told about" — which is the promise of a signals
- * service, not a research one. The desk covers what is worth covering in a given week,
- * and naming the classes says that honestly where a fixed list of symbols would not.
- *
- * The language stays on method — structure, context, scenarios — and off levels, entries
- * and targets, for the same reason: this is analysis a reader acts on themselves.
- */
 const COVERAGE = [
   {
     title: 'Commodities & Energy',
