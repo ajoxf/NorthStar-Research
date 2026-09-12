@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Archive, ArrowRight, Check, FileText, Lock, Smartphone } from 'lucide-react'
+import { Archive, ArrowRight, ArrowUpRight, Check, FileText, Lock, Smartphone } from 'lucide-react'
 
 import { SampleReportForm } from '@/app/(marketing)/sample-report-form'
 import { AuthorAvatar } from '@/components/author-avatar'
@@ -71,6 +71,7 @@ export default async function LandingPage() {
       {covered.length > 0 ? <TopicCoverage topics={covered} /> : <CoverageSection />}
       {authors.length > 0 && <ContributorsSection authors={authors} />}
       <SampleReportSection />
+      <ProductSection />
       <PricingSection plan={plan} mode={mode} cheapestSectionCents={cheapest} />
     </>
   )
@@ -332,6 +333,91 @@ function CoverageSection() {
                 {card.analysis}
               </p>
             </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * The desk's own software, as opposed to its research.
+ *
+ * A list rather than a single card on purpose: this is where anything the desk builds
+ * gets announced, and the second entry should not need the section rewritten. Each one
+ * opens in its own tab — these are separate applications with their own sign-in, not
+ * pages of this site.
+ */
+const PRODUCTS = [
+  {
+    name: 'Nexus · RAMP',
+    subtitle: 'Risk and Margin Desk',
+    href: 'https://nexus-funds.vercel.app/',
+    blurb:
+      'Margin and risk for a commodity futures desk. Positions and margin across every broker account, in one book.',
+    points: [
+      'Import fills straight from TT or MT5 — spreads, legs and all',
+      'Stress a move against you before you put the trade on',
+      'Your own limits: minimum TNE/IM, risk per trade, daily loss',
+    ],
+  },
+]
+
+function ProductSection() {
+  return (
+    <section id="product" className="border-b border-line">
+      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+        <div className="max-w-2xl">
+          <span className="eyebrow">Product</span>
+          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
+            Software we built for our own desk.
+          </h2>
+          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
+            Written for the way we trade, and used on live books before it was offered to
+            anyone else.
+          </p>
+        </div>
+
+        <div className="mt-10 grid gap-4 md:grid-cols-2">
+          {PRODUCTS.map((product) => (
+            <a
+              key={product.name}
+              href={product.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex flex-col rounded-lg border border-line bg-panel p-6 transition-colors hover:border-accent/40 sm:p-7"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="font-display text-[21px] tracking-tight text-ink">
+                    {product.name}
+                  </h3>
+                  <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">
+                    {product.subtitle}
+                  </p>
+                </div>
+                <ArrowUpRight
+                  className="h-5 w-5 shrink-0 text-ink-dim transition-colors group-hover:text-accent"
+                  aria-hidden
+                />
+              </div>
+
+              <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">{product.blurb}</p>
+
+              <ul className="mt-5 space-y-2.5 border-t border-line pt-5">
+                {product.points.map((point) => (
+                  <li key={point} className="flex items-start gap-2.5 text-[14px] text-ink-dim">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-up" aria-hidden />
+                    {point}
+                  </li>
+                ))}
+              </ul>
+
+              <span className="mt-6 inline-flex items-center gap-1.5 text-[14px] font-medium text-accent">
+                Open {product.name.split(' · ')[1] ?? product.name}
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+              </span>
+            </a>
           ))}
         </div>
       </div>
