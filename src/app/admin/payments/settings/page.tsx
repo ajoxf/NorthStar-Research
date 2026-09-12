@@ -7,6 +7,7 @@ import { CregisForm, type CregisFormState } from '@/app/admin/payments/settings/
 import { PricingForm, type PricingState } from '@/app/admin/payments/settings/pricing-form'
 import { PricingModeForm } from '@/app/admin/payments/settings/pricing-mode-form'
 import { TestPayments, type TestState } from '@/app/admin/payments/settings/test-payments'
+import { TrialForm, type TrialState } from '@/app/admin/payments/settings/trial-form'
 import { CREGIS_SETTING_KEYS, resolveCregisSettings } from '@/lib/cregis-settings'
 import { settingsMetadata } from '@/lib/secure-settings'
 import { formatDate } from '@/lib/utils'
@@ -18,6 +19,7 @@ import { db } from '@/lib/db'
 import { cregisConfigured } from '@/lib/cregis'
 import { stripeConfigured } from '@/lib/stripe'
 import { pricingMode } from '@/lib/pricing-mode'
+import { trialSettings } from '@/lib/trial'
 import { isFallbackPackage, priceLine } from '@/lib/package-shape'
 import { defaultPackage, sellablePackages } from '@/lib/packages'
 import { CANONICAL_BASE_URL } from '@/lib/env'
@@ -65,6 +67,7 @@ export default async function PaymentSettingsPage() {
   const baseLooksWrong = urls.base !== CANONICAL_BASE_URL
   const stripeReady = stripeConfigured()
   const mode = await pricingMode()
+  const trialState = await buildTrialState()
   // Presence only. The URL itself is infrastructure and the secret is never surfaced.
   const relayConfigured = Boolean(process.env.CREGIS_RELAY_URL)
 
@@ -172,6 +175,25 @@ export default async function PaymentSettingsPage() {
               {packages.length > 1 ? 'Manage all packages' : 'Sell more than one package'}
             </ButtonLink>
           </div>
+        </Section>
+
+        <Section
+          title="Free trial"
+          note="The other way in, alongside access codes: an email and a password, no card, and it stops on its own."
+        >
+          <TrialForm state={trialState} />
+
+          <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+            A trial grants the product and nothing else — not the research archive, and not a
+            subscription that renews. Trialists appear in{' '}
+            <Link
+              href="/admin/members?source=trial"
+              className="text-accent underline underline-offset-4"
+            >
+              Members
+            </Link>{' '}
+            under the Free trial source.
+          </p>
         </Section>
 
         <Section
@@ -413,4 +435,23 @@ async function buildCregisFormState(): Promise<CregisFormState> {
       value: resolved.callbackIps.value.join('\n'),
     },
   }
+}
+
+/**
+ * What the trial form needs: the current settings, and the products it could grant.
+ *
+ * Only products — a section is research access, which is sold as a membership and not
+ * something a product trial grants.
+ */
+async function buildTrialState(): Promise<TrialState> {
+  const [settings, products] = await Promise.all([
+    trialSettings(),
+    db.item.findMany({
+      where: { kind: 'product', archivedAt: null },
+      select: { slug: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ])
+
+  return { ...settings, products }
 }

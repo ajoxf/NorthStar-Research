@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 
 import { LoginForm } from '@/app/(auth)/login/login-form'
 import { getCurrentMember } from '@/lib/auth'
+import { trialSettings } from '@/lib/trial'
 
 export const metadata: Metadata = { title: 'Sign in' }
 
@@ -33,6 +34,9 @@ export default async function LoginPage({
 
   if (member) redirect(next ?? (member.role === 'admin' ? '/admin' : '/dashboard'))
 
+  // Offered only while trials are actually open, so this never points at a page that 404s.
+  const trial = await trialSettings()
+
   return (
     <div className="w-full max-w-sm animate-fade-up">
       <span className="eyebrow">Members</span>
@@ -54,12 +58,23 @@ export default async function LoginPage({
 
       <LoginForm next={next} />
 
-      <p className="mt-7 border-t border-line pt-6 text-[14px] text-ink-dim">
-        Have an access code but no account yet?{' '}
-        <Link href="/redeem" className="text-accent underline underline-offset-4">
-          Redeem it
-        </Link>
-      </p>
+      <div className="mt-7 flex flex-col gap-2 border-t border-line pt-6 text-[14px] text-ink-dim">
+        <p>
+          Have an access code but no account yet?{' '}
+          <Link href="/redeem" className="text-accent underline underline-offset-4">
+            Redeem it
+          </Link>
+        </p>
+
+        {trial.enabled && (
+          <p>
+            No account at all?{' '}
+            <Link href="/trial" className="text-accent underline underline-offset-4">
+              Start a {trial.days}-day free trial
+            </Link>
+          </p>
+        )}
+      </div>
     </div>
   )
 }
