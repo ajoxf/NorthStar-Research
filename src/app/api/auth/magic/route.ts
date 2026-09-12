@@ -96,7 +96,7 @@ export async function GET(request: Request) {
   const member = await db.member.findUnique({ where: { email: payload.email } })
   if (!member) return NextResponse.redirect(`${base}/login?error=link_invalid`)
 
-  await startSession(member)
+  await startSession(member, 'link')
 
   const next = safeNext(payload.next)
   if (next) return NextResponse.redirect(`${base}${next}`)

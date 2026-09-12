@@ -82,7 +82,7 @@ export async function GET(request: Request) {
         },
       })
 
-  await startSession(member)
+  await startSession(member, 'google')
 
   const next = safeNext(parsedState.next)
   if (next) return NextResponse.redirect(`${base}${next}`)

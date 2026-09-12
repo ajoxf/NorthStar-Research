@@ -100,6 +100,7 @@ export function LoginForm({ next }: { next: string | null }) {
         </div>
         <p className="text-[14px] leading-relaxed text-ink-dim">
           If that address has an account, a sign-in link is on its way. It expires in 15 minutes.
+          Once you are in, you can set a new password on your account page.
         </p>
         <button
           type="button"
@@ -143,7 +144,27 @@ export function LoginForm({ next }: { next: string | null }) {
 
         {mode === 'password' && (
           <div className="mb-5">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-baseline justify-between gap-3">
+              <Label htmlFor="password">Password</Label>
+              {/*
+                There is no password reset on this site, and the email link is what stands
+                in for one — it signs you in without a password, and the account page then
+                lets you set a new one. That was already true and already built; what was
+                missing was anyone being able to find it. "Sign in with an email link
+                instead" is a method, and somebody who has forgotten their password is not
+                shopping for a method, they are looking for the words they expect.
+              */}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('magic')
+                  setError(null)
+                }}
+                className="text-[13px] text-accent underline underline-offset-4"
+              >
+                Forgot your password?
+              </button>
+            </div>
             <PasswordInput
               id="password"
               name="password"

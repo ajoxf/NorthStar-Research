@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation'
 
 import { AccountForms } from '@/app/(portal)/account/account-forms'
 import { Badge, statusTone } from '@/components/ui/badge'
-import { daysUntilRenewal, getCurrentMember } from '@/lib/auth'
+import { daysUntilRenewal, getCurrentMember, readSession } from '@/lib/auth'
+import { canSetPasswordWithoutCurrent } from '@/lib/password-reset-shape'
 import { db } from '@/lib/db'
 import { formatDate } from '@/lib/utils'
 
@@ -12,6 +13,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function AccountPage() {
   const member = await getCurrentMember()
+  const session = await readSession()
   if (!member) redirect('/login?next=/account')
 
   const daysLeft = daysUntilRenewal(member)
@@ -84,6 +86,19 @@ export default async function AccountPage() {
           lastName: member.lastName,
           phoneNumber: member.phoneNumber,
         }}
+        /*
+         * Whether this visit may set a password without the old one. Computed by the same
+         * function the API enforces it with, so the form never asks for something the
+         * server does not want, nor hides a field the server will insist on.
+         */
+        canSetPasswordWithoutCurrent={
+          session !== null &&
+          canSetPasswordWithoutCurrent({
+            hasPassword: member.passwordHash !== null,
+            via: session.via,
+            viaAt: session.viaAt,
+          })
+        }
       />
     </div>
   )

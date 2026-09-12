@@ -3,7 +3,11 @@ import { z } from 'zod'
 
 import { db } from '@/lib/db'
 import { syncProductAccess } from '@/lib/product-auth'
-import { getCurrentMember, hashPassword, verifyPassword } from '@/lib/auth'
+import { getCurrentMember, hashPassword, readSession, verifyPassword } from '@/lib/auth'
+import {
+  NEEDS_CURRENT_PASSWORD,
+  canSetPasswordWithoutCurrent,
+} from '@/lib/password-reset-shape'
 
 export const runtime = 'nodejs'
 
@@ -36,15 +40,38 @@ export async function PATCH(request: Request) {
   }
 
   if (parsed.data.newPassword) {
-    // Changing a password always requires proving the current one — a hijacked session
-    // should not be able to lock the real member out.
-    if (!parsed.data.currentPassword || !member.passwordHash) {
-      return NextResponse.json({ error: 'Enter your current password.' }, { status: 400 })
+    /*
+     * Normally this requires proving the current password — a hijacked session should not
+     * be able to lock the real member out with one click.
+     *
+     * Two sessions are exempt, and the reasoning is in lib/password-reset-shape.ts: an
+     * account with no password has nothing to prove, and somebody who signed in through
+     * an email link in the last half hour has just proved control of the address, which
+     * is precisely what a reset email proves. Without that second case this site has no
+     * password reset at all.
+     */
+    const session = await readSession()
+    const exempt =
+      session !== null &&
+      canSetPasswordWithoutCurrent({
+        hasPassword: member.passwordHash !== null,
+        via: session.via,
+        viaAt: session.viaAt,
+      })
+
+    if (!exempt) {
+      if (!parsed.data.currentPassword || !member.passwordHash) {
+        return NextResponse.json({ error: NEEDS_CURRENT_PASSWORD }, { status: 400 })
+      }
+      const ok = await verifyPassword(parsed.data.currentPassword, member.passwordHash)
+      if (!ok) {
+        return NextResponse.json(
+          { error: 'Your current password is not correct.' },
+          { status: 400 },
+        )
+      }
     }
-    const ok = await verifyPassword(parsed.data.currentPassword, member.passwordHash)
-    if (!ok) {
-      return NextResponse.json({ error: 'Your current password is not correct.' }, { status: 400 })
-    }
+
     data.passwordHash = await hashPassword(parsed.data.newPassword)
   }
 

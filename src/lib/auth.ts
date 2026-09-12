@@ -14,6 +14,7 @@ import type { Member, Role } from '@prisma/client'
 
 import { db } from '@/lib/db'
 import { requireEnv } from '@/lib/env'
+import { type SignInMethod } from '@/lib/password-reset-shape'
 
 const SESSION_COOKIE = 'nsr_session'
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30 // 30 days
@@ -22,6 +23,21 @@ export type SessionPayload = {
   sub: string
   email: string
   role: Role
+  /**
+   * How this session began, and when.
+   *
+   * Carried in the token rather than looked up, because it is a fact about the session
+   * and not about the member — the same person can hold a password session on one
+   * machine and a link session on another. It is inside the signed payload, so it cannot
+   * be edited by whoever holds the cookie.
+   *
+   * Read by the password-change rule: proving control of the email address is what earns
+   * the right to set a new password without knowing the old one. See
+   * lib/password-reset-shape.ts.
+   */
+  via: SignInMethod
+  /** Epoch seconds. Bounds the window above; not the session's own lifetime. */
+  viaAt: number
 }
 
 function secretKey(): Uint8Array {
@@ -37,7 +53,12 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export async function createSessionToken(payload: SessionPayload): Promise<string> {
-  return new SignJWT({ email: payload.email, role: payload.role })
+  return new SignJWT({
+    email: payload.email,
+    role: payload.role,
+    via: payload.via,
+    viaAt: payload.viaAt,
+  })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(payload.sub)
     .setIssuedAt()
@@ -45,11 +66,20 @@ export async function createSessionToken(payload: SessionPayload): Promise<strin
     .sign(secretKey())
 }
 
-export async function startSession(member: Pick<Member, 'id' | 'email' | 'role'>): Promise<void> {
+export async function startSession(
+  member: Pick<Member, 'id' | 'email' | 'role'>,
+  /*
+   * Defaults to `password`, the least privileged of the three — a caller that forgets to
+   * say how somebody signed in must not accidentally hand them a reset window.
+   */
+  via: SignInMethod = 'password',
+): Promise<void> {
   const token = await createSessionToken({
     sub: member.id,
     email: member.email,
     role: member.role,
+    via,
+    viaAt: Math.floor(Date.now() / 1000),
   })
 
   cookies().set(SESSION_COOKIE, token, {
@@ -81,6 +111,10 @@ export async function readSession(): Promise<SessionPayload | null> {
       sub: payload.sub,
       email: String(payload.email ?? ''),
       role: (payload.role === 'admin' ? 'admin' : 'member') as Role,
+      // A token issued before these claims existed has neither. Read as a password
+      // session with no window, which is what every session used to be.
+      via: payload.via === 'link' || payload.via === 'google' ? payload.via : 'password',
+      viaAt: typeof payload.viaAt === 'number' ? payload.viaAt : 0,
     }
   } catch {
     // Expired or tampered token — treat as logged out rather than erroring.

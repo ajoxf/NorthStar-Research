@@ -15,11 +15,17 @@ type MemberSettings = {
   phoneNumber: string | null
 }
 
-export function AccountForms({ member }: { member: MemberSettings }) {
+export function AccountForms({
+  member,
+  canSetPasswordWithoutCurrent = false,
+}: {
+  member: MemberSettings
+  canSetPasswordWithoutCurrent?: boolean
+}) {
   return (
     <>
       <BillingSection member={member} />
-      <ProfileSection member={member} />
+      <ProfileSection member={member} canSetWithoutCurrent={canSetPasswordWithoutCurrent} />
       <SignOutSection />
     </>
   )
@@ -97,7 +103,13 @@ function BillingSection({ member }: { member: MemberSettings }) {
   )
 }
 
-function ProfileSection({ member }: { member: MemberSettings }) {
+function ProfileSection({
+  member,
+  canSetWithoutCurrent,
+}: {
+  member: MemberSettings
+  canSetWithoutCurrent: boolean
+}) {
   const router = useRouter()
   const toast = useToast()
   const [pending, setPending] = React.useState(false)
@@ -172,17 +184,27 @@ function ProfileSection({ member }: { member: MemberSettings }) {
           <Hint>Include the country code. Reports are delivered by email only.</Hint>
         </div>
 
+        {/*
+          The current-password field disappears when it is genuinely not needed — signed in
+          by email link in the last half hour, or no password on the account yet. Leaving it
+          on screen is how a reset stops working in practice: somebody who has forgotten
+          their password reads a box asking for it and closes the page.
+        */}
         <div className="mt-6 border-t border-line pt-5">
-          <h3 className="mb-4 text-[15px] text-ink">Change password</h3>
+          <h3 className="mb-4 text-[15px] text-ink">
+            {canSetWithoutCurrent ? 'Set a password' : 'Change password'}
+          </h3>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="currentPassword">Current password</Label>
-              <PasswordInput
-                id="currentPassword"
-                name="currentPassword"
-                autoComplete="current-password"
-              />
-            </div>
+            {!canSetWithoutCurrent && (
+              <div>
+                <Label htmlFor="currentPassword">Current password</Label>
+                <PasswordInput
+                  id="currentPassword"
+                  name="currentPassword"
+                  autoComplete="current-password"
+                />
+              </div>
+            )}
             <div>
               <Label htmlFor="newPassword">New password</Label>
               <PasswordInput
@@ -192,7 +214,11 @@ function ProfileSection({ member }: { member: MemberSettings }) {
               />
             </div>
           </div>
-          <Hint>Leave both blank to keep your current password.</Hint>
+          <Hint>
+            {canSetWithoutCurrent
+              ? 'You signed in without a password, so you can set one here. Leave it blank to keep signing in the way you did.'
+              : 'Leave both blank to keep your current password.'}
+          </Hint>
         </div>
 
         <FieldError>{error}</FieldError>
