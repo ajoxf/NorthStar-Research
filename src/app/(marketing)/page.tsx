@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Archive, ArrowRight, ArrowUpRight, Check, FileText, Gauge, Lock } from 'lucide-react'
 
+import { RampGallery } from '@/app/(marketing)/ramp-gallery'
 import { SampleReportForm } from '@/app/(marketing)/sample-report-form'
 import { AuthorAvatar } from '@/components/author-avatar'
 import { HeroMedia } from '@/components/hero-media'
@@ -596,6 +597,12 @@ async function ProductSection() {
             </a>
           ))}
         </div>
+
+        {/*
+          Under the cards, not above them. Somebody deciding whether this is for them reads
+          what it does first; the screens are what convinces them it exists and works.
+        */}
+        <RampGallery />
       </div>
     </section>
   )
