@@ -263,10 +263,21 @@ export async function syncProductAccess(
 }
 
 function fail(action: SyncAction, response: AdminResponse): SyncOutcome {
-  const message =
-    (response.body as { msg?: string; message?: string } | null)?.msg ??
-    (response.body as { message?: string } | null)?.message ??
-    `HTTP ${response.status}`
-  console.error('[product-auth] refused', { action, status: response.status, message })
+  const body = response.body as { msg?: string; message?: string; error_code?: string } | null
+  const message = body?.msg ?? body?.message ?? `HTTP ${response.status}`
+
+  /*
+   * Logged with the code as well as the message, because the two failures that actually
+   * happen look alike from the outside and have opposite fixes: a key that is wrong or
+   * missing (401/403), and signups disabled at the provider, which would mean the admin
+   * API is not exempt from that switch after all. Without the code both arrive as
+   * "we are still setting up your access", which tells nobody anything.
+   */
+  console.error('[product-auth] refused', {
+    action,
+    status: response.status,
+    code: body?.error_code ?? null,
+    message,
+  })
   return { action: 'skipped', reason: 'failed', error: message }
 }

@@ -193,7 +193,8 @@ type HeldItem = {
 const SIGN_IN_NOTE: Record<HeldItem['signIn'], string> = {
   same: 'Opens straight from here — no second password.',
   existing: 'Opens straight from here — no second password.',
-  pending: 'We are still setting up your access. Contact the desk if it is not ready shortly.',
+  pending:
+    'One-click sign-in is still being set up. Until it is, open it directly and sign in with your own password there.',
 }
 
 /**
@@ -311,28 +312,49 @@ function InactiveState({
                 {SIGN_IN_NOTE[item.signIn]}
               </span>
               {/*
-                Through the handoff, not to the product's own URL. This is what makes it
-                one sign-in rather than two: the link carries their portal session across
-                and they arrive already in. Not a new tab, because the route redirects and
-                a tab that flashes through two redirects reads as something going wrong.
+                Through the handoff when there is one, and to the product's own sign-in
+                when there is not.
+                The handoff carries their portal session across so they arrive already in.
+                But when the product account has not been created yet — the keys were
+                unset when they were granted, or the product's auth system refused — the
+                link used to disappear entirely, leaving somebody who holds a live
+                entitlement staring at "we are still setting up your access" with no way
+                in and nothing to do. The product's own sign-in still works, so offer it:
+                a door needing a password beats no door.
               */}
-              {item.url && item.signIn !== 'pending' && (
-                <a
-                  href="/api/sso/ramp"
-                  className="mt-2 inline-block text-[13px] text-accent underline underline-offset-4"
-                >
-                  Open {item.name}
-                </a>
-              )}
+              {item.url &&
+                (item.signIn === 'pending' ? (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-[13px] text-accent underline underline-offset-4"
+                  >
+                    Open {item.name} directly
+                  </a>
+                ) : (
+                  <a
+                    href="/api/sso/ramp"
+                    className="mt-2 inline-block text-[13px] text-accent underline underline-offset-4"
+                  >
+                    Open {item.name}
+                  </a>
+                ))}
             </li>
           ))}
         </ul>
         <p className="mt-6 text-[15px] leading-relaxed text-ink-dim">
           This page is the research desk's reports, which are a separate subscription.
         </p>
+        {/*
+          Their own account, not the public enquiry form. "View membership" used to send a
+          signed-in member to /join — a page that asks a stranger for their name and phone
+          number so the desk can quote them. Somebody who is already signed in and holds a
+          product reads that as having been logged out.
+        */}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <ButtonLink href="/join" variant="secondary">
-            View membership
+          <ButtonLink href="/account" variant="secondary">
+            Your account
           </ButtonLink>
         </div>
       </div>
@@ -353,8 +375,8 @@ function InactiveState({
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <ButtonLink href="/redeem">Redeem a code</ButtonLink>
-        <ButtonLink href="/join" variant="secondary">
-          View membership
+        <ButtonLink href="/account" variant="secondary">
+          Your account
         </ButtonLink>
       </div>
     </div>
