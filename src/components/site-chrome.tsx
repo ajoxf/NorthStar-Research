@@ -46,6 +46,18 @@ export async function SiteHeader() {
         <Wordmark />
 
         <nav className="flex shrink-0 items-center gap-1 sm:gap-2">
+          {/*
+            Products were reachable only by scrolling most of the way down the homepage,
+            which is the same as not being reachable. An anchor rather than a page: the
+            section lives on the homepage, and a visitor who is already reading it should
+            not be sent somewhere else to find the same cards.
+          */}
+          <Link
+            href="/#product"
+            className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"
+          >
+            Products
+          </Link>
           <Link
             href="/faqs"
             className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"

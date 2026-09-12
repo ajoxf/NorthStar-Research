@@ -391,7 +391,9 @@ async function ProductSection() {
   )
 
   return (
-    <section id="product" className="border-b border-line">
+    /* scroll-mt clears the sticky header, which would otherwise sit over the heading
+       whenever somebody arrives here from the nav link or a /#product URL. */
+    <section id="product" className="scroll-mt-16 border-b border-line">
       <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
         <div className="max-w-2xl">
           <span className="eyebrow">Product</span>
