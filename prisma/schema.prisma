@@ -817,9 +817,10 @@ model Section {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  /// The grantable item this section is. Written by the backfill, one item per section.
-  /// Its uniqueness is added by hand after the backfill — see the note on Entitlement.
-  itemId String?
+  /// The grantable item this section is. One item per section, enforced by the database.
+  /// Nullable only because a section created before its item would otherwise be
+  /// unwritable; the backfill leaves none.
+  itemId String? @unique
   item   Item?   @relation(fields: [itemId], references: [id])
 
   reports      Report[]
@@ -877,11 +878,7 @@ model Item {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  /// A list only because Prisma insists on a unique field to call this one-to-one, and
-  /// that unique index is added by hand after the backfill (see Section.itemId). One item
-  /// is one section; the index makes that true in the database and this becomes
-  /// `section Section?` in the same commit that declares it.
-  sections     Section[]
+  section      Section?
   entitlements Entitlement[]
   packages     PackageItem[]
 
@@ -940,15 +937,16 @@ model Entitlement {
 
   /// One row per member per section; renewing updates it rather than adding another.
   @@unique([memberId, sectionId])
-  /// The same rule belongs on `itemId`, but it is NOT declared here yet, and the omission
-  /// is deliberate. The build runs `prisma db push` without `--accept-data-loss`, and
-  /// Prisma treats "add a unique constraint" as a change that could fail on existing data
-  /// — so declaring it here would fail the deploy that first ships this table. It is added
-  /// by hand once the backfill has run and the data is known clean
-  /// (scripts/sql/002-item-unique-indexes.sql), and declared here in the commit after
-  /// that, by which point `db push` sees it already in place and does nothing.
+  /// One row per member per item; renewing updates it rather than adding another. This is
+  /// what stops a second grant of the same product creating a duplicate instead of
+  /// extending what is there.
+  ///
+  /// Created by hand first (scripts/sql/002-item-unique-indexes.sql) and declared here
+  /// afterwards, because the build runs `prisma db push` without `--accept-data-loss` and
+  /// Prisma treats adding a unique constraint as a change that could fail on existing
+  /// rows. With the index already in place this declaration is a no-op at deploy time.
+  @@unique([memberId, itemId])
   @@index([status, renewsAt])
   @@index([sectionId])
   @@index([itemId])
-  @@index([memberId, itemId])
 }
