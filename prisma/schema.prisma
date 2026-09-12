@@ -945,7 +945,7 @@ model Entitlement {
   /// Prisma treats "add a unique constraint" as a change that could fail on existing data
   /// — so declaring it here would fail the deploy that first ships this table. It is added
   /// by hand once the backfill has run and the data is known clean
-  /// (scripts/sql/001-item-unique-indexes.sql), and declared here in the commit after
+  /// (scripts/sql/002-item-unique-indexes.sql), and declared here in the commit after
   /// that, by which point `db push` sees it already in place and does nothing.
   @@index([status, renewsAt])
   @@index([sectionId])

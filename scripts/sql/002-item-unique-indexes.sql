@@ -8,12 +8,14 @@
 -- So the order is:
 --
 --   1. merge the branch          — db push adds the tables and the nullable columns
---   2. node scripts/backfill-items.mjs   — every section gets an item, every entitlement an itemId
+--   2. scripts/sql/001-backfill-items.sql  — every section gets an item, every entitlement an itemId
+--                                (or node scripts/backfill-items.mjs, same thing)
 --   3. this file                 — the rules, now that nothing can violate them
 --   4. declare them in schema.prisma — db push then finds them already there and does nothing
 --
 -- Run it against the database directly:
---   psql "$DATABASE_URL_UNPOOLED" -f scripts/sql/001-item-unique-indexes.sql
+--   psql "$DATABASE_URL_UNPOOLED" -f scripts/sql/002-item-unique-indexes.sql
+-- or paste it into the Neon SQL editor.
 --
 -- It is safe to run twice: both statements are IF NOT EXISTS, and both will simply fail
 -- rather than damage anything if the data is not clean — which is the check, not a risk.
