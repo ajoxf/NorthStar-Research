@@ -11,7 +11,7 @@
 export const LAPSED_AFTER_DAYS = 30
 
 export const STATUSES = ['all', 'active', 'pending', 'expired', 'cancelled'] as const
-export const SOURCES = ['all', 'stripe_checkout', 'cregis_checkout', 'admin_manual'] as const
+export const SOURCES = ['all', 'stripe_checkout', 'cregis_checkout', 'admin_manual', 'trial'] as const
 export const ENGAGEMENT = ['all', 'reader', 'never_read', 'lapsed_reader'] as const
 
 export type StatusFilter = (typeof STATUSES)[number]
@@ -77,4 +77,5 @@ export const SOURCE_LABELS: Record<SourceFilter, string> = {
   stripe_checkout: 'Card',
   cregis_checkout: 'Crypto',
   admin_manual: 'Manual / comped',
+  trial: 'Free trial',
 }

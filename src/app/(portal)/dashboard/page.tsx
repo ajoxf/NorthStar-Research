@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { FileQuestion, Lock } from 'lucide-react'
+import { Check, FileQuestion, Lock } from 'lucide-react'
 
 import { ReportCard, ReportRow } from '@/components/report-card'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember, memberHasAnyAccess, memberReportWhere } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { fullName } from '@/lib/utils'
+import { formatDate, fullName } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Your reports' }
 export const dynamic = 'force-dynamic'
@@ -16,7 +16,7 @@ export default async function DashboardPage() {
   const member = await getCurrentMember()
   if (!member) redirect('/login?next=/dashboard')
 
-  if (!(await memberHasAnyAccess(member))) return <InactiveState />
+  if (!(await memberHasAnyAccess(member))) return <InactiveState held={await heldItems(member.id)} />
 
   /*
    * What this member may read. Empty for an all-access member, so their two queries
@@ -135,7 +135,66 @@ function EmptyReports() {
   )
 }
 
-function InactiveState() {
+/**
+ * The products this member holds a live entitlement to.
+ *
+ * Only consulted on the inactive path, so a research member's dashboard runs the same
+ * queries it always has. Sections are excluded: those are research access, and if this
+ * member held a live one they would not be on this path at all.
+ */
+async function heldItems(memberId: string): Promise<{ name: string; endsAt: Date | null }[]> {
+  const rows = await db.entitlement.findMany({
+    where: { memberId, status: 'active', itemId: { not: null }, item: { kind: 'product' } },
+    select: { renewsAt: true, item: { select: { name: true } } },
+    orderBy: { startedAt: 'desc' },
+  })
+
+  const now = Date.now()
+  return rows
+    .filter((row) => row.item && (!row.renewsAt || row.renewsAt.getTime() > now))
+    .map((row) => ({ name: row.item!.name, endsAt: row.renewsAt }))
+}
+
+/**
+ * What somebody sees when they have no research access.
+ *
+ * Two quite different people land here. Someone whose membership lapsed, who needs the
+ * code they were emailed — the original case. And, since free trials, someone who signed
+ * up for a product five seconds ago and has never had a membership to lapse: telling them
+ * their membership is not active would be technically true and read as a failed signup.
+ * So what they hold is stated first, and the research offer follows as an offer.
+ */
+function InactiveState({ held = [] }: { held?: { name: string; endsAt: Date | null }[] }) {
+  if (held.length > 0) {
+    return (
+      <div className="mx-auto max-w-md px-5 py-24 text-center">
+        <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-panel">
+          <Check className="h-5 w-5 text-accent" aria-hidden />
+        </div>
+        <h1 className="text-3xl text-ink">You're all set</h1>
+        <ul className="mt-6 flex flex-col gap-2">
+          {held.map((item) => (
+            <li key={item.name} className="rounded-lg border border-line bg-panel px-4 py-3">
+              <span className="text-[15px] text-ink">{item.name}</span>
+              <span className="mt-0.5 block text-[13px] text-ink-dim">
+                {item.endsAt ? `Runs until ${formatDate(item.endsAt)}` : 'No end date'}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-6 text-[15px] leading-relaxed text-ink-dim">
+          Sign-in details are emailed separately. This page is the research desk's reports, which
+          are a separate subscription.
+        </p>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <ButtonLink href="/join" variant="secondary">
+            View membership
+          </ButtonLink>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="mx-auto max-w-md px-5 py-24 text-center">
       <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-panel">

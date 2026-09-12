@@ -38,6 +38,10 @@ enum MemberSource {
   stripe_checkout
   admin_manual
   import
+  /// Signed up for a no-card free trial. Kept distinct from the checkout sources because
+  /// a trialist has paid nothing: counting them as a crypto customer would overstate
+  /// every conversion figure the members list is used to read.
+  trial
 }
 
 /// How a member's recurring $199/month subscription is actually paid.
