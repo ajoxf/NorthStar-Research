@@ -6,7 +6,7 @@ import { AuthorAvatar } from '@/components/author-avatar'
 import { HeroMedia } from '@/components/hero-media'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { defaultPackage } from '@/lib/packages'
+import { defaultPackage, packageBySlug } from '@/lib/packages'
 import { db } from '@/lib/db'
 import { pricingMode } from '@/lib/pricing-mode'
 import { sectionsPublic } from '@/lib/sections-mode'
@@ -353,6 +353,14 @@ const PRODUCTS = [
     name: 'Nexus · RAMP',
     subtitle: 'Risk and Margin Platform',
     href: 'https://nexus-funds.vercel.app/',
+    /*
+     * The price comes from the package with this handle, so it is set in
+     * admin alongside every other price and cannot drift from what checkout
+     * charges. The figure below is only what to quote until that package
+     * exists — create it and this number stops being consulted.
+     */
+    packageSlug: 'nexus-ramp',
+    fallbackPriceCents: 34900,
     blurb:
       'Margin and risk for a commodity futures desk. Positions and margin across every broker account, in one book.',
     points: [
@@ -363,7 +371,19 @@ const PRODUCTS = [
   },
 ]
 
-function ProductSection() {
+async function ProductSection() {
+  const priced = await Promise.all(
+    PRODUCTS.map(async (product) => {
+      const pkg = await packageBySlug(product.packageSlug)
+      return {
+        ...product,
+        priceCents: pkg?.priceCents ?? product.fallbackPriceCents,
+        currency: pkg?.currency ?? 'USD',
+        interval: pkg?.interval ?? 'month',
+      }
+    }),
+  )
+
   return (
     <section id="product" className="border-b border-line">
       <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
@@ -379,7 +399,7 @@ function ProductSection() {
         </div>
 
         <div className="mt-10 grid gap-4 md:grid-cols-2">
-          {PRODUCTS.map((product) => (
+          {priced.map((product) => (
             <a
               key={product.name}
               href={product.href}
@@ -413,10 +433,18 @@ function ProductSection() {
                 ))}
               </ul>
 
-              <span className="mt-6 inline-flex items-center gap-1.5 text-[14px] font-medium text-accent">
-                Open {product.name.split(' · ')[1] ?? product.name}
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-              </span>
+              <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-t border-line pt-5">
+                <p className="text-[15px] text-ink">
+                  <span className="font-display text-[26px] tracking-tight">
+                    {formatPrice(product.priceCents, product.currency)}
+                  </span>
+                  <span className="text-ink-dim"> / {product.interval === 'year' ? 'year' : 'month'}</span>
+                </p>
+                <span className="inline-flex items-center gap-1.5 text-[14px] font-medium text-accent">
+                  Open {product.name.split(' · ')[1] ?? product.name}
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                </span>
+              </div>
             </a>
           ))}
         </div>

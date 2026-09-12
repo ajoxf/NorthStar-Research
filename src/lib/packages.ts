@@ -99,6 +99,18 @@ export async function intervalForPackage(id: string | null): Promise<BillingInte
   return (row?.interval as BillingIntervalValue) ?? (await defaultPackage()).interval
 }
 
+/**
+ * One package by its handle, or null.
+ *
+ * Unlike {@link packageForCheckout} this does not fall back to the default: a caller
+ * asking for a named package wants to know whether that package exists, and being
+ * handed a different one would have it quote the wrong price.
+ */
+export async function packageBySlug(slug: string): Promise<PackageShape | null> {
+  const row = await db.package.findUnique({ where: { slug } })
+  return row ? toShape(row) : null
+}
+
 export async function packageById(id: string): Promise<PackageShape | null> {
   const row = await db.package.findUnique({ where: { id } })
   return row ? toShape(row) : null
