@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto'
+
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
@@ -172,7 +174,18 @@ export async function POST(request: Request) {
    * nightly job reconciles, and the outcome is returned for the logs.
    */
   const access = await syncProductAccess(member.id, {
-    password: parsed?.password ?? null,
+    /*
+     * A signed-out signup hands over the password they just chose, so they can sign in to
+     * the product directly as well as through the portal.
+     *
+     * A signed-in member chose nothing — they clicked a button — and without something
+     * here the account is never created: no password means no provisioning, which left
+     * them with an entitlement, a dashboard reading "still setting up", and nothing that
+     * would ever finish it, because the nightly job only reconciles accounts that already
+     * exist. So a random one, never shown. With the handoff in place a password is not how
+     * they get in, and they can set one from the account page if they ever want it.
+     */
+    password: parsed?.password ?? randomBytes(24).toString('base64url'),
     itemSlug: settings.itemSlug,
   })
 

@@ -3,10 +3,12 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Check, FileQuestion, Lock } from 'lucide-react'
 
+import { TrialOffer } from '@/app/(portal)/trial-offer'
 import { ReportCard, ReportRow } from '@/components/report-card'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember, memberHasAnyAccess, memberReportWhere } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { trialSettings } from '@/lib/trial'
 import { formatDate, fullName } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Your reports' }
@@ -35,9 +37,10 @@ export default async function DashboardPage({
   if (!member) redirect('/login?next=/dashboard')
 
   const ssoNotice = searchParams?.sso ? SSO_NOTICE[searchParams.sso] : undefined
+  const offer = await trialOffer(member.id)
 
   if (!(await memberHasAnyAccess(member)))
-    return <InactiveState held={await heldItems(member.id)} notice={ssoNotice} />
+    return <InactiveState held={await heldItems(member.id)} notice={ssoNotice} offer={offer} />
 
   /*
    * What this member may read. Empty for an all-access member, so their two queries
@@ -97,6 +100,7 @@ export default async function DashboardPage({
           {ssoNotice}
         </p>
       )}
+      {offer && <TrialOffer days={offer.days} itemName={offer.itemName} />}
       <div className="mb-10">
         {/*
           "Latest", not "This week". The query below takes the four most recent editions
@@ -240,7 +244,44 @@ async function heldItems(memberId: string): Promise<HeldItem[]> {
  * their membership is not active would be technically true and read as a failed signup.
  * So what they hold is stated first, and the research offer follows as an offer.
  */
-function InactiveState({ held = [], notice }: { held?: HeldItem[]; notice?: string }) {
+/**
+ * Is there a trial this member could start right now?
+ *
+ * Null unless trials are open, the item exists, and they have never held it — judged on
+ * ever rather than currently, so a lapsed trial does not reappear as a fresh offer every
+ * time they load the page.
+ */
+async function trialOffer(memberId: string): Promise<{ days: number; itemName: string } | null> {
+  const settings = await trialSettings()
+  if (!settings.enabled) return null
+
+  const item = await db.item.findUnique({
+    where: { slug: settings.itemSlug },
+    select: { id: true, name: true, archivedAt: true },
+  })
+  if (!item || item.archivedAt) return null
+
+  const heldEver = await db.entitlement.count({ where: { memberId, itemId: item.id } })
+  if (heldEver > 0) return null
+
+  return { days: settings.days, itemName: item.name }
+}
+
+function InactiveState({
+  held = [],
+  notice,
+  offer,
+}: {
+  held?: HeldItem[]
+  notice?: string
+  offer?: { days: number; itemName: string } | null
+}) {
+  const offerBlock = offer ? (
+    <div className="mb-6 text-left">
+      <TrialOffer days={offer.days} itemName={offer.itemName} />
+    </div>
+  ) : null
+
   const banner = notice ? (
     <p
       role="status"
@@ -254,6 +295,7 @@ function InactiveState({ held = [], notice }: { held?: HeldItem[]; notice?: stri
     return (
       <div className="mx-auto max-w-md px-5 py-24 text-center">
         {banner}
+        {offerBlock}
         <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-panel">
           <Check className="h-5 w-5 text-accent" aria-hidden />
         </div>
@@ -300,6 +342,7 @@ function InactiveState({ held = [], notice }: { held?: HeldItem[]; notice?: stri
   return (
     <div className="mx-auto max-w-md px-5 py-24 text-center">
       {banner}
+      {offerBlock}
       <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-panel">
         <Lock className="h-5 w-5 text-ink-dim" aria-hidden />
       </div>
