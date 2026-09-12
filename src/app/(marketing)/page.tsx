@@ -351,7 +351,7 @@ function CoverageSection() {
 const PRODUCTS = [
   {
     name: 'Nexus · RAMP',
-    subtitle: 'Risk and Margin Desk',
+    subtitle: 'Risk and Margin Platform',
     href: 'https://nexus-funds.vercel.app/',
     blurb:
       'Margin and risk for a commodity futures desk. Positions and margin across every broker account, in one book.',
