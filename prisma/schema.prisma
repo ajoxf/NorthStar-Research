@@ -56,6 +56,15 @@ enum BillingInterval {
   year
 }
 
+/// What kind of thing an Item is. The kind never changes what an entitlement *means* —
+/// it is for grouping and for the admin's own sake.
+enum ItemKind {
+  /// A research section, written by an author.
+  section
+  /// A piece of software: Nexus RAMP, Spread Terminal, whatever follows.
+  product
+}
+
 enum ReportType {
   commodities
   international_markets
@@ -372,6 +381,20 @@ model RedemptionCode {
   /// inbox is worse than an old code living on.
   expiresAt DateTime?
 
+  /// How long the access this code grants runs for, decided when the code is minted:
+  /// "this one is three months", "this one is a fortnight's trial".
+  ///
+  /// Null means "whatever the package says", which is what every code issued so far
+  /// means — so outstanding codes keep granting exactly what they granted when they were
+  /// sent. That is why this is not simply "null means forever": every code already in
+  /// somebody's inbox would have turned into a lifetime membership on deploy.
+  grantMonths Int?
+
+  /// Open-ended access, with no renewal date — a comp. Deliberately its own field rather
+  /// than a magic value in `grantMonths`, so that giving away permanent access is always
+  /// something an operator ticked on purpose.
+  grantsOpenEnded Boolean @default(false)
+
   /// When we warned the holder that this code was about to lapse.
   ///
   /// Cleared whenever the expiry is extended, so each expiry date warns once — the same
@@ -587,6 +610,7 @@ model Package {
   members Member[]
   orders  CheckoutOrder[]
   codes   RedemptionCode[]
+  items   PackageItem[]
 
   @@index([archivedAt, sortOrder])
 }
@@ -793,6 +817,11 @@ model Section {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// The grantable item this section is. Written by the backfill, one item per section.
+  /// Its uniqueness is added by hand after the backfill — see the note on Entitlement.
+  itemId String?
+  item   Item?   @relation(fields: [itemId], references: [id])
+
   reports      Report[]
   entitlements Entitlement[]
   orders       CheckoutOrder[]
@@ -814,13 +843,88 @@ model Section {
 /// first and unchanged. A member with no entitlements behaves today precisely as they did
 /// before this table existed — that is the property that makes this safe to deploy to a
 /// live site.
+/// Anything a member can be granted access to.
+///
+/// Before this existed the answer to "what has this member bought?" had three shapes: the
+/// legacy all-access fields on Member, an Entitlement pointing at a Section, and — once
+/// software was sold — a third thing that would have needed its own column on Entitlement,
+/// RedemptionCode and CheckoutOrder alike. Three tables carrying the same either/or, and
+/// one more branch in every access check per product added.
+///
+/// An Item is the one shape underneath all of them. A research section is an item; Nexus
+/// RAMP is an item; the fifth product will be an item. An entitlement points here, a
+/// package grants a set of these, and the access check asks one question: does this member
+/// hold a live entitlement to item X.
+///
+/// Nothing is stored here about what the item *is* — a Section keeps its price, author and
+/// topic; a product will keep its own presentation fields. This row is only the handle that
+/// access hangs off.
+model Item {
+  id   String   @id @default(cuid())
+  kind ItemKind
+
+  /// Stable handle, used in code and in the RAMP entitlement check ("nexus-ramp").
+  /// Renaming the thing does not change it.
+  slug String @unique
+  /// What an operator sees in a list. Kept here so a package's contents read as names
+  /// without joining out to two different tables depending on kind.
+  name String
+
+  /// Withdrawn from sale; existing entitlements keep working, exactly as an archived
+  /// package or section does.
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// A list only because Prisma insists on a unique field to call this one-to-one, and
+  /// that unique index is added by hand after the backfill (see Section.itemId). One item
+  /// is one section; the index makes that true in the database and this becomes
+  /// `section Section?` in the same commit that declares it.
+  sections     Section[]
+  entitlements Entitlement[]
+  packages     PackageItem[]
+
+  @@index([kind, archivedAt])
+}
+
+/// Which items a package grants.
+///
+/// This is what makes a bundle a bundle: "Research + RAMP" is a package with four items
+/// ticked rather than a new kind of object. Redeeming or buying the package creates one
+/// entitlement per item, all sharing that subscription's period, so they begin and lapse
+/// together.
+model PackageItem {
+  packageId String
+  package   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+  itemId    String
+  item      Item    @relation(fields: [itemId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@id([packageId, itemId])
+  @@index([itemId])
+}
+
 model Entitlement {
   id String @id @default(cuid())
 
-  memberId  String
-  member    Member  @relation(fields: [memberId], references: [id])
-  sectionId String
-  section   Section @relation(fields: [sectionId], references: [id])
+  memberId String
+  member   Member @relation(fields: [memberId], references: [id])
+
+  /// The section this grants, for every row written before items existed.
+  ///
+  /// Being retired in favour of `itemId`: the backfill gives every row an item, new writes
+  /// set both, and this column goes once nothing reads it. Both are nullable in the
+  /// meantime because a half-migrated table with a NOT NULL on either is a table that
+  /// cannot be half-migrated.
+  sectionId String?
+  section   Section? @relation(fields: [sectionId], references: [id])
+
+  /// What this entitlement actually grants. A research section, a product — the access
+  /// check does not care which.
+  itemId String?
+  item   Item?   @relation(fields: [itemId], references: [id])
 
   status            SubscriptionStatus @default(pending)
   startedAt         DateTime?
@@ -836,6 +940,15 @@ model Entitlement {
 
   /// One row per member per section; renewing updates it rather than adding another.
   @@unique([memberId, sectionId])
+  /// The same rule belongs on `itemId`, but it is NOT declared here yet, and the omission
+  /// is deliberate. The build runs `prisma db push` without `--accept-data-loss`, and
+  /// Prisma treats "add a unique constraint" as a change that could fail on existing data
+  /// — so declaring it here would fail the deploy that first ships this table. It is added
+  /// by hand once the backfill has run and the data is known clean
+  /// (scripts/sql/001-item-unique-indexes.sql), and declared here in the commit after
+  /// that, by which point `db push` sees it already in place and does nothing.
   @@index([status, renewsAt])
   @@index([sectionId])
+  @@index([itemId])
+  @@index([memberId, itemId])
 }

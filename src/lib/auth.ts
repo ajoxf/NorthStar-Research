@@ -166,7 +166,7 @@ export async function loadEntitlements(
   if (isAllAccess(member)) return []
   return db.entitlement.findMany({
     where: { memberId: member.id, status: 'active' },
-    select: { sectionId: true, status: true, renewsAt: true },
+    select: { sectionId: true, itemId: true, status: true, renewsAt: true },
   })
 }
 

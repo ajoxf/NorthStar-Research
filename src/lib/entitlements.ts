@@ -45,7 +45,29 @@ export type MemberAccess = {
 }
 
 export type EntitlementAccess = {
-  sectionId: string
+  /**
+   * Null once the column is retired, and null in the meantime for any row that grants a
+   * product rather than a section. Every function here treats a null section as granting
+   * no reports, which is exactly right: a RAMP entitlement is not a claim on the archive.
+   */
+  sectionId: string | null
+  /** Set by the backfill and on every new write. See {@link ItemEntitlement}. */
+  itemId?: string | null
+  status: string
+  /** End of the paid period. Null is open-ended — a comp granted by hand. */
+  renewsAt: Date | null
+}
+
+/**
+ * An entitlement as it is once items exist: it points at an item, whatever kind that is.
+ *
+ * `sectionId` is still here because the column is still there — every row written before
+ * the backfill has one, and rows written during it have both. Once nothing reads
+ * `sectionId` the column goes and this type loses a field.
+ */
+export type ItemEntitlement = {
+  itemId: string | null
+  sectionId?: string | null
   status: string
   /** End of the paid period. Null is open-ended — a comp granted by hand. */
   renewsAt: Date | null
@@ -136,8 +158,8 @@ export function readableSectionIds(
 ): string[] | null {
   if (isAllAccess(member, now)) return null
   return entitlements
-    .filter((entitlement) => entitlementActive(entitlement, now))
-    .map((entitlement) => entitlement.sectionId)
+    .filter((entitlement) => entitlement.sectionId !== null && entitlementActive(entitlement, now))
+    .map((entitlement) => entitlement.sectionId as string)
 }
 
 /**
@@ -156,4 +178,77 @@ export function reportVisibilityWhere(
   const ids = readableSectionIds(member, entitlements, now)
   if (ids === null) return {}
   return { sectionId: { in: ids } }
+}
+
+/**
+ * Does this member hold this item right now?
+ *
+ * The one question the whole system asks. A research section, Nexus RAMP, the fifth
+ * product — same call, same answer, no per-product branch anywhere else.
+ *
+ * ## The rule that is deliberately NOT here
+ *
+ * `isAllAccess` is not consulted, and that is the point. Every research member on the site
+ * today holds the legacy all-access membership, and all-access means the desk's writing —
+ * the thing they paid for. If this function short-circuited on it the way `canReadReport`
+ * does, the deploy that introduced products would hand Nexus RAMP, free and instantly, to
+ * every research subscriber. The one short-circuit kept is for admins, who need to be able
+ * to open a product to support someone using it.
+ *
+ * So: research keeps its legacy rule, in the functions above, untouched. Items are earned
+ * one at a time, by an entitlement somebody was actually granted.
+ */
+export function hasItem(
+  member: MemberAccess,
+  entitlements: ItemEntitlement[],
+  itemId: string,
+  now: Date = new Date(),
+): boolean {
+  if (member.role === 'admin') return true
+  return entitlements.some(
+    (entitlement) => entitlement.itemId === itemId && entitlementActive(entitlement, now),
+  )
+}
+
+/**
+ * The items this member holds live entitlements to.
+ *
+ * For the member dashboard, which needs to show what somebody has rather than ask about
+ * one thing at a time. Unlike `readableSectionIds` there is no null case: an all-access
+ * membership is not a claim on every item, for the reason set out above.
+ */
+export function heldItemIds(
+  entitlements: ItemEntitlement[],
+  now: Date = new Date(),
+): string[] {
+  return entitlements
+    .filter((entitlement) => entitlement.itemId !== null && entitlementActive(entitlement, now))
+    .map((entitlement) => entitlement.itemId as string)
+}
+
+/**
+ * When access granted by this code should end, given the code and the package behind it.
+ *
+ * Three cases, in the order an operator thinks about them:
+ *
+ *   1. The code says open-ended — a comp. No renewal date, and `entitlementActive` treats
+ *      that as live forever, the same as a hand-granted section today.
+ *   2. The code names a number of months — "three months", a fortnight's trial expressed
+ *      as a month. Counted from redemption, not from minting: a code sitting in an inbox
+ *      is not burning the period somebody paid for.
+ *   3. The code says nothing, which is every code issued before this existed. Falls back
+ *      to the package's own interval, so an outstanding code grants exactly what it
+ *      granted the day it was sent.
+ */
+export function grantEndsAt(
+  code: { grantsOpenEnded: boolean; grantMonths: number | null },
+  packageInterval: 'month' | 'year',
+  redeemedAt: Date = new Date(),
+): Date | null {
+  if (code.grantsOpenEnded) return null
+
+  const months = code.grantMonths ?? (packageInterval === 'year' ? 12 : 1)
+  const end = new Date(redeemedAt)
+  end.setMonth(end.getMonth() + months)
+  return end
 }
