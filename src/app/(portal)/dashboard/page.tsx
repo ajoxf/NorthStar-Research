@@ -12,11 +12,32 @@ import { formatDate, fullName } from '@/lib/utils'
 export const metadata: Metadata = { title: 'Your reports' }
 export const dynamic = 'force-dynamic'
 
-export default async function DashboardPage() {
+/*
+ * `sso` says a handoff to a product was refused and sent them here. Without saying so the
+ * customer clicks "Open Nexus RAMP", lands back where they started, and concludes the
+ * button is broken — which is worse than being told no.
+ */
+const SSO_NOTICE: Record<string, string> = {
+  not_entitled:
+    'You do not have an active Nexus RAMP subscription, so it could not be opened. What you do hold is below.',
+  setting_up:
+    'Your Nexus RAMP access is still being set up. Try again shortly — if it persists, contact the desk.',
+  unavailable:
+    'Nexus RAMP sign-in is temporarily unavailable. This is on our side, not yours; please try again shortly.',
+}
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: { sso?: string }
+}) {
   const member = await getCurrentMember()
   if (!member) redirect('/login?next=/dashboard')
 
-  if (!(await memberHasAnyAccess(member))) return <InactiveState held={await heldItems(member.id)} />
+  const ssoNotice = searchParams?.sso ? SSO_NOTICE[searchParams.sso] : undefined
+
+  if (!(await memberHasAnyAccess(member)))
+    return <InactiveState held={await heldItems(member.id)} notice={ssoNotice} />
 
   /*
    * What this member may read. Empty for an all-access member, so their two queries
@@ -63,6 +84,19 @@ export default async function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
+      {/*
+        Also on this path, not only the inactive one. A research member without a RAMP
+        subscription reaches the ordinary dashboard, and without this their refused click
+        would look like a dead button rather than an answer.
+      */}
+      {ssoNotice && (
+        <p
+          role="status"
+          className="mb-8 rounded-lg border border-line bg-panel-2 px-4 py-3 text-[14px] leading-relaxed text-ink-dim"
+        >
+          {ssoNotice}
+        </p>
+      )}
       <div className="mb-10">
         {/*
           "Latest", not "This week". The query below takes the four most recent editions
@@ -145,10 +179,17 @@ type HeldItem = {
   signIn: 'same' | 'existing' | 'pending'
 }
 
+/*
+ * Written for one sign-in, not two.
+ *
+ * These lines used to explain which password to use where, because the portal set the
+ * product's password to match and the customer typed it twice. They no longer need to
+ * know there are two systems at all — so the copy stops telling them.
+ */
 const SIGN_IN_NOTE: Record<HeldItem['signIn'], string> = {
-  same: 'Sign in there with this email address and the password you set here.',
-  existing: 'You already had an account — sign in there with the password you set in it, not this one.',
-  pending: 'We are still setting up your sign-in. Contact the desk if it is not ready shortly.',
+  same: 'Opens straight from here — no second password.',
+  existing: 'Opens straight from here — no second password.',
+  pending: 'We are still setting up your access. Contact the desk if it is not ready shortly.',
 }
 
 /**
@@ -199,10 +240,20 @@ async function heldItems(memberId: string): Promise<HeldItem[]> {
  * their membership is not active would be technically true and read as a failed signup.
  * So what they hold is stated first, and the research offer follows as an offer.
  */
-function InactiveState({ held = [] }: { held?: HeldItem[] }) {
+function InactiveState({ held = [], notice }: { held?: HeldItem[]; notice?: string }) {
+  const banner = notice ? (
+    <p
+      role="status"
+      className="mb-6 rounded-lg border border-line bg-panel-2 px-4 py-3 text-left text-[14px] leading-relaxed text-ink-dim"
+    >
+      {notice}
+    </p>
+  ) : null
+
   if (held.length > 0) {
     return (
       <div className="mx-auto max-w-md px-5 py-24 text-center">
+        {banner}
         <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-panel">
           <Check className="h-5 w-5 text-accent" aria-hidden />
         </div>
@@ -217,11 +268,15 @@ function InactiveState({ held = [] }: { held?: HeldItem[] }) {
               <span className="mt-1.5 block text-[13px] leading-relaxed text-ink-dim">
                 {SIGN_IN_NOTE[item.signIn]}
               </span>
-              {item.url && (
+              {/*
+                Through the handoff, not to the product's own URL. This is what makes it
+                one sign-in rather than two: the link carries their portal session across
+                and they arrive already in. Not a new tab, because the route redirects and
+                a tab that flashes through two redirects reads as something going wrong.
+              */}
+              {item.url && item.signIn !== 'pending' && (
                 <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="/api/sso/ramp"
                   className="mt-2 inline-block text-[13px] text-accent underline underline-offset-4"
                 >
                   Open {item.name}
@@ -244,6 +299,7 @@ function InactiveState({ held = [] }: { held?: HeldItem[] }) {
 
   return (
     <div className="mx-auto max-w-md px-5 py-24 text-center">
+      {banner}
       <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-panel">
         <Lock className="h-5 w-5 text-ink-dim" aria-hidden />
       </div>

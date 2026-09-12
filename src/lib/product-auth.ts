@@ -52,11 +52,22 @@ export function productAuthItemSlug(): string {
   return RAMP_ITEM_SLUG
 }
 
-type AdminResponse = { ok: boolean; status: number; body: unknown }
+export type AdminResponse = { ok: boolean; status: number; body: unknown }
 
-async function adminFetch(path: string, init: RequestInit): Promise<AdminResponse> {
+/**
+ * One authenticated call to the product's auth API.
+ *
+ * `absolute` drops the `/admin` prefix: most of what this file does is administrative,
+ * but the single-sign-on handoff finishes on the ordinary `/verify` endpoint, and that is
+ * a deliberate difference rather than a path to paper over.
+ */
+export async function adminFetch(
+  path: string,
+  init: RequestInit & { absolute?: boolean },
+): Promise<AdminResponse> {
   const { url, key } = config()
-  const response = await fetch(`${url}/auth/v1/admin${path}`, {
+  const prefix = init.absolute ? '/auth/v1' : '/auth/v1/admin'
+  const response = await fetch(`${url}${prefix}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
