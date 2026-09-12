@@ -19,7 +19,7 @@ import { db } from '@/lib/db'
 import { cregisConfigured } from '@/lib/cregis'
 import { stripeConfigured } from '@/lib/stripe'
 import { pricingMode } from '@/lib/pricing-mode'
-import { productAuthConfigured, productAuthItemSlug } from '@/lib/product-auth'
+import { productAuthCheck, productAuthConfigured, productAuthItemSlug } from '@/lib/product-auth'
 import { trialSettings } from '@/lib/trial'
 import { isFallbackPackage, priceLine } from '@/lib/package-shape'
 import { defaultPackage, sellablePackages } from '@/lib/packages'
@@ -69,6 +69,9 @@ export default async function PaymentSettingsPage() {
   const stripeReady = stripeConfigured()
   const mode = await pricingMode()
   const trialState = await buildTrialState()
+  // Asked, not assumed. A key that is present but refused looks identical from here
+  // otherwise, and that is precisely the failure that hides.
+  const productAuth = await productAuthCheck()
   // Presence only. The URL itself is infrastructure and the secret is never surfaced.
   const relayConfigured = Boolean(process.env.CREGIS_RELAY_URL)
 
@@ -203,30 +206,66 @@ export default async function PaymentSettingsPage() {
         >
           <div className="rounded-lg border border-line bg-panel p-5">
             <p className="flex items-center gap-2 text-[15px] text-ink">
-              {productAuthConfigured() ? 'Connected' : 'Not connected'}
-              {productAuthConfigured() && (
+              {productAuth.state === 'working'
+                ? 'Working'
+                : productAuth.state === 'refused'
+                  ? 'Refused'
+                  : 'Not connected'}
+              {productAuth.state === 'working' && (
                 <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
                   live
                 </span>
               )}
-            </p>
-            <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-ink-dim">
-              {productAuthConfigured() ? (
-                <>
-                  Granting <span className="font-mono text-[12px]">{productAuthItemSlug()}</span>{' '}
-                  creates the account in the product with the same email and password, and access
-                  ending disables it there — their own data is kept, not deleted. A password changed
-                  on the account page follows through to the product.
-                </>
-              ) : (
-                <>
-                  Entitlements are still granted and recorded, but nobody can sign into the product
-                  with them. Set <span className="font-mono text-[12px]">RAMP_SUPABASE_URL</span> and{' '}
-                  <span className="font-mono text-[12px]">RAMP_SUPABASE_SECRET_KEY</span> in
-                  Vercel and redeploy; the nightly job then connects everyone already granted.
-                </>
+              {productAuth.state === 'refused' && (
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-down">
+                  {productAuth.status || 'unreachable'}
+                </span>
               )}
             </p>
+
+            {productAuth.state === 'working' && (
+              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-ink-dim">
+                Checked just now, not assumed. Granting{' '}
+                <span className="font-mono text-[12px]">{productAuthItemSlug()}</span> creates the
+                account in the product, and access ending disables it there — their own data is
+                kept, not deleted.
+              </p>
+            )}
+
+            {productAuth.state === 'refused' && (
+              <div className="mt-2 max-w-2xl text-[13px] leading-relaxed text-ink-dim">
+                <p>
+                  A key is set, but the product refused it:{' '}
+                  <span className="font-mono text-[12px] text-down">{productAuth.message}</span>
+                </p>
+                <p className="mt-2">
+                  {productAuth.status === 401 || productAuth.status === 403 ? (
+                    <>
+                      That is the key itself. The commonest cause is the{' '}
+                      <span className="font-mono text-[12px]">sb_publishable_…</span> key pasted
+                      where the <span className="font-mono text-[12px]">sb_secret_…</span> one
+                      belongs — they differ by a word and sit on the same page. Re-paste
+                      RAMP_SUPABASE_SECRET_KEY in Vercel and redeploy.
+                    </>
+                  ) : (
+                    <>
+                      Entitlements are still granted and recorded; nobody can sign in with them
+                      until this clears. The nightly job connects everyone already granted once it
+                      does.
+                    </>
+                  )}
+                </p>
+              </div>
+            )}
+
+            {productAuth.state === 'unconfigured' && (
+              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-ink-dim">
+                Entitlements are still granted and recorded, but nobody can sign into the product
+                with them. Set <span className="font-mono text-[12px]">RAMP_SUPABASE_URL</span> and{' '}
+                <span className="font-mono text-[12px]">RAMP_SUPABASE_SECRET_KEY</span> in Vercel
+                and redeploy; the nightly job then connects everyone already granted.
+              </p>
+            )}
           </div>
         </Section>
 

@@ -43,9 +43,46 @@ function config() {
   return { url, key, ready: isConfigured(url, key) }
 }
 
-/** Whether the bridge can do anything at all. Surfaced in the admin console. */
+/** Whether a key is present. Not whether it works — see `productAuthCheck`. */
 export function productAuthConfigured(): boolean {
   return config().ready
+}
+
+export type ProductAuthCheck =
+  | { state: 'unconfigured' }
+  | { state: 'working' }
+  | { state: 'refused'; status: number; message: string }
+
+/**
+ * Ask the product's auth system whether the key actually opens anything.
+ *
+ * Presence is not health, and reporting it as health is how a misconfiguration hides. The
+ * console said "Connected" on the strength of a non-empty environment variable while every
+ * signup was being refused 401 for a key that was the publishable one rather than the
+ * secret one — the two differ by a word and sit on the same page. Nobody could have seen
+ * that from the console, so nobody looked at the console.
+ *
+ * One listing call, asking for a single user, which is the cheapest authenticated thing
+ * the admin API will do.
+ */
+export async function productAuthCheck(): Promise<ProductAuthCheck> {
+  if (!config().ready) return { state: 'unconfigured' }
+  try {
+    const probe = await adminFetch('/users?page=1&per_page=1', { method: 'GET' })
+    if (probe.ok) return { state: 'working' }
+    const body = probe.body as { msg?: string; message?: string } | null
+    return {
+      state: 'refused',
+      status: probe.status,
+      message: body?.msg ?? body?.message ?? `HTTP ${probe.status}`,
+    }
+  } catch (error) {
+    return {
+      state: 'refused',
+      status: 0,
+      message: error instanceof Error ? error.message : 'could not be reached',
+    }
+  }
 }
 
 export function productAuthItemSlug(): string {
