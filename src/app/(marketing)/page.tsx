@@ -11,6 +11,7 @@ import { db } from '@/lib/db'
 import { pricingMode } from '@/lib/pricing-mode'
 import { sectionsPublic } from '@/lib/sections-mode'
 import { formatPrice, type PackageShape } from '@/lib/package-shape'
+import { cn } from '@/lib/utils'
 
 /**
  * The price quoted here is the default package's, falling back to the built-in plan when
@@ -390,15 +391,17 @@ async function ProductSection() {
         <div className="max-w-2xl">
           <span className="eyebrow">Product</span>
           <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
-            Software we built for our own desk.
+            Risk and trading systems for professional desks.
           </h2>
           <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
-            Written for the way we trade, and used on live books before it was offered to
-            anyone else.
+            Built for live books and reconciled against broker statements. What our own desk
+            runs on, available to yours.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-2">
+        {/* Two across is the shape; a third product flows onto its own column at
+            the wide breakpoint rather than pushing anything off the row. */}
+        <div className={cn('mt-10 grid gap-4 md:grid-cols-2', priced.length > 2 && 'lg:grid-cols-3')}>
           {priced.map((product) => (
             <a
               key={product.name}
