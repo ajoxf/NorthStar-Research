@@ -182,3 +182,43 @@ describe('query filtering', () => {
     assert.deepEqual(where.sectionId.in, ['sec_energy'])
   })
 })
+
+/**
+ * A product entitlement is not a research membership.
+ *
+ * The trial signup writes an Entitlement with an itemId and no sectionId. Every gate in
+ * the portal has to read that as "holds Nexus RAMP", never as "is a member of the desk".
+ */
+describe('an item entitlement opens no research doors', () => {
+  const trialist = sectionBuyer()
+  const rampTrial: EntitlementAccess = {
+    sectionId: null,
+    itemId: 'item_nexus_ramp',
+    status: 'active',
+    renewsAt: future,
+  }
+
+  it('does not let a trialist into the portal', () => {
+    assert.equal(hasAnyAccess(trialist, [rampTrial], now), false)
+  })
+
+  it('reads no reports, tagged or untagged', () => {
+    assert.equal(canReadReport(trialist, { sectionId: null }, [rampTrial], now), false)
+    assert.equal(canReadReport(trialist, { sectionId: 'sec_energy' }, [rampTrial], now), false)
+  })
+
+  it('filters the archive down to nothing', () => {
+    assert.deepEqual(readableSectionIds(trialist, [rampTrial], now), [])
+    assert.deepEqual(reportVisibilityWhere(trialist, [rampTrial], now), { sectionId: { in: [] } })
+  })
+
+  it('still lets them in once they also hold a section', () => {
+    // The combination matters: buying a section later must not be cancelled out by
+    // holding a product, and holding a product must not survive the section lapsing.
+    assert.equal(hasAnyAccess(trialist, [rampTrial, ent('sec_energy')], now), true)
+    assert.equal(
+      hasAnyAccess(trialist, [rampTrial, ent('sec_energy', { renewsAt: past })], now),
+      false,
+    )
+  })
+})

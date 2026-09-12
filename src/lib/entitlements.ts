@@ -108,6 +108,13 @@ export function isAllAccess(member: MemberAccess, now: Date = new Date()): boole
  *
  * True for all-access members and for anyone holding at least one live section. This is
  * the gate for the shell, the dashboard and the tools — not for any individual report.
+ *
+ * **A section, specifically.** An entitlement with a null section grants a product, not
+ * the desk's writing, and the portal this gates is the research portal. Counting one here
+ * would let a Nexus RAMP trialist through the archive door — to an empty room, because
+ * `canReadReport` and `reportVisibilityWhere` both exclude null sections, but standing in
+ * an empty archive being told their membership is active is not what they signed up for,
+ * and a gate that is only saved by the gate behind it is one change away from a leak.
  */
 export function hasAnyAccess(
   member: MemberAccess,
@@ -115,7 +122,9 @@ export function hasAnyAccess(
   now: Date = new Date(),
 ): boolean {
   if (isAllAccess(member, now)) return true
-  return entitlements.some((entitlement) => entitlementActive(entitlement, now))
+  return entitlements.some(
+    (entitlement) => entitlement.sectionId !== null && entitlementActive(entitlement, now),
+  )
 }
 
 /**
