@@ -9,7 +9,8 @@ import {
   extendedRenewal,
   grantFor,
   memberSubscriptionFields,
-} from '@/lib/section-grant'
+  monthsGranted,
+} from '@/lib/grant'
 import { addPeriod, isFallbackPackage } from '@/lib/package-shape'
 import { defaultPackage, packageById } from '@/lib/packages'
 import { hashPassword, startSession } from '@/lib/auth'
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
   // gifted code, which carries none, falls back to whatever is currently on sale.
   const codeGrant = await db.redemptionCode.findUnique({
     where: { code },
-    select: { packageId: true, sectionId: true },
+    select: { packageId: true, sectionId: true, grantMonths: true, grantsOpenEnded: true },
   })
   const chosen = codeGrant?.packageId ? await packageById(codeGrant.packageId) : null
   const pkg = chosen ?? (await defaultPackage())
@@ -111,7 +112,7 @@ export async function POST(request: Request) {
   const section = codeGrant?.sectionId
     ? await db.section.findUnique({
         where: { id: codeGrant.sectionId },
-        select: { id: true, interval: true },
+        select: { id: true, interval: true, itemId: true },
       })
     : null
 
@@ -134,7 +135,27 @@ export async function POST(request: Request) {
             : null,
         )
     : null
-  const grant = grantFor({ sectionId: codeGrant?.sectionId ?? null }, { interval: pkg.interval, packageId }, section)
+  /*
+   * What this package grants, beyond the legacy membership columns.
+   *
+   * Empty for the built-in fallback package, which has no row to hang items off, and empty
+   * for any package nobody has ticked anything onto — so this changes nothing until an
+   * operator deliberately says a package includes something.
+   */
+  const packageItemIds = packageId
+    ? (
+        await db.packageItem.findMany({
+          where: { packageId, item: { archivedAt: null } },
+          select: { itemId: true },
+        })
+      ).map((row) => row.itemId)
+    : []
+
+  const grant = grantFor(
+    { sectionId: codeGrant?.sectionId ?? null },
+    { interval: pkg.interval, packageId, itemIds: packageItemIds },
+    section,
+  )
 
   try {
     const member = await db.$transaction(async (tx) => {
@@ -166,6 +187,8 @@ export async function POST(request: Request) {
       // First paid period starts now. Stripe members then have this extended
       // automatically by each `invoice.paid`; Cregis members extend it by paying again.
       const renewsAt = addPeriod(grant.interval, now)
+      // How long this code grants, decided once and used by every entitlement it writes.
+      const months = monthsGranted(codeGrant ?? { grantMonths: null, grantsOpenEnded: false }, grant.interval)
       const subscription = memberSubscriptionFields(grant, now, renewsAt)
 
       const created = await tx.member.upsert({
@@ -211,16 +234,16 @@ export async function POST(request: Request) {
           where: { memberId_sectionId: { memberId: created.id, sectionId: entitlement.sectionId } },
           select: { renewsAt: true },
         })
-        const until = extendedRenewal(
-          held?.renewsAt ?? null,
-          (from) => addPeriod(grant.interval, from),
-          now,
-        )
+        const until = extendedRenewal(held ?? null, months, now)
         await tx.entitlement.upsert({
           where: { memberId_sectionId: { memberId: created.id, sectionId: entitlement.sectionId } },
           create: {
             memberId: created.id,
             sectionId: entitlement.sectionId,
+            // The same row carries the item, so a section grant writes one entitlement
+            // rather than one per column. Null until the backfill has run, which is the
+            // only state in which the item half of this is absent.
+            itemId: grant.itemIds[0] ?? null,
             status: 'active',
             startedAt: now,
             renewsAt: until,
@@ -231,6 +254,9 @@ export async function POST(request: Request) {
             status: 'active',
             renewsAt: until,
             cancelAtPeriodEnd: false,
+            // Fills in the item on a row written before the backfill, without ever
+            // clearing one that is already set.
+            ...(grant.itemIds[0] ? { itemId: grant.itemIds[0] } : {}),
             ...(paidOrder?.stripeSubscriptionId
               ? {
                   billingProvider: paidOrder.provider,
@@ -239,6 +265,52 @@ export async function POST(request: Request) {
               : {}),
           },
         })
+      }
+
+      /*
+       * Everything else the package grants.
+       *
+       * This is where a bundle becomes real: "Research + RAMP" is a package with two items
+       * ticked, and redeeming its code writes an entitlement for each, sharing this one
+       * period so they begin and lapse together.
+       *
+       * Only for an all-access grant — a section code's single item is already on the row
+       * above, and running this as well would write the same access twice.
+       *
+       * Inert until the backfill has run, because until there are items nothing can be
+       * ticked onto a package and this list is empty.
+       *
+       * Found by (memberId, itemId) rather than upserted on it: that uniqueness is added
+       * by hand after the backfill, so the key Prisma would need does not exist yet. Inside
+       * this transaction the read and the write cannot be raced by another redemption.
+       */
+      if (grant.kind === 'all_access') {
+        for (const itemId of grant.itemIds) {
+          const heldItem = await tx.entitlement.findFirst({
+            where: { memberId: created.id, itemId },
+            select: { id: true, renewsAt: true },
+          })
+          const itemUntil = extendedRenewal(heldItem, months, now)
+
+          if (heldItem) {
+            await tx.entitlement.update({
+              where: { id: heldItem.id },
+              data: { status: 'active', renewsAt: itemUntil, cancelAtPeriodEnd: false },
+            })
+          } else {
+            await tx.entitlement.create({
+              data: {
+                memberId: created.id,
+                itemId,
+                status: 'active',
+                startedAt: now,
+                renewsAt: itemUntil,
+                billingProvider: paidOrder?.provider ?? 'cregis',
+                stripeSubscriptionId: paidOrder?.stripeSubscriptionId ?? null,
+              },
+            })
+          }
+        }
       }
 
       await tx.redemptionCode.update({

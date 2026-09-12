@@ -5,7 +5,7 @@ import { getCurrentMember } from '@/lib/auth'
 import { isCodeExpired, normaliseCode } from '@/lib/codes'
 import { db } from '@/lib/db'
 import { addPeriod } from '@/lib/package-shape'
-import { extendedRenewal } from '@/lib/section-grant'
+import { extendedRenewal, monthsGranted } from '@/lib/grant'
 import { sectionName } from '@/lib/section-shape'
 
 export const runtime = 'nodejs'
@@ -77,7 +77,8 @@ export async function POST(request: Request) {
     select: { renewsAt: true },
   })
   // Extends from whichever is later, so redeeming early never costs the time already held.
-  const until = extendedRenewal(held?.renewsAt ?? null, (from) => addPeriod(section.interval, from), now)
+  // The row rather than its date: an open-ended comp must not be cut short by a code.
+  const until = extendedRenewal(held ?? null, monthsGranted(row, section.interval), now)
 
   try {
     await db.$transaction(async (tx) => {
