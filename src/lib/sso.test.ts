@@ -77,3 +77,21 @@ describe('the return trip', () => {
     }
   })
 })
+
+/**
+ * Admins, and why they are decided here rather than by the shared entitlement rule.
+ *
+ * The gate that lets them through is in the route, which computes `entitled`. What this
+ * pins is the shape of the decision: the refusal function itself knows nothing about
+ * roles, so no future change to research access can accidentally open the product.
+ */
+describe('an admin opening a product for support', () => {
+  it('passes as entitled, because the route says so', () => {
+    assert.equal(ssoRefusal({ ...ok, entitled: true, hasAccount: true }), null)
+  })
+
+  it('is still refused if the bridge is not configured', () => {
+    // Nothing about being an admin makes an unconfigured deployment work.
+    assert.equal(ssoRefusal({ ...ok, configured: false }), 'not_configured')
+  })
+})

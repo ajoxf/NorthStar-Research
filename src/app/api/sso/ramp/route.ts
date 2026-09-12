@@ -1,3 +1,5 @@
+import { randomBytes } from 'node:crypto'
+
 import { NextResponse } from 'next/server'
 
 import { getCurrentMember } from '@/lib/auth'
@@ -64,7 +66,15 @@ export async function GET() {
         where: { memberId: member.id, itemId: item.id },
         select: { status: true, renewsAt: true },
       })
-      entitled = entitlement ? entitlementActive(entitlement) : false
+      /*
+       * Admins pass the gate without an entitlement, so support can open the product a
+       * customer is stuck in. Deliberately decided here and not by the shared
+       * entitlement rule, which stays strict: a research membership must never become
+       * product access, and `hasItem` keeping its own admin exception is about reading
+       * data, not about being handed a session.
+       */
+      entitled =
+        member.role === 'admin' || (entitlement ? entitlementActive(entitlement) : false)
 
       /*
        * Provision on the way through if it has not happened yet.
@@ -82,7 +92,19 @@ export async function GET() {
         })
 
         if (!account || account.disabledAt) {
-          await syncProductAccess(member.id, { itemSlug: slug })
+          /*
+           * A password only so the account can be created at all.
+           *
+           * Ordinarily the portal sets the password somebody chose, so they can also
+           * sign in directly. Nobody is choosing one here — an admin has no product
+           * subscription and a re-provisioned customer is mid-click — and with the
+           * handoff in place a password is not how either of them gets in. Random, and
+           * deliberately never shown: whoever needs one can set it from the account page.
+           */
+          await syncProductAccess(member.id, {
+            itemSlug: slug,
+            password: randomBytes(24).toString('base64url'),
+          })
           const after = await db.productAccount.findUnique({
             where: { memberId_itemId: { memberId: member.id, itemId: item.id } },
             select: { disabledAt: true },

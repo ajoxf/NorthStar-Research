@@ -144,7 +144,7 @@ export async function syncProductAccess(
   try {
     const [item, member] = await Promise.all([
       db.item.findUnique({ where: { slug }, select: { id: true } }),
-      db.member.findUnique({ where: { id: memberId }, select: { email: true } }),
+      db.member.findUnique({ where: { id: memberId }, select: { email: true, role: true } }),
     ])
     if (!item || !member) return { action: 'skipped', reason: 'no_item' }
 
@@ -159,7 +159,17 @@ export async function syncProductAccess(
       }),
     ])
 
-    const holdsItem = entitlement ? entitlementActive(entitlement) : false
+    /*
+     * An admin counts as holding every product.
+     *
+     * Not a convenience: without it the nightly reconciliation would *disable* an
+     * admin's product account, because they hold no entitlement and never will. Support
+     * is the reason they have one at all — being unable to open the thing a customer is
+     * stuck in makes the console decorative — and an admin who can already read the
+     * database is not being granted anything they did not have.
+     */
+    const holdsItem =
+      member.role === 'admin' || (entitlement ? entitlementActive(entitlement) : false)
     const password = options.password?.trim() || null
     const action = syncAction({ holdsItem, account, password })
     if (action === 'none' || action === 'needs_password') return { action }
