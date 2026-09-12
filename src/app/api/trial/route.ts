@@ -34,12 +34,34 @@ const fail = (error: string, status = 400) => NextResponse.json({ error }, { sta
 export async function POST(request: Request) {
   const settings = await trialSettings()
 
-  // Read before anything is written, so a refusal cannot leave half an account behind.
+  /*
+   * Read before anything is written, so a refusal cannot leave half an account behind.
+   *
+   * The section is loaded alongside, because a trial of a research section has to write
+   * `sectionId` as well as `itemId`. Report access is matched on the section — that is
+   * what stops a single-section buyer reading the whole back catalogue — so an
+   * item-only entitlement would let somebody through the door into an empty archive.
+   *
+   * A section carries its own `archivedAt`, separate from the item's. Either one being
+   * set means the offer is off the shelf.
+   */
   const item = await db.item.findUnique({
     where: { slug: settings.itemSlug },
-    select: { id: true, name: true, archivedAt: true },
+    select: {
+      id: true,
+      name: true,
+      kind: true,
+      archivedAt: true,
+      section: { select: { id: true, archivedAt: true } },
+    },
   })
-  const itemExists = Boolean(item && !item.archivedAt)
+  const sectionId = item?.section?.id ?? null
+  const itemExists = Boolean(
+    item &&
+      !item.archivedAt &&
+      // A section item with no section row is a half-finished backfill, not an offer.
+      (item.kind !== 'section' || (item.section && !item.section.archivedAt)),
+  )
 
   const signedIn = await getCurrentMember()
 
@@ -53,8 +75,19 @@ export async function POST(request: Request) {
   const existing = signedIn ?? null
   let heldEver = false
   if (existing && item) {
+    /*
+     * Either half counts. An entitlement written before items existed carries only a
+     * section, so asking about the item alone would offer a free trial of a section
+     * somebody already subscribes to — and then fail on the unique key, reported as a
+     * refusal nobody can act on.
+     */
     heldEver =
-      (await db.entitlement.count({ where: { memberId: existing.id, itemId: item.id } })) > 0
+      (await db.entitlement.count({
+        where: {
+          memberId: existing.id,
+          OR: [{ itemId: item.id }, ...(sectionId ? [{ sectionId }] : [])],
+        },
+      })) > 0
   }
 
   // Signed out: everything hangs off the email, so parse the body first.
@@ -115,6 +148,9 @@ export async function POST(request: Request) {
       data: {
         memberId: member.id,
         itemId: item.id,
+        // Set for a section, null for a product. The one field that decides whether this
+        // entitlement can read anything.
+        sectionId,
         status: 'active',
         startedAt: now,
         renewsAt: endsAt,
@@ -135,7 +171,10 @@ export async function POST(request: Request) {
    * that was granted is granted whether or not the product's auth system answered. The
    * nightly job reconciles, and the outcome is returned for the logs.
    */
-  const access = await syncProductAccess(member.id, { password: parsed?.password ?? null })
+  const access = await syncProductAccess(member.id, {
+    password: parsed?.password ?? null,
+    itemSlug: settings.itemSlug,
+  })
 
   if (!existing) await startSession(member)
 

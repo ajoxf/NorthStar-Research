@@ -11,7 +11,7 @@ export type TrialState = {
   enabled: boolean
   days: number
   itemSlug: string
-  products: { slug: string; name: string }[]
+  grantable: { slug: string; name: string; kind: 'product' | 'section' }[]
   /** Whether a granted entitlement actually opens the product's own sign-in. */
   productAuthReady: boolean
 }
@@ -32,7 +32,10 @@ export function TrialForm({ state }: { state: TrialState }) {
   const [itemSlug, setItemSlug] = React.useState(state.itemSlug)
   const [pending, setPending] = React.useState(false)
 
-  const noProducts = state.products.length === 0
+  const products = state.grantable.filter((entry) => entry.kind === 'product')
+  const sections = state.grantable.filter((entry) => entry.kind === 'section')
+  const nothingToGrant = state.grantable.length === 0
+  const grantingSection = sections.some((entry) => entry.slug === itemSlug)
 
   async function save(next: { enabled: boolean }) {
     setPending(true)
@@ -87,7 +90,7 @@ export function TrialForm({ state }: { state: TrialState }) {
         <Button
           type="button"
           variant={enabled ? 'secondary' : 'primary'}
-          disabled={pending || noProducts}
+          disabled={pending || nothingToGrant}
           onClick={() => save({ enabled: !enabled })}
         >
           {pending && <Spinner />}
@@ -101,15 +104,28 @@ export function TrialForm({ state }: { state: TrialState }) {
           <Select
             id="trial-item"
             value={itemSlug}
-            disabled={noProducts}
+            disabled={nothingToGrant}
             onChange={(event) => setItemSlug(event.target.value)}
           >
-            {noProducts && <option value={itemSlug}>No products yet</option>}
-            {state.products.map((product) => (
-              <option key={product.slug} value={product.slug}>
-                {product.name}
-              </option>
-            ))}
+            {nothingToGrant && <option value={itemSlug}>Nothing to grant yet</option>}
+            {products.length > 0 && (
+              <optgroup label="Products">
+                {products.map((entry) => (
+                  <option key={entry.slug} value={entry.slug}>
+                    {entry.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {sections.length > 0 && (
+              <optgroup label="Research sections">
+                {sections.map((entry) => (
+                  <option key={entry.slug} value={entry.slug}>
+                    {entry.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </Select>
         </div>
 
@@ -135,7 +151,7 @@ export function TrialForm({ state }: { state: TrialState }) {
           type="button"
           variant="secondary"
           size="sm"
-          disabled={pending || noProducts}
+          disabled={pending || nothingToGrant}
           onClick={() => save({ enabled })}
         >
           {pending && <Spinner />}
@@ -146,7 +162,16 @@ export function TrialForm({ state }: { state: TrialState }) {
         </span>
       </div>
 
-      {enabled && !state.productAuthReady && (
+      {grantingSection && (
+        <p className="mt-4 rounded-lg border border-line bg-panel-2 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink-dim">
+          A research section, not software. The trialist reads that section's reports for the
+          period and keeps whatever they have read — unlike a product, which stops being useful
+          the day access ends. They get that section only: no other section, and none of the
+          untagged back catalogue.
+        </p>
+      )}
+
+      {enabled && !grantingSection && !state.productAuthReady && (
         <p className="mt-4 rounded-lg border border-down/35 bg-down/10 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink">
           Trials are open, but the sign-in bridge is not configured — so a trialist gets an
           entitlement here and cannot sign into the product. Set RAMP_SUPABASE_URL and
@@ -155,10 +180,9 @@ export function TrialForm({ state }: { state: TrialState }) {
         </p>
       )}
 
-      {noProducts && (
+      {nothingToGrant && (
         <p className="mt-4 text-[13px] leading-relaxed text-down">
-          No products exist yet, so there is nothing a trial could grant. Run the item backfill
-          first.
+          Nothing exists yet that a trial could grant. Run the item backfill first.
         </p>
       )}
     </div>

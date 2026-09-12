@@ -36,9 +36,20 @@ export default async function TrialPage() {
 
   const item = await db.item.findUnique({
     where: { slug: settings.itemSlug },
-    select: { name: true, archivedAt: true },
+    select: {
+      name: true,
+      kind: true,
+      archivedAt: true,
+      section: { select: { archivedAt: true } },
+    },
   })
-  if (!item || item.archivedAt) notFound()
+  // Archived either as an item or, for a research section, as a section. The two flags are
+  // separate columns, and an offer that is off the shelf by either is not on sale here.
+  const usable =
+    item &&
+    !item.archivedAt &&
+    (item.kind !== 'section' || (item.section && !item.section.archivedAt))
+  if (!usable) notFound()
 
   const member = await getCurrentMember()
   if (member) redirect(member.role === 'admin' ? '/admin' : '/dashboard')
@@ -50,8 +61,9 @@ export default async function TrialPage() {
         {settings.days} days of {item.name}
       </h1>
       <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
-        The whole thing, not a cut-down version. Import your own fills and see your real book —
-        that is the only way to judge it.
+        {item.kind === 'section'
+          ? 'Every report in it, including editions published before today. Read it properly before you decide — a summary of research is not research.'
+          : 'The whole thing, not a cut-down version. Import your own fills and see your real book — that is the only way to judge it.'}
       </p>
 
       <TrialForm days={settings.days} />

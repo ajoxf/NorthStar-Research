@@ -472,20 +472,34 @@ async function buildCregisFormState(): Promise<CregisFormState> {
 }
 
 /**
- * What the trial form needs: the current settings, and the products it could grant.
+ * What the trial form needs: the current settings, and everything it could grant.
  *
- * Only products — a section is research access, which is sold as a membership and not
- * something a product trial grants.
+ * Products and research sections both, grouped in the form so the two are not mistaken
+ * for each other — they are quite different offers. A section trial hands over a
+ * fortnight of somebody's published work, which the reader keeps; a product trial stops
+ * being useful the day it ends.
+ *
+ * A section is excluded when either it or its item is archived. The two flags are
+ * separate columns and an archived section is off the shelf whatever its item says.
  */
 async function buildTrialState(): Promise<TrialState> {
-  const [settings, products] = await Promise.all([
+  const [settings, items] = await Promise.all([
     trialSettings(),
     db.item.findMany({
-      where: { kind: 'product', archivedAt: null },
-      select: { slug: true, name: true },
-      orderBy: { name: 'asc' },
+      where: { archivedAt: null },
+      select: {
+        slug: true,
+        name: true,
+        kind: true,
+        section: { select: { archivedAt: true } },
+      },
+      orderBy: [{ kind: 'asc' }, { name: 'asc' }],
     }),
   ])
 
-  return { ...settings, products, productAuthReady: productAuthConfigured() }
+  const grantable = items
+    .filter((item) => item.kind !== 'section' || (item.section && !item.section.archivedAt))
+    .map((item) => ({ slug: item.slug, name: item.name, kind: item.kind }))
+
+  return { ...settings, grantable, productAuthReady: productAuthConfigured() }
 }

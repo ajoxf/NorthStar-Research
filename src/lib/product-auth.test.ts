@@ -113,3 +113,12 @@ describe('an account that was already theirs', () => {
     )
   })
 })
+
+describe('the bridge only applies to what has a sign-in elsewhere', () => {
+  it('is decided by the item, not by the caller', () => {
+    // A section is read on this site and has no account to create anywhere. The guard for
+    // that lives in product-auth.ts, which needs the database; what is worth pinning here
+    // is that the decision below never looks at who called it — only at what is held.
+    assert.equal(syncAction({ holdsItem: false, account: null, password: 'chosen' }), 'none')
+  })
+})

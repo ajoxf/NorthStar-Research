@@ -47,11 +47,17 @@ export async function PATCH(request: Request) {
    */
   const item = await db.item.findUnique({
     where: { slug: parsed.data.itemSlug },
-    select: { archivedAt: true },
+    select: { archivedAt: true, kind: true, section: { select: { archivedAt: true } } },
   })
-  if (!item || item.archivedAt) {
+  // A section carries its own archived flag, and a section item with no section row is a
+  // half-finished backfill. Either way there is nothing to offer.
+  const usable =
+    item &&
+    !item.archivedAt &&
+    (item.kind !== 'section' || (item.section && !item.section.archivedAt))
+  if (!usable) {
     return NextResponse.json(
-      { error: 'That product does not exist, or has been archived.' },
+      { error: 'That does not exist, or has been archived.' },
       { status: 400 },
     )
   }

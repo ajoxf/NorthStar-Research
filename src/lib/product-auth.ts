@@ -94,7 +94,7 @@ async function findUserIdByEmail(email: string): Promise<string | null> {
 export type SyncOutcome = {
   action: SyncAction | 'skipped'
   /** Why nothing happened, when nothing happened. */
-  reason?: 'not_configured' | 'no_item' | 'failed'
+  reason?: 'not_configured' | 'not_bridged' | 'no_item' | 'failed'
   error?: string
 }
 
@@ -119,6 +119,16 @@ export async function syncProductAccess(
   if (!ready) return { action: 'skipped', reason: 'not_configured' }
 
   const slug = options.itemSlug ?? RAMP_ITEM_SLUG
+
+  /*
+   * Only the one item that actually has a sign-in elsewhere.
+   *
+   * Callers pass whatever they have just granted, and most of it is research — a section
+   * is read on this site and has no account to create anywhere. Without this, granting a
+   * section trial would try to create a RAMP login for somebody who is not entitled to
+   * RAMP. When a second product arrives this becomes a lookup rather than a comparison.
+   */
+  if (slug !== RAMP_ITEM_SLUG) return { action: 'skipped', reason: 'not_bridged' }
 
   try {
     const [item, member] = await Promise.all([

@@ -222,3 +222,43 @@ describe('an item entitlement opens no research doors', () => {
     )
   })
 })
+
+/**
+ * A trialled research section behaves exactly like a bought one.
+ *
+ * The trial writes `sectionId` as well as `itemId` precisely so this is true. Without the
+ * section the entitlement would pass the portal gate and read nothing — access that looks
+ * granted and is not.
+ */
+describe('a section trial reads that section and no more', () => {
+  const trialist = sectionBuyer()
+  const trial: EntitlementAccess = {
+    sectionId: 'sec_energy',
+    itemId: 'item_section_energy',
+    status: 'active',
+    renewsAt: future,
+  }
+
+  it('opens the portal', () => {
+    assert.equal(hasAnyAccess(trialist, [trial], now), true)
+  })
+
+  it('reads its own section', () => {
+    assert.equal(canReadReport(trialist, { sectionId: 'sec_energy' }, [trial], now), true)
+  })
+
+  it('reads no other section, and none of the untagged back catalogue', () => {
+    assert.equal(canReadReport(trialist, { sectionId: 'sec_indices' }, [trial], now), false)
+    assert.equal(canReadReport(trialist, { sectionId: null }, [trial], now), false)
+  })
+
+  it('closes on the day it ends, without waiting for the nightly job', () => {
+    const lapsed = { ...trial, renewsAt: past }
+    assert.equal(hasAnyAccess(trialist, [lapsed], now), false)
+    assert.equal(canReadReport(trialist, { sectionId: 'sec_energy' }, [lapsed], now), false)
+  })
+
+  it('filters the archive to that one section', () => {
+    assert.deepEqual(readableSectionIds(trialist, [trial], now), ['sec_energy'])
+  })
+})
