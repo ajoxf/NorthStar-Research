@@ -222,7 +222,7 @@ export default async function PaymentSettingsPage() {
                 <>
                   Entitlements are still granted and recorded, but nobody can sign into the product
                   with them. Set <span className="font-mono text-[12px]">RAMP_SUPABASE_URL</span> and{' '}
-                  <span className="font-mono text-[12px]">RAMP_SUPABASE_SERVICE_ROLE_KEY</span> in
+                  <span className="font-mono text-[12px]">RAMP_SUPABASE_SECRET_KEY</span> in
                   Vercel and redeploy; the nightly job then connects everyone already granted.
                 </>
               )}

@@ -23,9 +23,23 @@ export * from '@/lib/product-auth-shape'
 
 const RAMP_ITEM_SLUG = process.env.RAMP_ITEM_SLUG?.trim() || 'nexus-ramp'
 
+/*
+ * Either key Supabase offers works here.
+ *
+ * `sb_secret_...` is the current one and the one to prefer: it rotates on its own without
+ * touching the client key or signing anybody out, and it is refused outright if it ever
+ * turns up in a browser. The legacy `service_role` JWT still works and does until the end
+ * of 2026, so both names are read — a deployment that already has one keeps working, and
+ * the name on the variable matches the key that is actually in it either way.
+ *
+ * Both are sent on the `apikey` and `Authorization` headers, which is what the gateway
+ * expects: the new keys are not JWTs and would be rejected on `Authorization` alone.
+ */
 function config() {
   const url = process.env.RAMP_SUPABASE_URL?.trim().replace(/\/$/, '')
-  const key = process.env.RAMP_SUPABASE_SERVICE_ROLE_KEY?.trim()
+  const key =
+    process.env.RAMP_SUPABASE_SECRET_KEY?.trim() ||
+    process.env.RAMP_SUPABASE_SERVICE_ROLE_KEY?.trim()
   return { url, key, ready: isConfigured(url, key) }
 }
 
