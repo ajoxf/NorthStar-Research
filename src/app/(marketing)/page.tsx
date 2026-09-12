@@ -7,6 +7,7 @@ import { HeroMedia } from '@/components/hero-media'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { defaultPackage, packageBySlug } from '@/lib/packages'
+import { trialSettings } from '@/lib/trial'
 import { db } from '@/lib/db'
 import { pricingMode } from '@/lib/pricing-mode'
 import { sectionsPublic } from '@/lib/sections-mode'
@@ -373,6 +374,9 @@ const PRODUCTS = [
 ]
 
 async function ProductSection() {
+  // Advertised only while trials are actually open, and at whatever length is set — a
+  // "14 days free" badge above a signup page that 404s is worse than no badge at all.
+  const trial = await trialSettings()
   const priced = await Promise.all(
     PRODUCTS.map(async (product) => {
       const pkg = await packageBySlug(product.packageSlug)
@@ -381,6 +385,7 @@ async function ProductSection() {
         priceCents: pkg?.priceCents ?? product.fallbackPriceCents,
         currency: pkg?.currency ?? 'USD',
         interval: pkg?.interval ?? 'month',
+        trialDays: trial.enabled && trial.itemSlug === product.packageSlug ? trial.days : null,
       }
     }),
   )
@@ -405,9 +410,9 @@ async function ProductSection() {
           {priced.map((product) => (
             <a
               key={product.name}
-              href={product.href}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={product.trialDays ? '/trial' : product.href}
+              // Into the application in a new tab; onto our own signup page in this one.
+              {...(product.trialDays ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
               className="group flex flex-col rounded-lg border border-line bg-panel p-6 transition-colors hover:border-accent/40 sm:p-7"
             >
               <div className="flex items-start justify-between gap-4">
@@ -419,10 +424,16 @@ async function ProductSection() {
                     {product.subtitle}
                   </p>
                 </div>
-                <ArrowUpRight
-                  className="h-5 w-5 shrink-0 text-ink-dim transition-colors group-hover:text-accent"
-                  aria-hidden
-                />
+                {product.trialDays ? (
+                  <Badge tone="accent" className="shrink-0">
+                    {product.trialDays} days free
+                  </Badge>
+                ) : (
+                  <ArrowUpRight
+                    className="h-5 w-5 shrink-0 text-ink-dim transition-colors group-hover:text-accent"
+                    aria-hidden
+                  />
+                )}
               </div>
 
               <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">{product.blurb}</p>
@@ -437,14 +448,28 @@ async function ProductSection() {
               </ul>
 
               <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-t border-line pt-5">
-                <p className="text-[15px] text-ink">
-                  <span className="font-display text-[26px] tracking-tight">
-                    {formatPrice(product.priceCents, product.currency)}
-                  </span>
-                  <span className="text-ink-dim"> / {product.interval === 'year' ? 'year' : 'month'}</span>
-                </p>
+                {product.trialDays ? (
+                  <p className="text-[15px] text-ink">
+                    <span className="font-display text-[26px] tracking-tight">Free</span>
+                    <span className="text-ink-dim">
+                      {' '}
+                      for {product.trialDays} days, then{' '}
+                      {formatPrice(product.priceCents, product.currency)}/
+                      {product.interval === 'year' ? 'yr' : 'mo'}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-[15px] text-ink">
+                    <span className="font-display text-[26px] tracking-tight">
+                      {formatPrice(product.priceCents, product.currency)}
+                    </span>
+                    <span className="text-ink-dim"> / {product.interval === 'year' ? 'year' : 'month'}</span>
+                  </p>
+                )}
                 <span className="inline-flex items-center gap-1.5 text-[14px] font-medium text-accent">
-                  Open {product.name.split(' · ')[1] ?? product.name}
+                  {product.trialDays
+                    ? 'Start free trial'
+                    : `Open ${product.name.split(' · ')[1] ?? product.name}`}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
                 </span>
               </div>
