@@ -1,7 +1,6 @@
 import Link from 'next/link'
-import { Archive, ArrowRight, Check, FileText, Lock, Smartphone } from 'lucide-react'
+import { Archive, ArrowRight, Check, FileText, Smartphone } from 'lucide-react'
 
-import { SampleReportForm } from '@/app/(marketing)/sample-report-form'
 import { AuthorAvatar } from '@/components/author-avatar'
 import { HeroMedia } from '@/components/hero-media'
 import { ButtonLink } from '@/components/ui/button'
@@ -82,7 +81,6 @@ export default async function LandingPage() {
       <Hero plan={plan} trial={trial} hasSections={authors.length > 0} />
       {covered.length > 0 ? <TopicCoverage topics={covered} /> : <CoverageSection />}
       {authors.length > 0 && <ContributorsSection authors={authors} />}
-      <SampleReportSection />
       <PricingSection plan={plan} trial={trial} cheapestSectionCents={cheapest} />
     </>
   )
@@ -277,29 +275,35 @@ function Hero({
             find out what it costs — that is the same wait a pricing request used to impose,
             dressed differently.
           */}
-          <div className="mt-9 flex flex-wrap items-center gap-3">
-            {trial ? (
-              <>
-                <ButtonLink href="/trial" size="lg">
-                  Start a free {trial.days}-day trial
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </ButtonLink>
-                <ButtonLink href="/join" size="lg" variant="secondary">
-                  {`Join — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)}`}
-                </ButtonLink>
-              </>
-            ) : (
-              <>
-                <ButtonLink href="/join" size="lg">
-                  {`Become a member — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)} intro`}
-                  <ArrowRight className="h-4 w-4" aria-hidden />
-                </ButtonLink>
-                <ButtonLink href="#sample-report" size="lg" variant="secondary">
-                  Request a sample report
-                </ButtonLink>
-              </>
-            )}
-          </div>
+          {/*
+            Two tracks of equal width, rather than two buttons each sized to its own label.
+
+            A grid and not flex-wrap, because the labels are different lengths and always
+            will be — the trial names a number of days an operator can change. Equal `1fr`
+            tracks in a shrink-to-fit grid settle at the wider of the two whatever those
+            labels say, so nobody has to keep a hand-tuned width in step with the copy.
+
+            One column below `sm`, where side by side would either wrap mid-label or force
+            a horizontal scroll on a phone.
+          */}
+          {trial ? (
+            <div className="mt-9 grid max-w-md grid-cols-1 gap-3 sm:inline-grid sm:max-w-none sm:grid-cols-2">
+              <ButtonLink href="/trial" size="lg">
+                Start a free {trial.days}-day trial
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </ButtonLink>
+              <ButtonLink href="/join" size="lg" variant="secondary">
+                {`Join — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)}`}
+              </ButtonLink>
+            </div>
+          ) : (
+            <div className="mt-9">
+              <ButtonLink href="/join" size="lg">
+                {`Become a member — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)} intro`}
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </ButtonLink>
+            </div>
+          )}
         </div>
       </div>
     </section>
@@ -352,43 +356,6 @@ function CoverageSection() {
               </p>
             </div>
           ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function SampleReportSection() {
-  return (
-    <section id="sample-report" className="border-b border-line bg-panel-2/40">
-      <div className="mx-auto max-w-6xl px-5 py-20">
-        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,460px)] lg:items-start">
-          <div>
-            <span className="eyebrow">See the work first</span>
-            <h2 className="mt-3 max-w-lg text-3xl leading-tight text-ink sm:text-4xl">
-              Ask for a sample before you subscribe.
-            </h2>
-            <p className="mt-5 max-w-lg text-[16px] leading-relaxed text-ink-dim">
-              Tell us what you trade and we will send you a recent edition. Read it, and decide
-              for yourself whether the work is worth paying for.
-            </p>
-
-            {/* One point, not a list. The watermarking and mobile-rendering claims that
-                used to sit beside it were removed; a two-item list with the survivor of a
-                three-item one reads as something half-finished, so this stands alone. */}
-            <div className="mt-8 flex gap-3.5">
-              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
-              <div>
-                <h3 className="font-display text-[17px] text-ink">Members-only, in every channel</h3>
-                <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">
-                  Every email carries a link, never the research. Opening it always requires a
-                  signed-in member session.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <SampleReportForm />
         </div>
       </div>
     </section>
