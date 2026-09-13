@@ -19,6 +19,7 @@ import { cregisConfigured } from '@/lib/cregis'
 import { stripeConfigured } from '@/lib/stripe'
 import {
   migrateLegacyTrialSettings,
+  TRIAL_DEFAULTS,
   RESEARCH_TRIAL_NAME,
   RESEARCH_TRIAL_SLUG,
   researchTrialOffer,
@@ -467,6 +468,7 @@ async function buildTrialState(): Promise<TrialState> {
       kind: item.kind,
       trialEnabled: item.trialEnabled,
       trialDays: item.trialDays,
+      defaultDays: settings.days,
     }))
 
   /*
@@ -483,10 +485,11 @@ async function buildTrialState(): Promise<TrialState> {
     kind: 'research',
     trialEnabled: research !== null,
     trialDays: research?.days ?? null,
+    // Its own fortnight, not the section default — see researchTrialOffer.
+    defaultDays: TRIAL_DEFAULTS.days,
   }
 
   return {
-    defaultDays: settings.days,
     grantable: [researchRow, ...grantable],
   }
 }

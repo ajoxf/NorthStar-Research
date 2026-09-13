@@ -18,13 +18,20 @@ export type TrialItem = {
    */
   kind: 'product' | 'section' | 'research'
   trialEnabled: boolean
-  /** Null means "use the house default". */
+  /** Null means "use the default below". */
   trialDays: number | null
+  /**
+   * What a blank box actually gives THIS row.
+   *
+   * Per row rather than one figure for the table, because the two kinds do not share a
+   * default: a section falls back to the house setting an operator can change, and the
+   * membership falls back to a fortnight fixed in code. One placeholder for both was a
+   * box that promised a number the save would not use.
+   */
+  defaultDays: number
 }
 
 export type TrialState = {
-  /** Applied to any item that has set no length of its own. */
-  defaultDays: number
   grantable: TrialItem[]
 }
 
@@ -68,7 +75,6 @@ export function TrialForm({ state }: { state: TrialState }) {
           <TrialRow
             key={item.slug}
             item={item}
-            defaultDays={state.defaultDays}
             onSaved={(next) =>
               setItems((all) => all.map((one) => (one.slug === next.slug ? next : one)))
             }
@@ -85,15 +91,7 @@ export function TrialForm({ state }: { state: TrialState }) {
   )
 }
 
-function TrialRow({
-  item,
-  defaultDays,
-  onSaved,
-}: {
-  item: TrialItem
-  defaultDays: number
-  onSaved: (next: TrialItem) => void
-}) {
+function TrialRow({ item, onSaved }: { item: TrialItem; onSaved: (next: TrialItem) => void }) {
   const router = useRouter()
   const toast = useToast()
   const [days, setDays] = React.useState(item.trialDays === null ? '' : String(item.trialDays))
@@ -121,7 +119,7 @@ function TrialRow({
       onSaved({ ...item, trialEnabled: next.enabled, trialDays: data?.item?.trialDays ?? null })
       toast(
         next.enabled
-          ? `${item.name}: trial open — ${data?.item?.trialDays ?? defaultDays} days`
+          ? `${item.name}: trial open — ${data?.item?.trialDays ?? item.defaultDays} days`
           : `${item.name}: trial closed`,
       )
       router.refresh()
@@ -145,7 +143,7 @@ function TrialRow({
           className="h-9 w-20"
           inputMode="numeric"
           value={days}
-          placeholder={String(defaultDays)}
+          placeholder={String(item.defaultDays)}
           onChange={(event) => setDays(event.target.value)}
           disabled={pending}
           aria-label={`Trial length for ${item.name}, in days`}
