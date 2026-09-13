@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 
 import { LoginForm } from '@/app/(auth)/login/login-form'
 import { getCurrentMember } from '@/lib/auth'
-import { trialSettings } from '@/lib/trial'
+import { trialOffers } from '@/lib/trial'
 
 export const metadata: Metadata = { title: 'Sign in' }
 
@@ -34,8 +34,12 @@ export default async function LoginPage({
 
   if (member) redirect(next ?? (member.role === 'admin' ? '/admin' : '/dashboard'))
 
-  // Offered only while trials are actually open, so this never points at a page that 404s.
-  const trial = await trialSettings()
+  /*
+   * Offered only while a trial is actually open, so this never points at a page that 404s.
+   * Several can run at once now; /trial shows the one when there is one and asks which
+   * when there are more, so this stays a single link either way.
+   */
+  const offers = await trialOffers()
 
   return (
     <div className="w-full max-w-sm animate-fade-up">
@@ -72,11 +76,13 @@ export default async function LoginPage({
           </Link>
         </p>
 
-        {trial.enabled && (
+        {offers.length > 0 && (
           <p>
             No account at all?{' '}
             <Link href="/trial" className="text-accent underline underline-offset-4">
-              Start a {trial.days}-day free trial
+              {offers.length === 1
+                ? `Start a ${offers[0].days}-day free trial`
+                : 'Start a free trial'}
             </Link>
           </p>
         )}

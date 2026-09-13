@@ -30,6 +30,14 @@
 export const TRIAL_ENABLED_KEY = 'trial.enabled'
 export const TRIAL_DAYS_KEY = 'trial.days'
 export const TRIAL_ITEM_KEY = 'trial.itemSlug'
+/**
+ * Set once, when the single global trial is carried onto the item it named.
+ *
+ * Its own flag rather than inferring from the item columns: "no item has trials on" is
+ * also the ordinary state of having closed the last one, and reading that as "not migrated
+ * yet" would re-open a trial every time an operator turned one off.
+ */
+export const TRIAL_MIGRATED_KEY = 'trial.migratedToItems'
 
 /** What a trial grants when nobody has said otherwise. */
 export const TRIAL_DEFAULTS = { days: 14, itemSlug: 'nexus-ramp' } as const

@@ -18,7 +18,15 @@ import { Button, Spinner } from '@/components/ui/button'
  * never held the item. That last part is judged on ever, not currently, so an expired
  * trial does not quietly reappear as a fresh offer.
  */
-export function TrialOffer({ days, itemName }: { days: number; itemName: string }) {
+export function TrialOffer({
+  days,
+  itemName,
+  itemSlug,
+}: {
+  days: number
+  itemName: string
+  itemSlug: string
+}) {
   const router = useRouter()
   const [pending, setPending] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
@@ -27,8 +35,19 @@ export function TrialOffer({ days, itemName }: { days: number; itemName: string 
     setPending(true)
     setError(null)
     try {
-      // No body: the route reads the session and grants the trial to that member.
-      const response = await fetch('/api/trial', { method: 'POST' })
+      /*
+       * The session says who; the slug says what.
+       *
+       * This used to post no body at all, which worked while exactly one trial could be
+       * open. With several running independently, an empty body would make the server
+       * guess — and refuse rather than guess, correctly — so the button names its own
+       * product. Still no email or password: the route reads the session for those.
+       */
+      const response = await fetch('/api/trial', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemSlug }),
+      })
       const body = await response.json().catch(() => ({}))
       if (!response.ok) {
         setError(body.error ?? 'That did not work. Please try again.')
@@ -43,7 +62,7 @@ export function TrialOffer({ days, itemName }: { days: number; itemName: string 
   }
 
   return (
-    <div className="mb-8 rounded-lg border border-accent/35 bg-accent/[0.06] px-5 py-4">
+    <div className="rounded-lg border border-accent/35 bg-accent/[0.06] px-5 py-4">
       <p className="text-[15px] text-ink">
         Try {itemName} free for {days} days
       </p>

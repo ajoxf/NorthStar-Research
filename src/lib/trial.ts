@@ -2,11 +2,12 @@ import 'server-only'
 
 import { db } from '@/lib/db'
 import { readSettings, writeSetting } from '@/lib/secure-settings'
-import { brandForItem, offerUsable, type Brand } from '@/lib/trial-offer-shape'
+import { brandForItem, itemTrial, offerUsable, type Brand } from '@/lib/trial-offer-shape'
 import {
   TRIAL_DAYS_KEY,
   TRIAL_ENABLED_KEY,
   TRIAL_ITEM_KEY,
+  TRIAL_MIGRATED_KEY,
   TRIAL_DEFAULTS,
   clampDays,
   parseDays,
@@ -54,45 +55,117 @@ export async function setTrialItem(slug: string, adminId: string): Promise<void>
 }
 
 /**
- * The offer as it stands right now: the settings, the item, and whether it is really open.
+ * Every trial that is open right now, one per item.
  *
- * One place that answers "is there a trial, and of what". The signup page, the public
- * status endpoint and the auth chrome all ask this rather than each making the same two
- * queries and the same archived-or-not judgement — three copies of that rule was three
- * chances for the site to advertise an offer it would then refuse.
+ * Replaces the single `currentTrialOffer`. That could only describe one offer because the
+ * settings behind it could only hold one slug — so opening a trial of a second product
+ * closed the first, without saying so, and the customer evaluating the first found out by
+ * being refused at the door.
+ *
+ * Offers do not consult each other. A member may hold a live trial of every product at
+ * once; what they may not do is trial the same product twice, which `trialRefusal` has
+ * always enforced on whether an entitlement EVER existed, expired ones included.
  */
-export type TrialOffer =
-  | { open: false }
-  | {
-      open: true
-      days: number
-      slug: string
-      name: string
-      brand: Brand
-      isSection: boolean
-    }
+export type TrialOffer = {
+  days: number
+  slug: string
+  name: string
+  brand: Brand
+  isSection: boolean
+}
 
-export async function currentTrialOffer(): Promise<TrialOffer> {
-  const settings = await trialSettings()
-  if (!settings.enabled) return { open: false }
+const OFFER_SELECT = {
+  slug: true,
+  name: true,
+  kind: true,
+  archivedAt: true,
+  trialEnabled: true,
+  trialDays: true,
+  section: { select: { archivedAt: true } },
+} as const
 
-  const item = await db.item.findUnique({
-    where: { slug: settings.itemSlug },
-    select: {
-      name: true,
-      kind: true,
-      archivedAt: true,
-      section: { select: { archivedAt: true } },
-    },
-  })
-  if (!offerUsable(item) || !item) return { open: false }
-
+function toOffer(
+  item: {
+    slug: string
+    name: string
+    kind: 'section' | 'product'
+    archivedAt: Date | null
+    trialEnabled: boolean
+    trialDays: number | null
+    section: { archivedAt: Date | null } | null
+  },
+  defaultDays: number,
+): TrialOffer | null {
+  const trial = itemTrial(item, defaultDays)
+  if (!trial) return null
   return {
-    open: true,
-    days: settings.days,
-    slug: settings.itemSlug,
+    days: trial.days,
+    slug: item.slug,
     name: item.name,
     brand: brandForItem(item.kind),
     isSection: item.kind === 'section',
   }
+}
+
+export async function trialOffers(): Promise<TrialOffer[]> {
+  await migrateLegacyTrialSettings()
+  const settings = await trialSettings()
+  const items = await db.item.findMany({
+    where: { trialEnabled: true, archivedAt: null },
+    select: OFFER_SELECT,
+    orderBy: { name: 'asc' },
+  })
+  return items
+    .map((item) => toOffer(item, settings.days))
+    .filter((offer): offer is TrialOffer => offer !== null)
+}
+
+/** One item's offer, or null if it is not on trial. */
+export async function trialOfferFor(slug: string): Promise<TrialOffer | null> {
+  await migrateLegacyTrialSettings()
+  const settings = await trialSettings()
+  const item = await db.item.findUnique({ where: { slug }, select: OFFER_SELECT })
+  return item ? toOffer(item, settings.days) : null
+}
+
+/**
+ * Carries the one global trial onto the item it was pointing at, once.
+ *
+ * Necessary rather than tidy. The old switch lives in the encrypted settings table, so no
+ * SQL migration can read it; ship the new columns defaulting to off and a trial that is
+ * live right now closes the moment this deploys, with the signup page 404ing under
+ * customers already part-way through it.
+ *
+ * Guarded by its own settings flag rather than by "are all the columns still false",
+ * because all-false is also the perfectly ordinary state of having no trials open — using
+ * it as the signal would re-open a trial every time an operator closed the last one.
+ *
+ * Idempotent, and safe to call on every read: after the first run it costs one settings
+ * lookup, which that read was making anyway.
+ */
+export async function migrateLegacyTrialSettings(): Promise<void> {
+  const raw = await readSettings([TRIAL_MIGRATED_KEY])
+  if (raw[TRIAL_MIGRATED_KEY] === 'true') return
+
+  const settings = await trialSettings()
+  if (settings.enabled && settings.itemSlug) {
+    await db.item.updateMany({
+      where: { slug: settings.itemSlug },
+      data: { trialEnabled: true, trialDays: settings.days },
+    })
+  }
+  await writeSetting(TRIAL_MIGRATED_KEY, 'true', 'system:migration')
+}
+
+export async function setItemTrial(
+  slug: string,
+  input: { enabled: boolean; days: number | null },
+): Promise<void> {
+  await db.item.update({
+    where: { slug },
+    data: {
+      trialEnabled: input.enabled,
+      trialDays: input.days === null ? null : clampDays(input.days),
+    },
+  })
 }

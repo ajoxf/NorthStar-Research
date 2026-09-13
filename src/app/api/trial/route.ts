@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { getCurrentMember, hashPassword, startSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { syncProductAccess } from '@/lib/product-auth'
-import { refusalMessage, trialEndsAt, trialRefusal, trialSettings } from '@/lib/trial'
+import { refusalMessage, trialEndsAt, trialOfferFor, trialOffers, trialRefusal } from '@/lib/trial'
 
 /**
  * Start a free trial.
@@ -29,6 +29,8 @@ const Body = z.object({
   password: z.string().min(8, 'Use at least 8 characters.'),
   firstName: z.string().trim().max(80).optional(),
   lastName: z.string().trim().max(80).optional(),
+  /** Which product. Optional only so a single-offer site keeps working without it. */
+  itemSlug: z.string().trim().min(1).optional(),
 })
 
 /**
@@ -43,7 +45,28 @@ const fail = (error: string, status = 400, signIn?: string) =>
   NextResponse.json(signIn ? { error, signIn } : { error }, { status })
 
 export async function POST(request: Request) {
-  const settings = await trialSettings()
+  /*
+   * Read the body once, up front.
+   *
+   * It now decides WHICH product is being trialled, and several can be open at once, so
+   * the item lookup below depends on it — where before there was one offer and the body
+   * only mattered for a signed-out signup.
+   */
+  const rawBody = (await request.json().catch(() => null)) as Record<string, unknown> | null
+  const askedSlug = typeof rawBody?.itemSlug === 'string' ? rawBody.itemSlug.trim() : ''
+
+  /*
+   * No slug means "the trial", which is unambiguous only while exactly one is open. With
+   * several open, guessing would grant somebody a trial of something they did not ask for,
+   * so it is refused and the form is told to name one.
+   */
+  let offer = askedSlug ? await trialOfferFor(askedSlug) : null
+  if (!offer && !askedSlug) {
+    const open = await trialOffers()
+    if (open.length === 1) offer = open[0]
+    else if (open.length > 1) return fail('Choose which trial you would like.', 400)
+  }
+  if (!offer) return fail(refusalMessage('disabled'), 403)
 
   /*
    * Read before anything is written, so a refusal cannot leave half an account behind.
@@ -57,7 +80,7 @@ export async function POST(request: Request) {
    * set means the offer is off the shelf.
    */
   const item = await db.item.findUnique({
-    where: { slug: settings.itemSlug },
+    where: { slug: offer.slug },
     select: {
       id: true,
       name: true,
@@ -106,8 +129,9 @@ export async function POST(request: Request) {
   let parsed: z.infer<typeof Body> | null = null
 
   if (!existing) {
-    const body = await request.json().catch(() => null)
-    const result = Body.safeParse(body)
+    // rawBody, not a second request.json(): a request body can only be read once, and
+    // reading it again here returns nothing, failing every signed-out signup on the site.
+    const result = Body.safeParse(rawBody)
     if (!result.success) {
       return fail(result.error.issues[0]?.message ?? 'Check the form and try again.')
     }
@@ -134,12 +158,12 @@ export async function POST(request: Request) {
     }
   }
 
-  const refusal = trialRefusal({ enabled: settings.enabled, itemExists, heldEver })
+  const refusal = trialRefusal({ enabled: true, itemExists, heldEver })
   if (refusal) return fail(refusalMessage(refusal), refusal === 'already_trialled' ? 409 : 403)
   if (!item) return fail(refusalMessage('no_item'), 403)
 
   const now = new Date()
-  const endsAt = trialEndsAt(settings.days, now)
+  const endsAt = trialEndsAt(offer.days, now)
 
   const member = existing
     ? existing
@@ -204,7 +228,7 @@ export async function POST(request: Request) {
      * they get in, and they can set one from the account page if they ever want it.
      */
     password: parsed?.password ?? randomBytes(24).toString('base64url'),
-    itemSlug: settings.itemSlug,
+    itemSlug: offer.slug,
   })
 
   if (!existing) await startSession(member)
@@ -213,7 +237,7 @@ export async function POST(request: Request) {
     access: access.action,
     ok: true,
     item: item.name,
-    days: settings.days,
+    days: offer.days,
     endsAt: endsAt.toISOString(),
   })
 }

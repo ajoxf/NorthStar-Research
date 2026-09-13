@@ -4,49 +4,118 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Button, Spinner } from '@/components/ui/button'
-import { Input, Label, Select } from '@/components/ui/field'
+import { Input } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 
+export type TrialItem = {
+  slug: string
+  name: string
+  kind: 'product' | 'section'
+  trialEnabled: boolean
+  /** Null means "use the house default". */
+  trialDays: number | null
+}
+
 export type TrialState = {
-  enabled: boolean
-  days: number
-  itemSlug: string
-  grantable: { slug: string; name: string; kind: 'product' | 'section' }[]
+  /** Applied to any item that has set no length of its own. */
+  defaultDays: number
+  grantable: TrialItem[]
   /** Whether a granted entitlement actually opens the product's own sign-in. */
   productAuthReady: boolean
 }
 
 /**
- * Whether anyone can start a free trial, of what, and for how long.
+ * Free trials, one switch per product.
  *
- * The switch is the whole point of this form: the signup page does not exist while trials
- * are off — it returns a 404 rather than a disabled form — and the product cards on the
- * homepage advertise the trial only while it is on. So this one control is the difference
- * between a site with a public sign-up and a site without one.
+ * It used to be a single global switch with a dropdown naming the one thing on offer,
+ * which meant opening a trial of a second product closed the first — silently, with the
+ * customer evaluating the first finding out by being refused at the door.
+ *
+ * The offers are independent. A member may hold a live trial of every product at once;
+ * what they still cannot do is trial the same product twice, which is enforced on whether
+ * an entitlement has EVER existed, expired ones included.
+ *
+ * Each switch is saved on its own. A batch save would make turning one trial on and
+ * another off a single all-or-nothing write, and there is no reason those two decisions
+ * should be able to fail together.
  */
 export function TrialForm({ state }: { state: TrialState }) {
+  const [items, setItems] = React.useState(state.grantable)
+  const anyOpen = items.some((item) => item.trialEnabled)
+  const openProducts = items.filter((item) => item.trialEnabled && item.kind === 'product')
+
+  if (items.length === 0) {
+    return (
+      <p className="text-[14px] leading-relaxed text-ink-dim">
+        There is nothing to offer yet. A trial grants an item, and none exist.
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-[14px] leading-relaxed text-ink-dim">
+        One switch per product, each independent. A member can run a trial of every product
+        at once, but only ever one trial of each — an expired trial still counts, so nobody
+        renews a free month by waiting.
+      </p>
+
+      {!state.productAuthReady && openProducts.length > 0 && (
+        <p className="rounded-lg border border-down/35 bg-down/10 px-3.5 py-2.5 text-[13px] leading-relaxed text-down">
+          Product sign-in is not working, so a trial of{' '}
+          {openProducts.map((item) => item.name).join(', ')} grants an entitlement that
+          cannot open anything. Fix that before letting anybody in.
+        </p>
+      )}
+
+      <ul className="flex flex-col gap-2">
+        {items.map((item) => (
+          <TrialRow
+            key={item.slug}
+            item={item}
+            defaultDays={state.defaultDays}
+            onSaved={(next) =>
+              setItems((all) => all.map((one) => (one.slug === next.slug ? next : one)))
+            }
+          />
+        ))}
+      </ul>
+
+      {!anyOpen && (
+        <p className="text-[13px] text-ink-dim">
+          Every trial is closed. /trial returns a 404 and nothing advertises one.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function TrialRow({
+  item,
+  defaultDays,
+  onSaved,
+}: {
+  item: TrialItem
+  defaultDays: number
+  onSaved: (next: TrialItem) => void
+}) {
   const router = useRouter()
   const toast = useToast()
-  const [enabled, setEnabled] = React.useState(state.enabled)
-  const [days, setDays] = React.useState(String(state.days))
-  const [itemSlug, setItemSlug] = React.useState(state.itemSlug)
+  const [days, setDays] = React.useState(item.trialDays === null ? '' : String(item.trialDays))
   const [pending, setPending] = React.useState(false)
 
-  const products = state.grantable.filter((entry) => entry.kind === 'product')
-  const sections = state.grantable.filter((entry) => entry.kind === 'section')
-  const nothingToGrant = state.grantable.length === 0
-  const grantingSection = sections.some((entry) => entry.slug === itemSlug)
-
-  async function save(next: { enabled: boolean }) {
+  async function save(next: { enabled: boolean; days: string }) {
     setPending(true)
     try {
       const response = await fetch('/api/admin/trial', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          itemSlug: item.slug,
           enabled: next.enabled,
-          days: Number(days) || state.days,
-          itemSlug,
+          // Blank means "use the house default" and is sent as null, not as zero — which
+          // the server would clamp to a one-day trial nobody asked for.
+          days: next.days.trim() === '' ? null : Number(next.days),
         }),
       })
       const data = await response.json().catch(() => null)
@@ -54,137 +123,50 @@ export function TrialForm({ state }: { state: TrialState }) {
         toast(data?.error ?? 'Could not save that.', 'error')
         return
       }
-      setEnabled(next.enabled)
-      if (data?.settings) setDays(String(data.settings.days))
+      onSaved({ ...item, trialEnabled: next.enabled, trialDays: data?.item?.trialDays ?? null })
       toast(
-        next.enabled ? `Free trials are open — ${data?.settings?.days ?? days} days` : 'Free trials are closed',
-        'success',
+        next.enabled
+          ? `${item.name}: trial open — ${data?.item?.trialDays ?? defaultDays} days`
+          : `${item.name}: trial closed`,
       )
       router.refresh()
-    } catch {
-      toast('Could not reach the server.', 'error')
     } finally {
       setPending(false)
     }
   }
 
   return (
-    <div className="rounded-lg border border-line bg-panel p-5">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <div>
-          <span className="flex items-center gap-2 text-[15px] text-ink">
-            {enabled ? 'Open' : 'Closed'}
-            {enabled && (
-              <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
-                live
-              </span>
-            )}
-          </span>
-          <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
-            {enabled
-              ? 'Anyone can sign up at /trial with an email and a password. No card, no code.'
-              : 'There is no public sign-up. /trial returns a 404 and the homepage advertises no trial.'}
-          </span>
-        </div>
-
-        <Button
-          type="button"
-          variant={enabled ? 'secondary' : 'primary'}
-          disabled={pending || nothingToGrant}
-          onClick={() => save({ enabled: !enabled })}
-        >
-          {pending && <Spinner />}
-          {enabled ? 'Close trials' : 'Open trials'}
-        </Button>
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-line bg-panel-2 px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[15px] text-ink">{item.name}</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+          {item.kind === 'product' ? 'Platform' : 'Research'}
+        </p>
       </div>
 
-      <div className="mt-5 grid gap-4 border-t border-line pt-5 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="trial-item">What it grants</Label>
-          <Select
-            id="trial-item"
-            value={itemSlug}
-            disabled={nothingToGrant}
-            onChange={(event) => setItemSlug(event.target.value)}
-          >
-            {nothingToGrant && <option value={itemSlug}>Nothing to grant yet</option>}
-            {products.length > 0 && (
-              <optgroup label="Products">
-                {products.map((entry) => (
-                  <option key={entry.slug} value={entry.slug}>
-                    {entry.name}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {sections.length > 0 && (
-              <optgroup label="Research sections">
-                {sections.map((entry) => (
-                  <option key={entry.slug} value={entry.slug}>
-                    {entry.name}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </Select>
-        </div>
+      <label className="flex items-center gap-2 text-[13px] text-ink-dim">
+        <span>Days</span>
+        <Input
+          className="h-9 w-20"
+          inputMode="numeric"
+          value={days}
+          placeholder={String(defaultDays)}
+          onChange={(event) => setDays(event.target.value)}
+          disabled={pending}
+          aria-label={`Trial length for ${item.name}, in days`}
+        />
+      </label>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="trial-days">How long</Label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="trial-days"
-              type="number"
-              min={1}
-              max={365}
-              value={days}
-              onChange={(event) => setDays(event.target.value)}
-              className="w-24"
-            />
-            <span className="text-[14px] text-ink-dim">days</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={pending || nothingToGrant}
-          onClick={() => save({ enabled })}
-        >
-          {pending && <Spinner />}
-          Save
-        </Button>
-        <span className="text-[13px] text-ink-dim">
-          Changing these does not shorten a trial somebody is already on.
-        </span>
-      </div>
-
-      {grantingSection && (
-        <p className="mt-4 rounded-lg border border-line bg-panel-2 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink-dim">
-          A research section, not software. The trialist reads that section's reports for the
-          period and keeps whatever they have read — unlike a product, which stops being useful
-          the day access ends. They get that section only: no other section, and none of the
-          untagged back catalogue.
-        </p>
-      )}
-
-      {enabled && !grantingSection && !state.productAuthReady && (
-        <p className="mt-4 rounded-lg border border-down/35 bg-down/10 px-3.5 py-2.5 text-[13px] leading-relaxed text-ink">
-          Trials are open, but the sign-in bridge is not configured — so a trialist gets an
-          entitlement here and cannot sign into the product. Set RAMP_SUPABASE_URL and
-          RAMP_SUPABASE_SECRET_KEY in Vercel, then redeploy. Everyone who signed up in the
-          meantime is connected by the nightly job.
-        </p>
-      )}
-
-      {nothingToGrant && (
-        <p className="mt-4 text-[13px] leading-relaxed text-down">
-          Nothing exists yet that a trial could grant. Run the item backfill first.
-        </p>
-      )}
-    </div>
+      <Button
+        type="button"
+        size="sm"
+        variant={item.trialEnabled ? 'danger' : 'primary'}
+        disabled={pending}
+        onClick={() => save({ enabled: !item.trialEnabled, days })}
+      >
+        {pending && <Spinner />}
+        {item.trialEnabled ? 'Close trial' : 'Open trial'}
+      </Button>
+    </li>
   )
 }

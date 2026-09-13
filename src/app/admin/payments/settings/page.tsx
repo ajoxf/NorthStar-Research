@@ -20,7 +20,7 @@ import { cregisConfigured } from '@/lib/cregis'
 import { stripeConfigured } from '@/lib/stripe'
 import { pricingMode } from '@/lib/pricing-mode'
 import { productAuthCheck, productAuthConfigured, productAuthItemSlug } from '@/lib/product-auth'
-import { trialSettings } from '@/lib/trial'
+import { migrateLegacyTrialSettings, trialSettings } from '@/lib/trial'
 import { isFallbackPackage, priceLine } from '@/lib/package-shape'
 import { defaultPackage, sellablePackages } from '@/lib/packages'
 import { CANONICAL_BASE_URL } from '@/lib/env'
@@ -522,6 +522,10 @@ async function buildCregisFormState(): Promise<CregisFormState> {
  * separate columns and an archived section is off the shelf whatever its item says.
  */
 async function buildTrialState(): Promise<TrialState> {
+  // Carries the old single global trial onto its item before anything is read, so the
+  // switches below show the offer that is actually live rather than all-off.
+  await migrateLegacyTrialSettings()
+
   const [settings, items] = await Promise.all([
     trialSettings(),
     db.item.findMany({
@@ -530,6 +534,8 @@ async function buildTrialState(): Promise<TrialState> {
         slug: true,
         name: true,
         kind: true,
+        trialEnabled: true,
+        trialDays: true,
         section: { select: { archivedAt: true } },
       },
       orderBy: [{ kind: 'asc' }, { name: 'asc' }],
@@ -538,7 +544,17 @@ async function buildTrialState(): Promise<TrialState> {
 
   const grantable = items
     .filter((item) => item.kind !== 'section' || (item.section && !item.section.archivedAt))
-    .map((item) => ({ slug: item.slug, name: item.name, kind: item.kind }))
+    .map((item) => ({
+      slug: item.slug,
+      name: item.name,
+      kind: item.kind,
+      trialEnabled: item.trialEnabled,
+      trialDays: item.trialDays,
+    }))
 
-  return { ...settings, grantable, productAuthReady: productAuthConfigured() }
+  return {
+    defaultDays: settings.days,
+    grantable,
+    productAuthReady: productAuthConfigured(),
+  }
 }

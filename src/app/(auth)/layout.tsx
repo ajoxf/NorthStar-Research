@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 import { NexusWordmark, Wordmark } from '@/components/site-chrome'
 import { ToastProvider } from '@/components/ui/toast'
-import { currentTrialOffer } from '@/lib/trial'
+import { trialOfferFor, trialOffers } from '@/lib/trial'
 
 /**
  * Which brand these pages wear.
@@ -17,9 +17,22 @@ import { currentTrialOffer } from '@/lib/trial'
  * the route it is wrapping any other way.
  */
 async function brandForThisPage(): Promise<'nordstar' | 'nexus'> {
-  if (headers().get('x-pathname') !== '/trial') return 'nordstar'
-  const offer = await currentTrialOffer()
-  return offer.open ? offer.brand : 'nordstar'
+  const head = headers()
+  if (head.get('x-pathname') !== '/trial') return 'nordstar'
+
+  /*
+   * Which offer is on screen decides the clothes. ?item names it; a bare /trial shows a
+   * single open offer, and with several open shows a chooser listing all of them — which
+   * belongs to no one product, so it wears the house brand.
+   */
+  const asked = new URLSearchParams(head.get('x-search') ?? '').get('item')?.trim()
+  if (asked) {
+    const offer = await trialOfferFor(asked)
+    return offer ? offer.brand : 'nordstar'
+  }
+
+  const open = await trialOffers()
+  return open.length === 1 ? open[0].brand : 'nordstar'
 }
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {

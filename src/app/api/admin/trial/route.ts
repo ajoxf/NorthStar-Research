@@ -3,22 +3,25 @@ import { z } from 'zod'
 
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { clampDays, setTrialDays, setTrialEnabled, setTrialItem, trialSettings } from '@/lib/trial'
+import { clampDays, migrateLegacyTrialSettings, setItemTrial } from '@/lib/trial'
+import { offerUsable } from '@/lib/trial-offer-shape'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 /**
- * The free trial switch.
+ * Open or close the free trial of ONE item.
  *
- * All three settings are written together because they are one decision: turning trials
- * on without saying what they grant, or for how long, is not a state worth being able to
- * reach from the console.
+ * One item at a time, because the offers are independent: opening a trial of a second
+ * product must not touch the first, which is exactly what the previous global switch did.
+ *
+ * `days` null means "use the house default", so an operator who wants every trial to move
+ * together leaves them all blank and changes the default once.
  */
 const schema = z.object({
-  enabled: z.boolean(),
-  days: z.number().int().min(1).max(365),
   itemSlug: z.string().trim().min(1),
+  enabled: z.boolean(),
+  days: z.number().int().min(1).max(365).nullable(),
 })
 
 export async function PATCH(request: Request) {
@@ -31,40 +34,47 @@ export async function PATCH(request: Request) {
     }
     throw error
   }
+  void admin
 
   const parsed = schema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Check the trial length and the product.' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Check the trial length — 1 to 365 days, or blank for the default.' },
+      { status: 400 },
+    )
   }
 
   /*
-   * The product has to exist before trials can be switched on.
+   * The item has to exist and be on the shelf before its trial can be switched on.
    *
-   * Without this an operator can save a slug with a typo in it, see the switch say On,
-   * and advertise a signup page that refuses every person who reaches it. The signup route
-   * would refuse them correctly — but the place to catch it is here, once, not silently on
-   * each visitor.
+   * Without this an operator saves a slug with a typo in it, sees the switch say Open, and
+   * advertises a signup that refuses every person who reaches it. The signup route would
+   * refuse them correctly — but the place to catch it is here, once, not silently on each
+   * visitor.
    */
   const item = await db.item.findUnique({
     where: { slug: parsed.data.itemSlug },
     select: { archivedAt: true, kind: true, section: { select: { archivedAt: true } } },
   })
-  // A section carries its own archived flag, and a section item with no section row is a
-  // half-finished backfill. Either way there is nothing to offer.
-  const usable =
-    item &&
-    !item.archivedAt &&
-    (item.kind !== 'section' || (item.section && !item.section.archivedAt))
-  if (!usable) {
+  if (!offerUsable(item)) {
     return NextResponse.json(
       { error: 'That does not exist, or has been archived.' },
       { status: 400 },
     )
   }
 
-  await setTrialItem(parsed.data.itemSlug, admin.id)
-  await setTrialDays(clampDays(parsed.data.days), admin.id)
-  await setTrialEnabled(parsed.data.enabled, admin.id)
+  // Before writing, so an operator's first switch does not race the migration and get
+  // overwritten by the legacy setting a moment later.
+  await migrateLegacyTrialSettings()
 
-  return NextResponse.json({ ok: true, settings: await trialSettings() })
+  await setItemTrial(parsed.data.itemSlug, {
+    enabled: parsed.data.enabled,
+    days: parsed.data.days === null ? null : clampDays(parsed.data.days),
+  })
+
+  const saved = await db.item.findUnique({
+    where: { slug: parsed.data.itemSlug },
+    select: { slug: true, trialEnabled: true, trialDays: true },
+  })
+  return NextResponse.json({ ok: true, item: saved })
 }

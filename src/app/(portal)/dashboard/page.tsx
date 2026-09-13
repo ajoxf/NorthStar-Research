@@ -8,7 +8,7 @@ import { ReportCard, ReportRow } from '@/components/report-card'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember, memberHasAnyAccess, memberReportWhere } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { trialSettings } from '@/lib/trial'
+import { trialOffers } from '@/lib/trial'
 import { formatDate, fullName } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Your reports' }
@@ -100,7 +100,9 @@ export default async function DashboardPage({
           {ssoNotice}
         </p>
       )}
-      {offer && <TrialOffer days={offer.days} itemName={offer.itemName} />}
+      {offer.map((one) => (
+        <TrialOffer key={one.itemSlug} days={one.days} itemName={one.itemName} itemSlug={one.itemSlug} />
+      ))}
       <div className="mb-10">
         {/*
           "Latest", not "This week". The query below takes the four most recent editions
@@ -252,20 +254,35 @@ async function heldItems(memberId: string): Promise<HeldItem[]> {
  * ever rather than currently, so a lapsed trial does not reappear as a fresh offer every
  * time they load the page.
  */
-async function trialOffer(memberId: string): Promise<{ days: number; itemName: string } | null> {
-  const settings = await trialSettings()
-  if (!settings.enabled) return null
+async function trialOffer(
+  memberId: string,
+): Promise<{ days: number; itemName: string; itemSlug: string }[]> {
+  const open = await trialOffers()
+  if (open.length === 0) return []
 
-  const item = await db.item.findUnique({
-    where: { slug: settings.itemSlug },
-    select: { id: true, name: true, archivedAt: true },
+  /*
+   * Everything they have not already had, not the first thing on the list.
+   *
+   * The offers are independent — a member may run a trial of every product at once — so
+   * showing one of several would quietly hide the rest. "Ever held" is the filter, so a
+   * trial that has already expired does not come back as a fresh offer next month.
+   */
+  const items = await db.item.findMany({
+    where: { slug: { in: open.map((offer) => offer.slug) } },
+    select: { id: true, slug: true },
   })
-  if (!item || item.archivedAt) return null
+  const held = await db.entitlement.findMany({
+    where: { memberId, itemId: { in: items.map((item) => item.id) } },
+    select: { itemId: true },
+  })
+  const heldIds = new Set(held.map((row) => row.itemId))
+  const heldSlugs = new Set(
+    items.filter((item) => heldIds.has(item.id)).map((item) => item.slug),
+  )
 
-  const heldEver = await db.entitlement.count({ where: { memberId, itemId: item.id } })
-  if (heldEver > 0) return null
-
-  return { days: settings.days, itemName: item.name }
+  return open
+    .filter((offer) => !heldSlugs.has(offer.slug))
+    .map((offer) => ({ days: offer.days, itemName: offer.name, itemSlug: offer.slug }))
 }
 
 function InactiveState({
@@ -275,11 +292,13 @@ function InactiveState({
 }: {
   held?: HeldItem[]
   notice?: string
-  offer?: { days: number; itemName: string } | null
+  offer?: { days: number; itemName: string; itemSlug: string }[]
 }) {
-  const offerBlock = offer ? (
-    <div className="mb-6 text-left">
-      <TrialOffer days={offer.days} itemName={offer.itemName} />
+  const offerBlock = offer && offer.length > 0 ? (
+    <div className="mb-6 flex flex-col gap-3 text-left">
+      {offer.map((one) => (
+        <TrialOffer key={one.itemSlug} days={one.days} itemName={one.itemName} itemSlug={one.itemSlug} />
+      ))}
     </div>
   ) : null
 

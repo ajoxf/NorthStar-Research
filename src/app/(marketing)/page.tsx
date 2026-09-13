@@ -7,7 +7,7 @@ import { HeroMedia } from '@/components/hero-media'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { defaultPackage, packageBySlug } from '@/lib/packages'
-import { trialSettings } from '@/lib/trial'
+import { trialOffers } from '@/lib/trial'
 import { db } from '@/lib/db'
 import { pricingMode } from '@/lib/pricing-mode'
 import { sectionsPublic } from '@/lib/sections-mode'
@@ -363,9 +363,13 @@ const PRODUCTS = [
 ]
 
 async function ProductSection() {
-  // Advertised only while trials are actually open, and at whatever length is set — a
-  // "14 days free" badge above a signup page that 404s is worse than no badge at all.
-  const trial = await trialSettings()
+  /*
+   * Each card reads its OWN trial. Trials are per item now, so a "14 days free" badge on
+   * one product no longer depends on it happening to be the single thing the site had on
+   * offer — and two products can advertise their own trials side by side.
+   */
+  const offers = await trialOffers()
+  const bySlug = new Map(offers.map((offer) => [offer.slug, offer]))
   const priced = await Promise.all(
     PRODUCTS.map(async (product) => {
       const pkg = await packageBySlug(product.packageSlug)
@@ -374,7 +378,7 @@ async function ProductSection() {
         priceCents: pkg?.priceCents ?? product.fallbackPriceCents,
         currency: pkg?.currency ?? 'USD',
         interval: pkg?.interval ?? 'month',
-        trialDays: trial.enabled && trial.itemSlug === product.packageSlug ? trial.days : null,
+        trialDays: bySlug.get(product.packageSlug)?.days ?? null,
       }
     }),
   )
@@ -401,7 +405,11 @@ async function ProductSection() {
           {priced.map((product) => (
             <a
               key={product.name}
-              href={product.trialDays ? '/trial' : product.href}
+              href={
+                product.trialDays
+                  ? `/trial?item=${encodeURIComponent(product.packageSlug)}`
+                  : product.href
+              }
               // Into the application in a new tab; onto our own signup page in this one.
               {...(product.trialDays ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
               className="group flex flex-col rounded-lg border border-line bg-panel p-6 transition-colors hover:border-accent/40 sm:p-7"

@@ -884,6 +884,21 @@ model Item {
   /// package or section does.
   archivedAt DateTime?
 
+  /// Is a free trial of THIS open, and for how long?
+  ///
+  /// Per item, because a trial is a fact about the thing being sold rather than a mode the
+  /// whole site is in. These replace the three global trial.* settings, which could only
+  /// ever describe one offer: turning on a trial of a second product closed the first.
+  ///
+  /// Off by default, and the default is load-bearing — a product created tomorrow must not
+  /// arrive with a free trial nobody decided to give away. The existing global setting is
+  /// carried onto its item once, on first read; see migrateLegacyTrialSettings.
+  ///
+  /// `trialDays` null means "use the house default", so changing that default moves every
+  /// item that never had a number set of its own.
+  trialEnabled Boolean @default(false)
+  trialDays    Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

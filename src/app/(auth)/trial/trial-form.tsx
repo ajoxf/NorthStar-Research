@@ -16,7 +16,7 @@ import { PasswordInput } from '@/components/ui/password-input'
  * reach people who have paid. A trialist has paid nothing and may never return, so asking
  * costs signups and buys a phone number nobody will ring.
  */
-export function TrialForm({ days }: { days: number }) {
+export function TrialForm({ days, itemSlug }: { days: number; itemSlug: string }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
   // The refusal and, where there is one, the way out of it.
@@ -33,6 +33,9 @@ export function TrialForm({ days }: { days: number }) {
           email: String(formData.get('email') ?? ''),
           password: String(formData.get('password') ?? ''),
           firstName: String(formData.get('firstName') ?? ''),
+          // Which product this signup is for. Several can be on trial at once, so the
+          // server must be told rather than looking up "the" open offer.
+          itemSlug,
         }),
       })
       const body = await response.json().catch(() => ({}))

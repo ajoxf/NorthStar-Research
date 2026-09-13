@@ -19,6 +19,9 @@ import { ATTRIBUTION_DAYS, REFERRAL_COOKIE, normaliseSlug } from '@/lib/affiliat
 export function middleware(request: NextRequest) {
   const headers = new Headers(request.headers)
   headers.set('x-pathname', request.nextUrl.pathname)
+  /* The query too, because a layout cannot read searchParams and the trial page's chrome
+     depends on which product ?item names. */
+  headers.set('x-search', request.nextUrl.search)
 
   const response = NextResponse.next({ request: { headers } })
 

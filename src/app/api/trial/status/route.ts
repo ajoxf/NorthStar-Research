@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { currentTrialOffer } from '@/lib/trial'
+import { trialOfferFor, trialOffers } from '@/lib/trial'
 
 /**
  * Is a trial open, and what does it grant?
@@ -44,21 +44,34 @@ export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: CORS })
 }
 
-export async function GET() {
-  const offer = await currentTrialOffer()
+export async function GET(request: Request) {
+  const asked = new URL(request.url).searchParams.get('item')?.trim()
 
-  if (!offer.open) {
-    return NextResponse.json({ open: false as const }, { headers: CORS })
-  }
+  /*
+   * ?item asks about one product, which is what a product's own sign-in wants to know.
+   *
+   * Without it the answer describes every open offer. `offers` is the real answer; the
+   * flat `open`/`days`/`slug` beside it describes a single open offer and is there for
+   * builds of Nexus RAMP that shipped before any of this existed and call with no
+   * parameter. Dropping those fields would have turned their trial line off silently at
+   * the moment this deployed, which is precisely the failure this whole change is about.
+   * With several offers open they are omitted rather than guessed at.
+   */
+  const offers = asked
+    ? [await trialOfferFor(asked)].filter((offer) => offer !== null)
+    : await trialOffers()
+
+  const payload = offers.map((offer) => ({
+    days: offer!.days,
+    slug: offer!.slug,
+    name: offer!.name,
+    url: `https://nordstarpro.com/trial?item=${encodeURIComponent(offer!.slug)}`,
+  }))
+
+  const only = payload.length === 1 ? payload[0] : null
 
   return NextResponse.json(
-    {
-      open: true as const,
-      days: offer.days,
-      slug: offer.slug,
-      name: offer.name,
-      url: 'https://nordstarpro.com/trial',
-    },
+    only ? { open: true as const, ...only, offers: payload } : { open: false as const, offers: payload },
     { headers: CORS },
   )
 }
