@@ -128,6 +128,26 @@ export function hasAnyAccess(
 }
 
 /**
+ * Does this account hold anything at all — research or product?
+ *
+ * A different question from `hasAnyAccess`, and the difference is the point. That one
+ * asks "may this person into the research portal", and answers no for a Nexus RAMP
+ * trialist, correctly. This one asks "is there anything on this account", and answers yes.
+ *
+ * Gates use `hasAnyAccess`. Only tell somebody their account is inactive on the strength
+ * of THIS one: a trialist with a live product being shown an "Inactive" badge is being
+ * told something that is not true, next to a page congratulating them on signing up.
+ */
+export function hasAnythingActive(
+  member: MemberAccess,
+  entitlements: EntitlementAccess[],
+  now: Date = new Date(),
+): boolean {
+  if (isAllAccess(member, now)) return true
+  return entitlements.some((entitlement) => entitlementActive(entitlement, now))
+}
+
+/**
  * Can this member read this particular report?
  *
  * The only question that matters at a report gate, and the one the old boolean could not

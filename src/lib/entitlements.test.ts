@@ -7,6 +7,7 @@ import {
   canReadReport,
   entitlementActive,
   hasAnyAccess,
+  hasAnythingActive,
   isAllAccess,
   readableSectionIds,
   reportVisibilityWhere,
@@ -260,5 +261,48 @@ describe('a section trial reads that section and no more', () => {
 
   it('filters the archive to that one section', () => {
     assert.deepEqual(readableSectionIds(trialist, [trial], now), ['sec_energy'])
+  })
+})
+
+/**
+ * The two questions that must never collapse into one.
+ *
+ * `hasAnyAccess` gates the research portal and says no to a product trialist. That is
+ * correct and was fixed deliberately. `hasAnythingActive` is for telling somebody how they
+ * stand, and says yes. If a later edit makes them agree, either a trialist is labelled
+ * inactive while holding a live product, or one walks into the archive.
+ */
+describe('holding something is not the same as having research access', () => {
+  const productOnly: EntitlementAccess = { sectionId: null, status: 'active', renewsAt: future }
+
+  it('a Nexus RAMP trialist holds something', () => {
+    assert.equal(hasAnythingActive(sectionBuyer(), [productOnly], now), true)
+  })
+
+  it('...but is still kept out of the research portal', () => {
+    assert.equal(hasAnyAccess(sectionBuyer(), [productOnly], now), false)
+  })
+
+  it('an account with nothing on it holds nothing', () => {
+    assert.equal(hasAnythingActive(sectionBuyer(), [], now), false)
+  })
+
+  it('an expired product does not count as holding something', () => {
+    const lapsed: EntitlementAccess = { sectionId: null, status: 'active', renewsAt: past }
+    assert.equal(hasAnythingActive(sectionBuyer(), [lapsed], now), false)
+  })
+
+  it('a cancelled product does not count either', () => {
+    const cancelled: EntitlementAccess = { sectionId: null, status: 'cancelled', renewsAt: future }
+    assert.equal(hasAnythingActive(sectionBuyer(), [cancelled], now), false)
+  })
+
+  it('a section buyer holds something, and both agree for once', () => {
+    assert.equal(hasAnythingActive(sectionBuyer(), [ent('sec_energy')], now), true)
+    assert.equal(hasAnyAccess(sectionBuyer(), [ent('sec_energy')], now), true)
+  })
+
+  it('an all-access member holds something with no entitlement rows at all', () => {
+    assert.equal(hasAnythingActive(legacyMember(), [], now), true)
   })
 })

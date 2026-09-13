@@ -6,7 +6,7 @@ import { PortalNav } from '@/app/(portal)/portal-nav'
 import { Wordmark } from '@/components/site-chrome'
 import { Badge } from '@/components/ui/badge'
 import { ToastProvider } from '@/components/ui/toast'
-import { getCurrentMember, memberHasAnyAccess } from '@/lib/auth'
+import { getCurrentMember, memberHoldsAnything } from '@/lib/auth'
 import { initials } from '@/lib/utils'
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -25,7 +25,14 @@ export default async function PortalLayout({ children }: { children: React.React
     redirect(pathname ? `/login?next=${encodeURIComponent(pathname)}` : '/login')
   }
 
-  const active = await memberHasAnyAccess(member)
+  /*
+   * "Inactive" here means the account holds nothing at all — not that it lacks a research
+   * subscription. A Nexus RAMP trialist holds something real, and stamping INACTIVE on
+   * the header beside a page that says "You're all set" tells them the opposite of the
+   * truth. What they may actually open is still decided by memberHasAnyAccess, on the
+   * pages that decide it.
+   */
+  const holdsSomething = await memberHoldsAnything(member)
 
   return (
     <ToastProvider>
@@ -38,7 +45,7 @@ export default async function PortalLayout({ children }: { children: React.React
             </div>
 
             <div className="flex items-center gap-3">
-              {!active && <Badge tone="down">Inactive</Badge>}
+              {!holdsSomething && <Badge tone="down">Inactive</Badge>}
               <Link
                 href="/account"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel font-mono text-[11px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"

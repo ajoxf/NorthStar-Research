@@ -3,6 +3,7 @@ import {
   type EntitlementAccess,
   canReadReport,
   hasAnyAccess,
+  hasAnythingActive,
   isAllAccess,
   reportVisibilityWhere,
 } from '@/lib/entitlements'
@@ -210,6 +211,20 @@ export async function memberHasAnyAccess(
 ): Promise<boolean> {
   if (isAllAccess(member)) return true
   return hasAnyAccess(member, await loadEntitlements(member))
+}
+
+/**
+ * Is there anything live on this account, of any kind?
+ *
+ * For telling somebody how they stand, never for deciding what they may open. A product
+ * trialist holds something real and must not be labelled inactive; they still may not
+ * read the reports, which is what `memberHasAnyAccess` is for.
+ */
+export async function memberHoldsAnything(
+  member: Pick<Member, 'id' | 'role' | 'subscriptionStatus' | 'subscriptionRenewsAt'>,
+): Promise<boolean> {
+  if (isAllAccess(member)) return true
+  return hasAnythingActive(member, await loadEntitlements(member))
 }
 
 /** May this member read this particular report? The only question a report gate should ask. */
