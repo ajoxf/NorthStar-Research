@@ -1,5 +1,5 @@
 /**
- * Which brand an offer wears, and whether it is on the shelf at all.
+ * Whether an offer is on the shelf at all.
  *
  * Pure, so both rules can be tested without a database — the same split as
  * `trial-shape.ts`, and for the same reason: anything importing `server-only`
@@ -7,7 +7,6 @@
  */
 
 export type ItemKind = 'section' | 'product'
-export type Brand = 'nordstar' | 'nexus'
 
 /**
  * Is the offer's item actually available?
@@ -17,7 +16,7 @@ export type Brand = 'nordstar' | 'nexus'
  * section that has been retired would admit somebody to an archive nobody is writing.
  *
  * This lived in three places at once: the signup page, the public status endpoint, and
- * the chrome that decides which brand to wear. Three copies of one rule is three chances
+ * the chrome around it. Three copies of one rule is three chances
  * for them to disagree about whether an offer exists, so there is now one.
  */
 export function offerUsable(item: {
@@ -30,19 +29,6 @@ export function offerUsable(item: {
   return Boolean(item.section && !item.section.archivedAt)
 }
 
-/**
- * Which brand the signup wears.
- *
- * Nexus RAMP has its own front page and its own colours, and somebody who clicks "start a
- * trial" there should not land on a page dressed as a different company. A research
- * section is NordStar Pro's own product, so it keeps NordStar Pro's clothes.
- *
- * Keyed on the item's kind rather than its slug, so the next piece of software inherits
- * this without anybody editing a list — which is what `kind` is for.
- */
-export function brandForItem(kind: ItemKind | null | undefined): Brand {
-  return kind === 'product' ? 'nexus' : 'nordstar'
-}
 
 /**
  * Is a trial of this item open, and for how long?

@@ -27,7 +27,7 @@ export default async function PortalLayout({ children }: { children: React.React
 
   /*
    * "Inactive" here means the account holds nothing at all — not that it lacks a research
-   * subscription. A Nexus RAMP trialist holds something real, and stamping INACTIVE on
+   * subscription. A trialist holds something real, and stamping INACTIVE on
    * the header beside a page that says "You're all set" tells them the opposite of the
    * truth. What they may actually open is still decided by memberHasAnyAccess, on the
    * pages that decide it.

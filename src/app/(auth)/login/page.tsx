@@ -48,13 +48,7 @@ export default async function LoginPage({
       <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
         {next
           ? 'Sign in to open the report you were sent.'
-          : /*
-             * Both halves, because this is now the only door.
-             * The line used to promise reports and an archive, written when that was all
-             * there was. Somebody arriving to open Nexus RAMP read it and reasonably
-             * wondered whether they were on the wrong site.
-             */
-            'One sign-in for your research and the Nexus systems you hold.'}
+          : 'Your research, your archive and everything you hold.'}
       </p>
 
       {searchParams.error && ERRORS[searchParams.error] && (

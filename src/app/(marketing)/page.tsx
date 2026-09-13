@@ -1,13 +1,12 @@
 import Link from 'next/link'
-import { Archive, ArrowRight, ArrowUpRight, Check, FileText, Lock, Smartphone } from 'lucide-react'
+import { Archive, ArrowRight, Check, FileText, Lock, Smartphone } from 'lucide-react'
 
 import { SampleReportForm } from '@/app/(marketing)/sample-report-form'
 import { AuthorAvatar } from '@/components/author-avatar'
 import { HeroMedia } from '@/components/hero-media'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { defaultPackage, packageBySlug } from '@/lib/packages'
-import { trialOffers } from '@/lib/trial'
+import { defaultPackage } from '@/lib/packages'
 import { db } from '@/lib/db'
 import { pricingMode } from '@/lib/pricing-mode'
 import { sectionsPublic } from '@/lib/sections-mode'
@@ -73,7 +72,6 @@ export default async function LandingPage() {
       {covered.length > 0 ? <TopicCoverage topics={covered} /> : <CoverageSection />}
       {authors.length > 0 && <ContributorsSection authors={authors} />}
       <SampleReportSection />
-      <ProductSection />
       <PricingSection plan={plan} mode={mode} cheapestSectionCents={cheapest} />
     </>
   )
@@ -326,156 +324,6 @@ function CoverageSection() {
             </div>
           ))}
         </div>
-      </div>
-    </section>
-  )
-}
-
-/**
- * The desk's own software, as opposed to its research.
- *
- * A list rather than a single card on purpose: this is where anything the desk builds
- * gets announced, and the second entry should not need the section rewritten. Each one
- * opens in its own tab — these are separate applications with their own sign-in, not
- * pages of this site.
- */
-const PRODUCTS = [
-  {
-    name: 'Nexus · RAMP',
-    subtitle: 'Risk and Margin Platform',
-    href: 'https://nexus-funds.vercel.app/',
-    /*
-     * The price comes from the package with this handle, so it is set in
-     * admin alongside every other price and cannot drift from what checkout
-     * charges. The figure below is only what to quote until that package
-     * exists — create it and this number stops being consulted.
-     */
-    packageSlug: 'nexus-ramp',
-    fallbackPriceCents: 34900,
-    blurb:
-      'Margin and risk for a commodity futures desk. Positions and margin across every broker account, in one book.',
-    points: [
-      'Import fills straight from TT or MT5 — spreads, legs and all',
-      'Stress a move against you before you put the trade on',
-      'Your own limits: minimum TNE/IM, risk per trade, daily loss',
-    ],
-  },
-]
-
-async function ProductSection() {
-  /*
-   * Each card reads its OWN trial. Trials are per item now, so a "14 days free" badge on
-   * one product no longer depends on it happening to be the single thing the site had on
-   * offer — and two products can advertise their own trials side by side.
-   */
-  const offers = await trialOffers()
-  const bySlug = new Map(offers.map((offer) => [offer.slug, offer]))
-  const priced = await Promise.all(
-    PRODUCTS.map(async (product) => {
-      const pkg = await packageBySlug(product.packageSlug)
-      return {
-        ...product,
-        priceCents: pkg?.priceCents ?? product.fallbackPriceCents,
-        currency: pkg?.currency ?? 'USD',
-        interval: pkg?.interval ?? 'month',
-        trialDays: bySlug.get(product.packageSlug)?.days ?? null,
-      }
-    }),
-  )
-
-  return (
-    /* scroll-mt clears the sticky header, which would otherwise sit over the heading
-       whenever somebody arrives here from the nav link or a /#product URL. */
-    <section id="product" className="scroll-mt-16 border-b border-line">
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
-        <div className="max-w-2xl">
-          <span className="eyebrow">Product</span>
-          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
-            Risk and trading systems for professional desks.
-          </h2>
-          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
-            Built for live books and reconciled against broker statements. What our own desk
-            runs on, available to yours.
-          </p>
-        </div>
-
-        {/* Two across is the shape; a third product flows onto its own column at
-            the wide breakpoint rather than pushing anything off the row. */}
-        <div className={cn('mt-10 grid gap-4 md:grid-cols-2', priced.length > 2 && 'lg:grid-cols-3')}>
-          {priced.map((product) => (
-            <a
-              key={product.name}
-              href={
-                product.trialDays
-                  ? `/trial?item=${encodeURIComponent(product.packageSlug)}`
-                  : product.href
-              }
-              // Into the application in a new tab; onto our own signup page in this one.
-              {...(product.trialDays ? {} : { target: '_blank', rel: 'noopener noreferrer' })}
-              className="group flex flex-col rounded-lg border border-line bg-panel p-6 transition-colors hover:border-accent/40 sm:p-7"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h3 className="font-display text-[21px] tracking-tight text-ink">
-                    {product.name}
-                  </h3>
-                  <p className="mt-1 font-mono text-[11px] uppercase tracking-[0.18em] text-accent">
-                    {product.subtitle}
-                  </p>
-                </div>
-                {product.trialDays ? (
-                  <Badge tone="accent" className="shrink-0">
-                    {product.trialDays} days free
-                  </Badge>
-                ) : (
-                  <ArrowUpRight
-                    className="h-5 w-5 shrink-0 text-ink-dim transition-colors group-hover:text-accent"
-                    aria-hidden
-                  />
-                )}
-              </div>
-
-              <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">{product.blurb}</p>
-
-              <ul className="mt-5 space-y-2.5 border-t border-line pt-5">
-                {product.points.map((point) => (
-                  <li key={point} className="flex items-start gap-2.5 text-[14px] text-ink-dim">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-up" aria-hidden />
-                    {point}
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 border-t border-line pt-5">
-                {product.trialDays ? (
-                  <p className="text-[15px] text-ink">
-                    <span className="font-display text-[26px] tracking-tight">Free</span>
-                    <span className="text-ink-dim">
-                      {' '}
-                      for {product.trialDays} days, then{' '}
-                      {formatPrice(product.priceCents, product.currency)}/
-                      {product.interval === 'year' ? 'yr' : 'mo'}
-                    </span>
-                  </p>
-                ) : (
-                  <p className="text-[15px] text-ink">
-                    <span className="font-display text-[26px] tracking-tight">
-                      {formatPrice(product.priceCents, product.currency)}
-                    </span>
-                    <span className="text-ink-dim"> / {product.interval === 'year' ? 'year' : 'month'}</span>
-                  </p>
-                )}
-                <span className="inline-flex items-center gap-1.5 text-[14px] font-medium text-accent">
-                  {product.trialDays
-                    ? 'Start free trial'
-                    : `Open ${product.name.split(' · ')[1] ?? product.name}`}
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" aria-hidden />
-                </span>
-              </div>
-            </a>
-          ))}
-        </div>
-
       </div>
     </section>
   )

@@ -41,12 +41,16 @@ export type AccessLine = {
 /**
  * Products that have a handover route, keyed by slug.
  *
- * A list rather than a rule, because a handover is a route somebody wrote: there is one
- * today and it is Nexus RAMP's. A product missing from here still gets a link — to its own
- * front door, where it will ask for a password — which is worse but honest. Assuming every
- * product has a handover would send people to a 404.
+ * Empty now, and that is the correct state rather than a stub waiting to be filled. The
+ * one entry here signed somebody straight into a product that has since become a separate
+ * business with its own accounts, its own sign-in and its own billing — so a handover from
+ * this site would be signing them into somebody else's system on the strength of a
+ * subscription this site no longer sells.
+ *
+ * A product with no entry still gets a link, to its own front door, where it asks for a
+ * password. That is one more step and it is honest about which system you are entering.
  */
-const HANDOVER: Record<string, string> = { 'nexus-ramp': '/api/sso/ramp' }
+const HANDOVER: Record<string, string> = {}
 
 export async function accessSummary(
   member: Pick<Member, 'id' | 'role' | 'subscriptionStatus' | 'subscriptionRenewsAt' | 'billingProvider'>,

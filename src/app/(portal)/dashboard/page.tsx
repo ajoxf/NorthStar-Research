@@ -15,17 +15,17 @@ export const metadata: Metadata = { title: 'Your reports' }
 export const dynamic = 'force-dynamic'
 
 /*
- * `sso` says a handoff to a product was refused and sent them here. Without saying so the
- * customer clicks "Open Nexus RAMP", lands back where they started, and concludes the
- * button is broken — which is worse than being told no.
+ * `sso` says a handoff to a product was refused and sent them here. Nothing on this site
+ * links to a handover any more, so these are reached only by an old bookmark — which is
+ * exactly when somebody lands somewhere unexpected and needs telling why.
  */
 const SSO_NOTICE: Record<string, string> = {
   not_entitled:
-    'You do not have an active Nexus RAMP subscription, so it could not be opened. What you do hold is below.',
+    'That product could not be opened from here — this account does not hold an active subscription to it. What you do hold is below.',
   setting_up:
-    'Your Nexus RAMP access is still being set up. Try again shortly — if it persists, contact the desk.',
+    'That access is still being set up. Try again shortly — if it persists, contact the desk.',
   unavailable:
-    'Nexus RAMP sign-in is temporarily unavailable. This is on our side, not yours; please try again shortly.',
+    'That sign-in is temporarily unavailable. This is on our side, not yours; please try again shortly.',
 }
 
 export default async function DashboardPage({

@@ -2,7 +2,7 @@ import 'server-only'
 
 import { db } from '@/lib/db'
 import { readSettings, writeSetting } from '@/lib/secure-settings'
-import { brandForItem, itemTrial, offerUsable, type Brand } from '@/lib/trial-offer-shape'
+import { itemTrial, offerUsable } from '@/lib/trial-offer-shape'
 import {
   TRIAL_DAYS_KEY,
   TRIAL_ENABLED_KEY,
@@ -70,7 +70,6 @@ export type TrialOffer = {
   days: number
   slug: string
   name: string
-  brand: Brand
   isSection: boolean
 }
 
@@ -102,7 +101,6 @@ function toOffer(
     days: trial.days,
     slug: item.slug,
     name: item.name,
-    brand: brandForItem(item.kind),
     isSection: item.kind === 'section',
   }
 }

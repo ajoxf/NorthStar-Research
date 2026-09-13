@@ -46,18 +46,6 @@ export async function SiteHeader() {
         <Wordmark />
 
         <nav className="flex shrink-0 items-center gap-1 sm:gap-2">
-          {/*
-            Products were reachable only by scrolling most of the way down the homepage,
-            which is the same as not being reachable. An anchor rather than a page: the
-            section lives on the homepage, and a visitor who is already reading it should
-            not be sent somewhere else to find the same cards.
-          */}
-          <Link
-            href="/#product"
-            className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"
-          >
-            Products
-          </Link>
           <Link
             href="/faqs"
             className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"
@@ -123,15 +111,6 @@ export async function SiteFooter() {
               <Link href="/join" className="text-ink-dim hover:text-ink">
                 Membership
               </Link>
-              {/* A separate application with its own sign-in, so it opens in its own tab. */}
-              <a
-                href="https://nexus-funds.vercel.app/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-ink-dim hover:text-ink"
-              >
-                Nexus · RAMP
-              </a>
               <Link href="/login" className="text-ink-dim hover:text-ink">
                 Member sign-in
               </Link>
@@ -175,41 +154,5 @@ export async function SiteFooter() {
         </div>
       </div>
     </footer>
-  )
-}
-
-/**
- * The Nexus RAMP wordmark, for pages wearing that brand.
- *
- * Deliberately not a parameterised version of `Wordmark` above: the two are different
- * marks, not one mark with a variable in it. NordStar Pro carries a parent-brand
- * attribution line and splits its name across two typefaces; Nexus sets the product name
- * in mono beside it and names what the software is underneath. Folding them together
- * would mean a prop for every difference and a component nobody could read.
- *
- * Links out to the product rather than to `/`, because somebody who arrived here from
- * Nexus RAMP should be able to get back to Nexus RAMP.
- */
-export function NexusWordmark() {
-  return (
-    <a
-      href="https://nexus-funds.vercel.app/"
-      className="group inline-flex items-center gap-3 leading-none"
-    >
-      <span className="grid h-9 w-9 place-items-center rounded-lg bg-accent text-[19px] font-bold tracking-tight text-panel">
-        N
-      </span>
-      <span className="inline-flex flex-col gap-1">
-        <span className="inline-flex items-baseline gap-2">
-          <span className="font-display text-[21px] tracking-tight text-ink">Nexus</span>
-          <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-accent">
-            RAMP
-          </span>
-        </span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-dim">
-          Risk and Margin Platform
-        </span>
-      </span>
-    </a>
   )
 }

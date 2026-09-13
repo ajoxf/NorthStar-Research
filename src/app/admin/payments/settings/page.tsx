@@ -202,7 +202,7 @@ export default async function PaymentSettingsPage() {
 
         <Section
           title="Product sign-in"
-          note="Nexus RAMP has its own sign-in. This is what makes a trial or a redeemed code actually open it."
+          note="A product sold here can have its own sign-in. This is what makes a trial or a redeemed code actually open it."
         >
           <div className="rounded-lg border border-line bg-panel p-5">
             <p className="flex items-center gap-2 text-[15px] text-ink">

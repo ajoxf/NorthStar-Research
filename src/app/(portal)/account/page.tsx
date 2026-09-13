@@ -36,7 +36,7 @@ export default async function AccountPage() {
         What they hold, before anything else on the page.
         ----------------------------------------------------
         The membership panel below reports the research subscription and nothing more,
-        which is correct but partial: somebody holding a live Nexus RAMP entitlement read
+        which is correct but partial: somebody holding a live product entitlement read
         "PENDING" there and had nowhere at all to see what they actually had. This states
         it plainly and first, research and products together, because "what have I got" is
         the question somebody opens this page to answer.
