@@ -179,25 +179,18 @@ type HeldItem = {
   name: string
   url: string | null
   endsAt: Date | null
-  /** `same` — the credentials they just chose. `existing` — the ones they already had
-   *  in that product. `pending` — no account there yet, which is a configuration
-   *  problem on our side rather than anything they can fix. */
-  signIn: 'same' | 'existing' | 'pending'
 }
 
 /*
- * Written for one sign-in, not two.
+ * One line, because there is one answer now.
  *
- * These lines used to explain which password to use where, because the portal set the
- * product's password to match and the customer typed it twice. They no longer need to
- * know there are two systems at all — so the copy stops telling them.
+ * These used to branch on whether this site had managed to open an account in the product
+ * for them — "opens straight from here, no second password" when it had. It no longer
+ * opens accounts anywhere, so all three branches would be saying something untrue. A
+ * product has its own sign-in and this says so plainly, which is the thing a person needs
+ * to know before they click.
  */
-const SIGN_IN_NOTE: Record<HeldItem['signIn'], string> = {
-  same: 'Opens straight from here — no second password.',
-  existing: 'Opens straight from here — no second password.',
-  pending:
-    'One-click sign-in is still being set up. Until it is, open it directly and sign in with your own password there.',
-}
+const SIGN_IN_NOTE = 'Has its own sign-in. Use your account there.'
 
 /**
  * The products this member holds a live entitlement to.
@@ -211,15 +204,7 @@ async function heldItems(memberId: string): Promise<HeldItem[]> {
     where: { memberId, status: 'active', itemId: { not: null }, item: { kind: 'product' } },
     select: {
       renewsAt: true,
-      item: {
-        select: {
-          name: true,
-          url: true,
-          // Their account in the product, if the portal has managed to open one. Its
-          // absence and its origin change what we can honestly tell them about signing in.
-          accounts: { where: { memberId }, select: { adoptedAt: true, disabledAt: true } },
-        },
-      },
+      item: { select: { name: true, url: true } },
     },
     orderBy: { startedAt: 'desc' },
   })
@@ -227,15 +212,11 @@ async function heldItems(memberId: string): Promise<HeldItem[]> {
   const now = Date.now()
   return rows
     .filter((row) => row.item && (!row.renewsAt || row.renewsAt.getTime() > now))
-    .map((row) => {
-      const account = row.item!.accounts[0] ?? null
-      return {
-        name: row.item!.name,
-        url: row.item!.url,
-        endsAt: row.renewsAt,
-        signIn: !account || account.disabledAt ? 'pending' : account.adoptedAt ? 'existing' : 'same',
-      }
-    })
+    .map((row) => ({
+      name: row.item!.name,
+      url: row.item!.url,
+      endsAt: row.renewsAt,
+    }))
 }
 
 /**
@@ -328,37 +309,27 @@ function InactiveState({
                 {item.endsAt ? `Runs until ${formatDate(item.endsAt)}` : 'No end date'}
               </span>
               <span className="mt-1.5 block text-[13px] leading-relaxed text-ink-dim">
-                {SIGN_IN_NOTE[item.signIn]}
+                {SIGN_IN_NOTE}
               </span>
               {/*
-                Through the handoff when there is one, and to the product's own sign-in
-                when there is not.
-                The handoff carries their portal session across so they arrive already in.
-                But when the product account has not been created yet — the keys were
-                unset when they were granted, or the product's auth system refused — the
-                link used to disappear entirely, leaving somebody who holds a live
-                entitlement staring at "we are still setting up your access" with no way
-                in and nothing to do. The product's own sign-in still works, so offer it:
-                a door needing a password beats no door.
+                Their own front door, where it asks for a password.
+                There was a handoff here that carried the portal session across, so
+                somebody arrived already signed in. It is gone: a product sold here lives
+                on its own domain with its own accounts and its own billing, and signing
+                somebody into it from this site would be doing so on the strength of a
+                subscription this site does not manage. One password box is the cost, and
+                it is honest about which system they are entering.
               */}
-              {item.url &&
-                (item.signIn === 'pending' ? (
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-[13px] text-accent underline underline-offset-4"
-                  >
-                    Open {item.name} directly
-                  </a>
-                ) : (
-                  <a
-                    href="/api/sso/ramp"
-                    className="mt-2 inline-block text-[13px] text-accent underline underline-offset-4"
-                  >
-                    Open {item.name}
-                  </a>
-                ))}
+              {item.url && (
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-block text-[13px] text-accent underline underline-offset-4"
+                >
+                  Open {item.name}
+                </a>
+              )}
             </li>
           ))}
         </ul>

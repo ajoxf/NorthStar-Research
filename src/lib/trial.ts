@@ -158,7 +158,15 @@ export async function trialOffers(): Promise<TrialOffer[]> {
   const [research, items] = await Promise.all([
     researchTrialOffer(),
     db.item.findMany({
-      where: { trialEnabled: true, archivedAt: null },
+      /*
+       * Sections only. A product cannot be trialled from here any more.
+       *
+       * Not a policy so much as an honest reading of what a grant would do. A product
+       * lives on its own domain behind its own sign-in, and this site no longer creates
+       * accounts there — so a product trial would write an entitlement that opens
+       * nothing, and hand somebody a fortnight of a door that does not exist.
+       */
+      where: { trialEnabled: true, archivedAt: null, kind: 'section' },
       select: OFFER_SELECT,
       orderBy: { name: 'asc' },
     }),
@@ -177,7 +185,10 @@ export async function trialOfferFor(slug: string): Promise<TrialOffer | null> {
   await migrateLegacyTrialSettings()
   const settings = await trialSettings()
   const item = await db.item.findUnique({ where: { slug }, select: OFFER_SELECT })
-  return item ? toOffer(item, settings.days) : null
+  // Sections only, matching trialOffers — otherwise a direct /trial?item= link would still
+  // reach a product offer that the list above deliberately stopped showing.
+  if (!item || item.kind !== 'section') return null
+  return toOffer(item, settings.days)
 }
 
 /**

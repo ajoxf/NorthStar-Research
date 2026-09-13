@@ -26,8 +26,6 @@ export type TrialState = {
   /** Applied to any item that has set no length of its own. */
   defaultDays: number
   grantable: TrialItem[]
-  /** Whether a granted entitlement actually opens the product's own sign-in. */
-  productAuthReady: boolean
 }
 
 /**
@@ -48,7 +46,6 @@ export type TrialState = {
 export function TrialForm({ state }: { state: TrialState }) {
   const [items, setItems] = React.useState(state.grantable)
   const anyOpen = items.some((item) => item.trialEnabled)
-  const openProducts = items.filter((item) => item.trialEnabled && item.kind === 'product')
 
   if (items.length === 0) {
     return (
@@ -61,18 +58,10 @@ export function TrialForm({ state }: { state: TrialState }) {
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[14px] leading-relaxed text-ink-dim">
-        One switch per product, each independent. A member can run a trial of every product
-        at once, but only ever one trial of each — an expired trial still counts, so nobody
-        renews a free month by waiting.
+        One switch each, independent. A member can run a trial of the membership and of a
+        section at once, but only ever one trial of each — an expired trial still counts, so
+        nobody renews a free month by waiting.
       </p>
-
-      {!state.productAuthReady && openProducts.length > 0 && (
-        <p className="rounded-lg border border-down/35 bg-down/10 px-3.5 py-2.5 text-[13px] leading-relaxed text-down">
-          Product sign-in is not working, so a trial of{' '}
-          {openProducts.map((item) => item.name).join(', ')} grants an entitlement that
-          cannot open anything. Fix that before letting anybody in.
-        </p>
-      )}
 
       <ul className="flex flex-col gap-2">
         {items.map((item) => (

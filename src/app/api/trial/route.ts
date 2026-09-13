@@ -1,11 +1,8 @@
-import { randomBytes } from 'node:crypto'
-
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { getCurrentMember, hashPassword, startSession } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { syncProductAccess } from '@/lib/product-auth'
 import {
   refusalMessage,
   researchTrialRefusal,
@@ -221,37 +218,9 @@ export async function POST(request: Request) {
     return fail(refusalMessage('already_trialled'), 409)
   }
 
-  /*
-   * Open the door the trial just paid for.
-   *
-   * The product has its own sign-in, so an entitlement here is not on its own something
-   * anybody can log into. This creates the account there with the password they chose a
-   * moment ago — the same credentials, both sites.
-   *
-   * Deliberately not awaited into the response's success: it never throws, and a trial
-   * that was granted is granted whether or not the product's auth system answered. The
-   * nightly job reconciles, and the outcome is returned for the logs.
-   */
-  const access = await syncProductAccess(member.id, {
-    /*
-     * A signed-out signup hands over the password they just chose, so they can sign in to
-     * the product directly as well as through the portal.
-     *
-     * A signed-in member chose nothing — they clicked a button — and without something
-     * here the account is never created: no password means no provisioning, which left
-     * them with an entitlement, a dashboard reading "still setting up", and nothing that
-     * would ever finish it, because the nightly job only reconciles accounts that already
-     * exist. So a random one, never shown. With the handoff in place a password is not how
-     * they get in, and they can set one from the account page if they ever want it.
-     */
-    password: parsed?.password ?? randomBytes(24).toString('base64url'),
-    itemSlug: offer.slug,
-  })
-
   if (!existing) await startSession(member)
 
   return NextResponse.json({
-    access: access.action,
     ok: true,
     item: item.name,
     days: offer.days,

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { db } from '@/lib/db'
-import { syncProductAccess } from '@/lib/product-auth'
 import { getCurrentMember, hashPassword, readSession, verifyPassword } from '@/lib/auth'
 import {
   NEEDS_CURRENT_PASSWORD,
@@ -76,18 +75,6 @@ export async function PATCH(request: Request) {
   }
 
   await db.member.update({ where: { id: member.id }, data })
-
-  /*
-   * Carry a new password through to any product they hold.
-   *
-   * The whole point of the bridge is one set of credentials for both sites. A password
-   * changed here and not there would quietly split them in two, and the person would
-   * find out the next time they opened the product — with the old password, which they
-   * have just replaced and may no longer remember.
-   */
-  if (parsed.data.newPassword) {
-    await syncProductAccess(member.id, { password: parsed.data.newPassword })
-  }
 
   return NextResponse.json({ ok: true })
 }

@@ -17,7 +17,6 @@ import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { cregisConfigured } from '@/lib/cregis'
 import { stripeConfigured } from '@/lib/stripe'
-import { productAuthCheck, productAuthConfigured, productAuthItemSlug } from '@/lib/product-auth'
 import {
   migrateLegacyTrialSettings,
   RESEARCH_TRIAL_NAME,
@@ -72,9 +71,6 @@ export default async function PaymentSettingsPage() {
   const baseLooksWrong = urls.base !== CANONICAL_BASE_URL
   const stripeReady = stripeConfigured()
   const trialState = await buildTrialState()
-  // Asked, not assumed. A key that is present but refused looks identical from here
-  // otherwise, and that is precisely the failure that hides.
-  const productAuth = await productAuthCheck()
   // Presence only. The URL itself is infrastructure and the secret is never surfaced.
   const relayConfigured = Boolean(process.env.CREGIS_RELAY_URL)
 
@@ -174,9 +170,9 @@ export default async function PaymentSettingsPage() {
           <TrialForm state={trialState} />
 
           <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
-            A membership trial grants everything a member reads, the full archive included, and
-            expires on its own. A product trial grants that product and nothing else. Neither
-            takes a card or creates a subscription that renews. Trialists appear in{' '}
+            A membership trial grants everything a member reads, the full archive included; a
+            section trial grants that section. Neither takes a card nor creates a subscription
+            that renews, and both expire on their own. Trialists appear in{' '}
             <Link
               href="/admin/members?source=trial"
               className="text-accent underline underline-offset-4"
@@ -185,75 +181,6 @@ export default async function PaymentSettingsPage() {
             </Link>{' '}
             under the Free trial source.
           </p>
-        </Section>
-
-        <Section
-          title="Product sign-in"
-          note="A product sold here can have its own sign-in. This is what makes a trial or a redeemed code actually open it."
-        >
-          <div className="rounded-lg border border-line bg-panel p-5">
-            <p className="flex items-center gap-2 text-[15px] text-ink">
-              {productAuth.state === 'working'
-                ? 'Working'
-                : productAuth.state === 'refused'
-                  ? 'Refused'
-                  : 'Not connected'}
-              {productAuth.state === 'working' && (
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
-                  live
-                </span>
-              )}
-              {productAuth.state === 'refused' && (
-                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-down">
-                  {productAuth.status || 'unreachable'}
-                </span>
-              )}
-            </p>
-
-            {productAuth.state === 'working' && (
-              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-ink-dim">
-                Checked just now, not assumed. Granting{' '}
-                <span className="font-mono text-[12px]">{productAuthItemSlug()}</span> creates the
-                account in the product, and access ending disables it there — their own data is
-                kept, not deleted.
-              </p>
-            )}
-
-            {productAuth.state === 'refused' && (
-              <div className="mt-2 max-w-2xl text-[13px] leading-relaxed text-ink-dim">
-                <p>
-                  A key is set, but the product refused it:{' '}
-                  <span className="font-mono text-[12px] text-down">{productAuth.message}</span>
-                </p>
-                <p className="mt-2">
-                  {productAuth.status === 401 || productAuth.status === 403 ? (
-                    <>
-                      That is the key itself. The commonest cause is the{' '}
-                      <span className="font-mono text-[12px]">sb_publishable_…</span> key pasted
-                      where the <span className="font-mono text-[12px]">sb_secret_…</span> one
-                      belongs — they differ by a word and sit on the same page. Re-paste
-                      RAMP_SUPABASE_SECRET_KEY in Vercel and redeploy.
-                    </>
-                  ) : (
-                    <>
-                      Entitlements are still granted and recorded; nobody can sign in with them
-                      until this clears. The nightly job connects everyone already granted once it
-                      does.
-                    </>
-                  )}
-                </p>
-              </div>
-            )}
-
-            {productAuth.state === 'unconfigured' && (
-              <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-ink-dim">
-                Entitlements are still granted and recorded, but nobody can sign into the product
-                with them. Set <span className="font-mono text-[12px]">RAMP_SUPABASE_URL</span> and{' '}
-                <span className="font-mono text-[12px]">RAMP_SUPABASE_SECRET_KEY</span> in Vercel
-                and redeploy; the nightly job then connects everyone already granted.
-              </p>
-            )}
-          </div>
         </Section>
 
         <Section
@@ -531,7 +458,9 @@ async function buildTrialState(): Promise<TrialState> {
   ])
 
   const grantable = items
-    .filter((item) => item.kind !== 'section' || (item.section && !item.section.archivedAt))
+    // Sections only. A product is sold on its own site now, and a trial granted here
+    // would open nothing — see the note in trialOffers.
+    .filter((item) => item.kind === 'section' && item.section && !item.section.archivedAt)
     .map((item) => ({
       slug: item.slug,
       name: item.name,
@@ -559,6 +488,5 @@ async function buildTrialState(): Promise<TrialState> {
   return {
     defaultDays: settings.days,
     grantable: [researchRow, ...grantable],
-    productAuthReady: productAuthConfigured(),
   }
 }
