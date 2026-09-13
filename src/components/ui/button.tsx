@@ -11,8 +11,10 @@ const base =
   'disabled:pointer-events-none disabled:opacity-50 active:translate-y-px whitespace-nowrap'
 
 const variants: Record<Variant, string> = {
-  // Flat lime fill, black label. The reference uses no glow — the colour carries it.
-  primary: 'bg-accent text-bg font-semibold hover:bg-[#DDFF63]',
+  // Flat accent fill, page-coloured label. The reference uses no glow — the colour
+  // carries it. Both the fill and its hover come from tokens, so a re-skinned subtree
+  // gets a button that hovers in its own colour rather than flashing lime.
+  primary: 'bg-accent text-bg font-semibold hover:bg-accent-hover',
   // Outlined pill on transparent, the reference's secondary action.
   secondary: 'border border-ink/25 bg-transparent text-ink hover:border-ink/60 hover:bg-ink/5',
   ghost: 'text-ink-dim hover:text-ink hover:bg-panel',

@@ -20,6 +20,10 @@
   --ink: 255 255 255;
   --ink-dim: 163 163 163;
   --accent: 208 245 60;
+  /* The lift on a primary button's hover. A token like any other: it was the last
+     hard-coded colour in the system, and it was lime on every brand — including the
+     blue one, where it turned the button acid green under the cursor. */
+  --accent-hover: 221 255 99;   /* #DDFF63 */
   --imprint: 216 207 192;
   --up: 0 224 138;
   --down: 255 77 94;
@@ -55,6 +59,7 @@
   --ink: 22 32 46;           /* #16202E */
   --ink-dim: 91 103 120;     /* #5B6778 */
   --accent: 31 78 140;       /* #1F4E8C */
+  --accent-hover: 26 66 121; /* #1A4279 — RAMP's own hover navy */
   /* The parchment imprint tone was picked to sit on black; on paper it is barely
      there, so it steps down to the dim ink rather than staying unreadable. */
   --imprint: 91 103 120;

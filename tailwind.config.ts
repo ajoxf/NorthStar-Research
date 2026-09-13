@@ -26,6 +26,7 @@ const config: Config = {
         ink: 'rgb(var(--ink) / <alpha-value>)',
         'ink-dim': 'rgb(var(--ink-dim) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
+        'accent-hover': 'rgb(var(--accent-hover) / <alpha-value>)',
         imprint: 'rgb(var(--imprint) / <alpha-value>)',
         up: 'rgb(var(--up) / <alpha-value>)',
         down: 'rgb(var(--down) / <alpha-value>)',
