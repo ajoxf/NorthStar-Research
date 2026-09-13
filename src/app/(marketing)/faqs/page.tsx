@@ -3,7 +3,6 @@ import Link from 'next/link'
 
 import { formatPrice } from '@/lib/package-shape'
 import { defaultPackage } from '@/lib/packages'
-import { pricingMode } from '@/lib/pricing-mode'
 
 export const metadata: Metadata = { title: 'FAQs' }
 
@@ -116,13 +115,11 @@ const faqs = (
 ]
 
 export default async function FaqsPage() {
-  const [plan, mode] = await Promise.all([defaultPackage(), pricingMode()])
-  // Null in enquiry mode: the answer then describes what membership includes without
-  // naming a figure, rather than a figure appearing in an FAQ nobody thought to check.
-  const FAQS = faqs(
-    mode === 'enquiry' ? null : formatPrice(plan.priceCents, plan.currency),
-    plan.interval,
-  )
+  const plan = await defaultPackage()
+  // The figure is always named now. It used to be null while the site took pricing
+  // requests, so the answer described what membership includes without saying what it
+  // costs — which is the one thing somebody reading a pricing FAQ came for.
+  const FAQS = faqs(formatPrice(plan.priceCents, plan.currency), plan.interval)
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-20">

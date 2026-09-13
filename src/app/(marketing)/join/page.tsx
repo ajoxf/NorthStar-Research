@@ -1,14 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-import { EnquiryForm } from '@/app/(marketing)/join/enquiry-form'
 import { JoinForm } from '@/app/(marketing)/join/join-form'
+import { ButtonLink } from '@/components/ui/button'
 import { ToastProvider } from '@/components/ui/toast'
-import { db } from '@/lib/db'
-import { pricingMode } from '@/lib/pricing-mode'
 import { isConfigured } from '@/lib/env'
 import { FALLBACK_PACKAGE, formatPrice } from '@/lib/package-shape'
 import { sellablePackages } from '@/lib/packages'
+import { trialOffers } from '@/lib/trial'
 
 export const metadata: Metadata = { title: 'Join' }
 export const dynamic = 'force-dynamic'
@@ -24,71 +23,34 @@ export const dynamic = 'force-dynamic'
 export default async function JoinPage({
   searchParams,
 }: {
-  searchParams: { package?: string; invite?: string }
+  searchParams: { package?: string }
 }) {
   /*
-   * Two versions of this page, chosen by a stored setting.
+   * The price is on the page, always.
    *
-   * In `enquiry` mode the price is off the public site and this takes a request instead
-   * — except for somebody arriving on a private link the desk sent them, who sees the
-   * real price and the real checkout. The token is what separates "the public" from
-   * "this person we quoted", without the price being a secret in any cryptographic sense.
+   * This used to have two versions, chosen by a stored setting: one showing the figure and
+   * one taking a request for it. Asking somebody to fill in a form to be told a number puts
+   * a person and a wait between a buyer and the thing they came to buy, and most of them do
+   * not come back. The setting, the form, the private links that let a quoted buyer skip
+   * the form, and the endpoint behind all of it are gone.
    */
-  const mode = await pricingMode()
-  const invite = searchParams.invite
-    ? await db.pricingEnquiry.findUnique({ where: { inviteToken: searchParams.invite } })
-    : null
-
-  if (mode === 'enquiry' && !invite) {
-    return (
-      <ToastProvider>
-        <div className="mx-auto grid max-w-5xl gap-12 px-5 py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:py-24">
-          <div>
-            <span className="eyebrow">Membership</span>
-            <h1 className="mt-3 text-balance text-4xl leading-tight text-ink sm:text-[42px]">
-              Three research editions a week, by subscription.
-            </h1>
-            <p className="mt-5 max-w-md text-[16px] leading-relaxed text-ink-dim">
-              Membership is arranged directly with the desk. Tell us how to reach you and we will
-              send pricing and a payment link — by card or in crypto, whichever you prefer.
-            </p>
-
-            <ol className="mt-10 space-y-5 border-t border-line pt-8">
-              {[
-                { step: '01', title: 'Tell us how to reach you', body: 'Name, email and a number. It takes a moment.' },
-                { step: '02', title: 'We send pricing', body: 'A person from the desk replies with the figure and a payment link.' },
-                { step: '03', title: 'Pay and read', body: 'Your access code arrives as soon as the payment confirms.' },
-              ].map((item) => (
-                <li key={item.step} className="flex gap-4">
-                  <span className="font-mono text-[12px] tracking-[0.14em] text-accent">{item.step}</span>
-                  <div>
-                    <h2 className="font-display text-[17px] text-ink">{item.title}</h2>
-                    <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">{item.body}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          <div className="panel h-fit p-7">
-            <EnquiryForm />
-
-            <p className="mt-5 text-center text-[13px] text-ink-dim">
-              Already have a code?{' '}
-              <Link href="/redeem" className="text-accent underline underline-offset-4">
-                Redeem it here
-              </Link>
-            </p>
-          </div>
-        </div>
-      </ToastProvider>
-    )
-  }
 
   // Resolved server-side so the page can say plainly which payment methods are actually
   // wired up, rather than presenting a button that fails at the last step.
   const cryptoReady = isConfigured('CREGIS_PROJECT_ID', 'CREGIS_API_KEY', 'CREGIS_BASE_URL')
   const cardReady = isConfigured('STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID')
+
+  /*
+   * Which trial to advertise, when there is one.
+   *
+   * Trials are per item and several can be open at once; /trial itself shows a chooser in
+   * that case. Here the shortest is quoted, because the button names a number of days and
+   * quoting the longest would overstate what somebody who picks a different offer gets.
+   */
+  const offers = await trialOffers()
+  const trial = offers.length > 0
+    ? offers.reduce((low, offer) => (offer.days < low.days ? offer : low))
+    : null
 
   // No packages created yet means the site is still selling the plan it always sold.
   const created = await sellablePackages()
@@ -140,6 +102,26 @@ export default async function JoinPage({
         </div>
 
         <div className="panel h-fit p-7">
+          {/*
+            The trial goes above the payment form, not instead of it.
+
+            Reading the research for a fortnight is a better first step than paying for it
+            sight unseen, and it is the step most people would take if offered. But it is
+            only shown when a trial is actually open — a button to a page that 404s is
+            worse than no button — and the payment form stays underneath either way, for
+            somebody who has already decided.
+          */}
+          {trial && (
+            <div className="mb-6 border-b border-line pb-6">
+              <ButtonLink href="/trial" size="lg" className="w-full">
+                Start your {trial.days}-day free trial
+              </ButtonLink>
+              <p className="mt-3 text-center text-[13px] leading-relaxed text-ink-dim">
+                No card. It stops on its own — there is nothing to cancel.
+              </p>
+            </div>
+          )}
+
           <JoinForm
             cardReady={cardReady}
             cryptoReady={cryptoReady}

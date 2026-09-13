@@ -11,7 +11,6 @@ import { db } from '@/lib/db'
 import { appBaseUrl } from '@/lib/env'
 import { formatPrice } from '@/lib/package-shape'
 import { defaultPackage } from '@/lib/packages'
-import { pricingMode } from '@/lib/pricing-mode'
 import { formatDateTime } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Enquiries', robots: { index: false, follow: false } }
@@ -49,11 +48,10 @@ export default async function EnquiriesPage({
         ? { status: { in: ['new', 'invited'] } }
         : { status: filter as 'new' | 'invited' | 'converted' | 'closed' }
 
-  const [enquiries, counts, plan, mode] = await Promise.all([
+  const [enquiries, counts, plan] = await Promise.all([
     db.pricingEnquiry.findMany({ where, orderBy: { createdAt: 'desc' }, take: 200 }),
     db.pricingEnquiry.groupBy({ by: ['status'], _count: { _all: true } }),
     defaultPackage(),
-    pricingMode(),
   ])
 
   const byStatus = Object.fromEntries(counts.map((row) => [row.status, row._count._all])) as Record<
@@ -70,30 +68,27 @@ export default async function EnquiriesPage({
           <span className="eyebrow">Demand</span>
           <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Enquiries</h1>
           <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
-            People who asked what membership costs. Send them the figure and a payment link from
-            here — the price comes from the default package,{' '}
+            People who asked what membership costs, from when the site quoted individually.
+            Send them the figure and a payment link from here — the price comes from the default
+            package,{' '}
             <span className="text-ink">{formatPrice(plan.priceCents, plan.currency)}</span> per{' '}
             {plan.interval}, so the email and the checkout cannot disagree.
           </p>
         </div>
 
-        {mode === 'public' && (
-          <p className="mb-6 flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3.5 text-[13px] leading-relaxed text-ink-dim">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
-            <span>
-              <strong className="font-medium text-ink">The price is currently public.</strong> The
-              site shows it and sells directly, so new enquiries will be rare. Switch back to
-              request-only under{' '}
-              <Link
-                href="/admin/payments/settings"
-                className="text-accent underline underline-offset-4"
-              >
-                Payment settings
-              </Link>
-              .
-            </span>
-          </p>
-        )}
+        {/*
+          The site sells at a published price and leads with the trial, so nothing new
+          arrives here. Kept because what is already here is real demand from real people,
+          and the reply-with-a-payment-link flow still works for every one of them.
+        */}
+        <p className="mb-6 flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3.5 text-[13px] leading-relaxed text-ink-dim">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+          <span>
+            <strong className="font-medium text-ink">No new enquiries arrive.</strong> The price
+            is on the site and the form that fed this page has been removed. These are the people
+            who asked while it was up — they can still be sent a payment link from here.
+          </span>
+        </p>
 
         <div className="mb-5 flex flex-wrap items-center gap-2">
           {FILTERS.map((entry) => (

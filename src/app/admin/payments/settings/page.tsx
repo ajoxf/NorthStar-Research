@@ -5,7 +5,6 @@ import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { CopyableUrl, PaymentChecks } from '@/app/admin/payments/settings/payment-checks'
 import { CregisForm, type CregisFormState } from '@/app/admin/payments/settings/cregis-form'
 import { PricingForm, type PricingState } from '@/app/admin/payments/settings/pricing-form'
-import { PricingModeForm } from '@/app/admin/payments/settings/pricing-mode-form'
 import { TestPayments, type TestState } from '@/app/admin/payments/settings/test-payments'
 import { TrialForm, type TrialState } from '@/app/admin/payments/settings/trial-form'
 import { CREGIS_SETTING_KEYS, resolveCregisSettings } from '@/lib/cregis-settings'
@@ -18,7 +17,6 @@ import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { cregisConfigured } from '@/lib/cregis'
 import { stripeConfigured } from '@/lib/stripe'
-import { pricingMode } from '@/lib/pricing-mode'
 import { productAuthCheck, productAuthConfigured, productAuthItemSlug } from '@/lib/product-auth'
 import { migrateLegacyTrialSettings, trialSettings } from '@/lib/trial'
 import { isFallbackPackage, priceLine } from '@/lib/package-shape'
@@ -67,7 +65,6 @@ export default async function PaymentSettingsPage() {
   const urls = processorUrls()
   const baseLooksWrong = urls.base !== CANONICAL_BASE_URL
   const stripeReady = stripeConfigured()
-  const mode = await pricingMode()
   const trialState = await buildTrialState()
   // Asked, not assumed. A key that is present but refused looks identical from here
   // otherwise, and that is precisely the failure that hides.
@@ -129,23 +126,6 @@ export default async function PaymentSettingsPage() {
           to do; everything below them is credentials and plumbing, which is looked at once
           at setup and then rarely again.
         */}
-        <Section
-          title="How the price is shown"
-          note="Publicly on the site, or on request with you quoting each person individually."
-        >
-          <PricingModeForm mode={mode} />
-
-          {mode === 'enquiry' && (
-            <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
-              Requests land in{' '}
-              <Link href="/admin/enquiries" className="text-accent underline underline-offset-4">
-                Enquiries
-              </Link>
-              , where you send each person the figure and a payment link.
-            </p>
-          )}
-        </Section>
-
         <Section title="Price" note="What the site charges. Applies to card and crypto alike.">
           <PricingForm state={pricingState} />
 

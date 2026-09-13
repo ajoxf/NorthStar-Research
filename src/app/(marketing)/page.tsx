@@ -8,7 +8,7 @@ import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { defaultPackage } from '@/lib/packages'
 import { db } from '@/lib/db'
-import { pricingMode } from '@/lib/pricing-mode'
+import { trialOffers } from '@/lib/trial'
 import { sectionsPublic } from '@/lib/sections-mode'
 import { formatPrice, type PackageShape } from '@/lib/package-shape'
 import { cn } from '@/lib/utils'
@@ -20,11 +20,22 @@ import { cn } from '@/lib/utils'
  * homepage, the join page and checkout cannot drift apart.
  */
 export default async function LandingPage() {
-  const [plan, mode, showSections] = await Promise.all([
+  const [plan, offers, showSections] = await Promise.all([
     defaultPackage(),
-    pricingMode(),
+    trialOffers(),
     sectionsPublic(),
   ])
+
+  /*
+   * The trial the buttons offer, when one is open.
+   *
+   * The shortest of them, because a button that names a number of days must not name one
+   * somebody might not get. Null when nothing is on trial, and then every call to action
+   * quotes the price instead — never a trial link to a page that 404s.
+   */
+  const trial = offers.length > 0
+    ? offers.reduce((low, offer) => (offer.days < low.days ? offer : low))
+    : null
 
   /*
    * The desk, when there is one to show.
@@ -68,11 +79,11 @@ export default async function LandingPage() {
 
   return (
     <>
-      <Hero plan={plan} mode={mode} hasSections={authors.length > 0} />
+      <Hero plan={plan} trial={trial} hasSections={authors.length > 0} />
       {covered.length > 0 ? <TopicCoverage topics={covered} /> : <CoverageSection />}
       {authors.length > 0 && <ContributorsSection authors={authors} />}
       <SampleReportSection />
-      <PricingSection plan={plan} mode={mode} cheapestSectionCents={cheapest} />
+      <PricingSection plan={plan} trial={trial} cheapestSectionCents={cheapest} />
     </>
   )
 }
@@ -195,11 +206,11 @@ function shortInterval(plan: PackageShape): string {
 
 function Hero({
   plan,
-  mode,
+  trial,
   hasSections,
 }: {
   plan: PackageShape
-  mode: 'public' | 'enquiry'
+  trial: { days: number } | null
   hasSections: boolean
 }) {
   return (
@@ -260,16 +271,34 @@ function Hero({
             ))}
           </ul>
 
+          {/*
+            The trial leads when there is one, and the price sits beside it rather than
+            behind it. Somebody who has already decided should not have to start a trial to
+            find out what it costs — that is the same wait a pricing request used to impose,
+            dressed differently.
+          */}
           <div className="mt-9 flex flex-wrap items-center gap-3">
-            <ButtonLink href="/join" size="lg">
-              {mode === 'enquiry'
-                ? 'Request pricing'
-                : `Become a member — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)} intro`}
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </ButtonLink>
-            <ButtonLink href="#sample-report" size="lg" variant="secondary">
-              Request a sample report
-            </ButtonLink>
+            {trial ? (
+              <>
+                <ButtonLink href="/trial" size="lg">
+                  Start a free {trial.days}-day trial
+                  <ArrowRight className="h-4 w-4" aria-hidden />
+                </ButtonLink>
+                <ButtonLink href="/join" size="lg" variant="secondary">
+                  {`Join — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)}`}
+                </ButtonLink>
+              </>
+            ) : (
+              <>
+                <ButtonLink href="/join" size="lg">
+                  {`Become a member — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)} intro`}
+                  <ArrowRight className="h-4 w-4" aria-hidden />
+                </ButtonLink>
+                <ButtonLink href="#sample-report" size="lg" variant="secondary">
+                  Request a sample report
+                </ButtonLink>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -368,11 +397,11 @@ function SampleReportSection() {
 
 function PricingSection({
   plan,
-  mode,
+  trial,
   cheapestSectionCents,
 }: {
   plan: PackageShape
-  mode: 'public' | 'enquiry'
+  trial: { days: number } | null
   /** Lowest live section price, or null when sections are off or none are on sale. */
   cheapestSectionCents: number | null
 }) {
@@ -387,53 +416,33 @@ function PricingSection({
 
           <span className="eyebrow">Membership</span>
 
-          {mode === 'enquiry' ? (
-            <>
-              {/*
-                No figure, and no placeholder standing in for one. "Pricing on request"
-                said plainly is a normal way to sell research; a struck-out number or a
-                "from $X" would be the pressure this product does not need.
-              */}
-              <h2 className="mt-4 text-balance font-display text-4xl leading-tight text-ink">
-                Pricing on request
-              </h2>
-              <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
-                Membership is arranged directly with the desk. Tell us how to reach you and we
-                will send the figure and a payment link — by card or in crypto, whichever suits.
-                Three reports a week, the complete archive, and an email the moment each one lands.
-              </p>
-            </>
-          ) : (
-            <>
-              <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-2">
-                <span className="font-display text-5xl text-ink">
-                  {formatPrice(plan.priceCents, plan.currency)}
-                </span>
-                <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
-                  per {plan.interval}
-                </span>
-                {/*
-                  Stated as a fact about the current price, not as a countdown. No fake
-                  deadline, no struck-through "was" figure that never existed — both are the
-                  kind of pressure a research product should not need, and the second is a
-                  claim we would have to be able to stand behind.
-                */}
-                <Badge tone="accent">Introductory rate</Badge>
-              </div>
-              <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
-                One plan. Three reports a week, the complete archive of everything published, and
-                an email the moment each one lands. Pay by card and it renews itself — cancel any
-                time — or pay in crypto and renew whenever you choose.
-              </p>
-              <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
-                <span className="text-ink">
-                  {formatPrice(plan.priceCents, plan.currency)} is an introductory rate
-                </span>{' '}
-                while the desk builds out its coverage. It will rise for new members later; join
-                now and yours stays as it is for as long as your membership runs.
-              </p>
-            </>
-          )}
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-2">
+            <span className="font-display text-5xl text-ink">
+              {formatPrice(plan.priceCents, plan.currency)}
+            </span>
+            <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
+              per {plan.interval}
+            </span>
+            {/*
+              Stated as a fact about the current price, not as a countdown. No fake
+              deadline, no struck-through "was" figure that never existed — both are the
+              kind of pressure a research product should not need, and the second is a
+              claim we would have to be able to stand behind.
+            */}
+            <Badge tone="accent">Introductory rate</Badge>
+          </div>
+          <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
+            One plan. Three reports a week, the complete archive of everything published, and an
+            email the moment each one lands. Pay by card and it renews itself — cancel any time —
+            or pay in crypto and renew whenever you choose.
+          </p>
+          <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
+            <span className="text-ink">
+              {formatPrice(plan.priceCents, plan.currency)} is an introductory rate
+            </span>{' '}
+            while the desk builds out its coverage. It will rise for new members later; join now
+            and yours stays as it is for as long as your membership runs.
+          </p>
 
           {/*
             Noun phrases, one fact each. The first two are deliberately parallel — new
@@ -461,9 +470,23 @@ function PricingSection({
             ))}
           </ul>
 
-          <ButtonLink href="/join" size="lg" className="mt-9 w-full">
-            {mode === 'enquiry' ? 'Request pricing' : 'Continue to payment'}
-            <ArrowRight className="h-4 w-4" aria-hidden />
+          {/* Trial first where there is one, payment underneath. The price is directly
+              above both, so neither button is hiding a figure from anybody. */}
+          {trial && (
+            <ButtonLink href="/trial" size="lg" className="mt-9 w-full">
+              Start a free {trial.days}-day trial
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </ButtonLink>
+          )}
+
+          <ButtonLink
+            href="/join"
+            size="lg"
+            variant={trial ? 'secondary' : 'primary'}
+            className={trial ? 'mt-3 w-full' : 'mt-9 w-full'}
+          >
+            Continue to payment
+            {!trial && <ArrowRight className="h-4 w-4" aria-hidden />}
           </ButtonLink>
 
           {/*
