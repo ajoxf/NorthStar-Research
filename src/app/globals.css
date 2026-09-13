@@ -64,7 +64,10 @@
      there, so it steps down to the dim ink rather than staying unreadable. */
   --imprint: 91 103 120;
   --up: 14 122 83;           /* #0E7A53 */
-  --down: 192 49 58;         /* #C0313A */
+  /* A touch deeper than the product's own #C0313A. That red is right on a white card,
+     but the refusal here sits on a 10%-tinted panel, where it measured 4.28:1 — under
+     the 4.5:1 body text needs. #B02B34 reads as the same red and clears it at 4.90:1. */
+  --down: 176 43 52;         /* #B02B34 */
 
   color-scheme: light;
   background-color: rgb(var(--bg));

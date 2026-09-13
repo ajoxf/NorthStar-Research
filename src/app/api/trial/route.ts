@@ -31,7 +31,16 @@ const Body = z.object({
   lastName: z.string().trim().max(80).optional(),
 })
 
-const fail = (error: string, status = 400) => NextResponse.json({ error }, { status })
+/**
+ * `signIn` is a path the form can offer as a link.
+ *
+ * A refusal that names the next step without providing it is a dead end: "sign in and
+ * start your trial from there" left somebody on a signup page with no way to sign in and
+ * no idea where "there" was. It carries no information the caller does not already have —
+ * /login is on the site's own header.
+ */
+const fail = (error: string, status = 400, signIn?: string) =>
+  NextResponse.json(signIn ? { error, signIn } : { error }, { status })
 
 export async function POST(request: Request) {
   const settings = await trialSettings()
@@ -112,7 +121,16 @@ export async function POST(request: Request) {
     if (already) {
       // Never silently overwrite a password, and never reveal more than the person asking
       // already knows: whoever holds this address can find out by signing in.
-      return fail('That email already has an account. Sign in and start your trial from there.', 409)
+      /*
+       * Straight to the dashboard, which is where the offer lives for somebody who
+       * already has an account — a research member who has never held this product sees
+       * the same trial offered there, one click, no form to fill in twice.
+       */
+      return fail(
+        'That email already has an account. Sign in and the trial is waiting on your dashboard.',
+        409,
+        '/login?next=/dashboard',
+      )
     }
   }
 

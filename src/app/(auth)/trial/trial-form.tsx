@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -18,7 +19,8 @@ import { PasswordInput } from '@/components/ui/password-input'
 export function TrialForm({ days }: { days: number }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // The refusal and, where there is one, the way out of it.
+  const [error, setError] = useState<{ message: string; signIn?: string } | null>(null)
 
   async function submit(formData: FormData) {
     setPending(true)
@@ -35,13 +37,16 @@ export function TrialForm({ days }: { days: number }) {
       })
       const body = await response.json().catch(() => ({}))
       if (!response.ok) {
-        setError(body.error ?? 'That did not work. Please try again.')
+        setError({
+          message: body.error ?? 'That did not work. Please try again.',
+          signIn: typeof body.signIn === 'string' ? body.signIn : undefined,
+        })
         return
       }
       router.push('/dashboard')
       router.refresh()
     } catch {
-      setError('That did not work. Please try again.')
+      setError({ message: 'That did not work. Please try again.' })
     } finally {
       setPending(false)
     }
@@ -66,9 +71,17 @@ export function TrialForm({ days }: { days: number }) {
       </div>
 
       {error && (
-        <p role="alert" className="rounded-lg border border-down/35 bg-down/10 px-3.5 py-2.5 text-[14px] text-down">
-          {error}
-        </p>
+        <div role="alert" className="rounded-lg border border-down/35 bg-down/10 px-3.5 py-2.5 text-[14px] text-down">
+          <p>{error.message}</p>
+          {error.signIn && (
+            <Link
+              href={error.signIn}
+              className="mt-1.5 inline-block font-medium text-ink underline underline-offset-4"
+            >
+              Sign in
+            </Link>
+          )}
+        </div>
       )}
 
       <Button type="submit" size="lg" disabled={pending} className="mt-1 w-full">
