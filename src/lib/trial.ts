@@ -2,6 +2,12 @@ import 'server-only'
 
 import { db } from '@/lib/db'
 import { readSettings, writeSetting } from '@/lib/secure-settings'
+import {
+  RESEARCH_TRIAL_DAYS_KEY,
+  RESEARCH_TRIAL_ENABLED_KEY,
+  RESEARCH_TRIAL_NAME,
+  RESEARCH_TRIAL_SLUG,
+} from '@/lib/research-trial'
 import { itemTrial, offerUsable } from '@/lib/trial-offer-shape'
 import {
   TRIAL_DAYS_KEY,
@@ -24,6 +30,7 @@ import {
 
 export * from '@/lib/trial-shape'
 export * from '@/lib/trial-offer-shape'
+export * from '@/lib/research-trial'
 
 /**
  * Trials are **off** unless switched on.
@@ -71,6 +78,15 @@ export type TrialOffer = {
   slug: string
   name: string
   isSection: boolean
+  /**
+   * The research membership rather than an item.
+   *
+   * Carried on the offer because the two are granted completely differently — an item
+   * trial writes an entitlement, this one writes the subscription columns on Member — and
+   * every caller that grants one has to know which it is holding. A slug comparison at
+   * each of those call sites would be the same knowledge, spread out and easy to miss.
+   */
+  isResearch: boolean
 }
 
 const OFFER_SELECT = {
@@ -102,24 +118,62 @@ function toOffer(
     slug: item.slug,
     name: item.name,
     isSection: item.kind === 'section',
+    isResearch: false,
+  }
+}
+
+/**
+ * The research membership's own offer, when it is open.
+ *
+ * Read from settings rather than from an item, because there is no item: the membership
+ * is two columns on Member. Its own day count too, independent of the item default — a
+ * fortnight of the whole archive and a fortnight of one piece of software are not
+ * obviously the same length, and tying them together would make changing one change both.
+ */
+export async function researchTrialOffer(): Promise<TrialOffer | null> {
+  const raw = await readSettings([RESEARCH_TRIAL_ENABLED_KEY, RESEARCH_TRIAL_DAYS_KEY])
+  if (raw[RESEARCH_TRIAL_ENABLED_KEY] !== 'true') return null
+  return {
+    days: parseDays(raw[RESEARCH_TRIAL_DAYS_KEY]),
+    slug: RESEARCH_TRIAL_SLUG,
+    name: RESEARCH_TRIAL_NAME,
+    isSection: false,
+    isResearch: true,
+  }
+}
+
+export async function setResearchTrial(
+  input: { enabled: boolean; days: number | null },
+  adminId: string,
+): Promise<void> {
+  await writeSetting(RESEARCH_TRIAL_ENABLED_KEY, input.enabled ? 'true' : 'false', adminId)
+  if (input.days !== null) {
+    await writeSetting(RESEARCH_TRIAL_DAYS_KEY, String(clampDays(input.days)), adminId)
   }
 }
 
 export async function trialOffers(): Promise<TrialOffer[]> {
   await migrateLegacyTrialSettings()
   const settings = await trialSettings()
-  const items = await db.item.findMany({
-    where: { trialEnabled: true, archivedAt: null },
-    select: OFFER_SELECT,
-    orderBy: { name: 'asc' },
-  })
-  return items
+  const [research, items] = await Promise.all([
+    researchTrialOffer(),
+    db.item.findMany({
+      where: { trialEnabled: true, archivedAt: null },
+      select: OFFER_SELECT,
+      orderBy: { name: 'asc' },
+    }),
+  ])
+  const fromItems = items
     .map((item) => toOffer(item, settings.days))
     .filter((offer): offer is TrialOffer => offer !== null)
+  // Research first. It is what this site sells; a product is the side door.
+  return research ? [research, ...fromItems] : fromItems
 }
 
 /** One item's offer, or null if it is not on trial. */
 export async function trialOfferFor(slug: string): Promise<TrialOffer | null> {
+  // The reserved slug names no row, so it is answered before the lookup rather than by it.
+  if (slug === RESEARCH_TRIAL_SLUG) return researchTrialOffer()
   await migrateLegacyTrialSettings()
   const settings = await trialSettings()
   const item = await db.item.findUnique({ where: { slug }, select: OFFER_SELECT })

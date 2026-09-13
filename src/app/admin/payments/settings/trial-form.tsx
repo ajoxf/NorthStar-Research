@@ -10,7 +10,13 @@ import { useToast } from '@/components/ui/toast'
 export type TrialItem = {
   slug: string
   name: string
-  kind: 'product' | 'section'
+  /**
+   * `research` is the membership this site sells, which is not an item at all — it is two
+   * columns on the member record. It appears in this list because an operator thinks of it
+   * as one more thing they can put on trial, and where the switch is stored is not their
+   * problem.
+   */
+  kind: 'product' | 'section' | 'research'
   trialEnabled: boolean
   /** Null means "use the house default". */
   trialDays: number | null
@@ -47,7 +53,7 @@ export function TrialForm({ state }: { state: TrialState }) {
   if (items.length === 0) {
     return (
       <p className="text-[14px] leading-relaxed text-ink-dim">
-        There is nothing to offer yet. A trial grants an item, and none exist.
+        There is nothing to offer yet.
       </p>
     )
   }
@@ -140,7 +146,7 @@ function TrialRow({
       <div className="min-w-0 flex-1">
         <p className="truncate text-[15px] text-ink">{item.name}</p>
         <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
-          {item.kind === 'product' ? 'Platform' : 'Research'}
+          {item.kind === 'product' ? 'Platform' : item.kind === 'research' ? 'Membership' : 'Section'}
         </p>
       </div>
 

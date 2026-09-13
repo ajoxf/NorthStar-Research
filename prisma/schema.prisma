@@ -29,6 +29,15 @@ enum Role {
 enum SubscriptionStatus {
   pending
   active
+  /// A free trial of the research membership, running now.
+  ///
+  /// Kept apart from `active` deliberately. A trialist has paid nothing, and counting them
+  /// as active would overstate every revenue and conversion figure the members list is
+  /// read for — and make a trial indistinguishable from a sale when the books are checked
+  /// against what actually came in.
+  ///
+  /// Unlike `active`, this one is nothing without an end date: see isAllAccess.
+  trialing
   expired
   cancelled
 }
@@ -307,6 +316,14 @@ model Member {
   cancelAtPeriodEnd     Boolean          @default(false)
   /// Guards against sending the same renewal reminder repeatedly.
   renewalReminderSentAt DateTime?
+
+  /// When this account's free trial of the research membership began. Never cleared.
+  ///
+  /// One research trial per account, and it is judged on this having a value rather than
+  /// on the status — an expired trial still counts, or the same account takes a free
+  /// fortnight every month by waiting for the last one to lapse. The product trials are
+  /// judged the same way, on whether an entitlement ever existed.
+  researchTrialStartedAt DateTime?
 
   source MemberSource @default(cregis_checkout)
 

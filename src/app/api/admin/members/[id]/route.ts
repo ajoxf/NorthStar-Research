@@ -9,7 +9,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const schema = z.object({
-  subscriptionStatus: z.enum(['pending', 'active', 'expired', 'cancelled']).optional(),
+  subscriptionStatus: z.enum(['pending', 'trialing', 'active', 'expired', 'cancelled']).optional(),
   tags: z.array(z.string().trim().max(40)).max(25).optional(),
   adminNotes: z.string().max(5000).nullable().optional(),
   /*

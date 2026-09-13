@@ -98,6 +98,20 @@ export function entitlementActive(
  */
 export function isAllAccess(member: MemberAccess, now: Date = new Date()): boolean {
   if (member.role === 'admin') return true
+
+  /*
+   * A research trial reads everything a member reads, and stops on its own.
+   *
+   * The one asymmetry with `active` below is the missing end date. For a paid membership a
+   * null renewal is open-ended — that is a comp, granted by hand, and it is meant to last.
+   * For a trial a null end date cannot mean the same thing: a trial without an end is a
+   * free membership forever, granted by a bug rather than by anybody. So it fails closed.
+   * The grant path always writes one; this is what happens if it ever does not.
+   */
+  if (member.subscriptionStatus === 'trialing') {
+    return member.subscriptionRenewsAt !== null && member.subscriptionRenewsAt.getTime() > now.getTime()
+  }
+
   if (member.subscriptionStatus !== 'active') return false
   if (!member.subscriptionRenewsAt) return true
   return member.subscriptionRenewsAt.getTime() > now.getTime()

@@ -67,7 +67,15 @@ export async function accessSummary(
     lines.push({
       name: 'NordStar Pro research',
       kind: 'research',
-      detail: 'Every report and the full archive',
+      /*
+       * A trial says so. It grants exactly what a membership grants, so the line would
+       * otherwise be identical to a paying member's — and somebody who does not know they
+       * are on a trial is somebody who finds out when it stops.
+       */
+      detail:
+        member.subscriptionStatus === 'trialing'
+          ? 'Free trial — every report and the full archive'
+          : 'Every report and the full archive',
       endsAt: member.subscriptionRenewsAt,
       billing: member.billingProvider === 'stripe' || member.billingProvider === 'cregis'
         ? member.billingProvider

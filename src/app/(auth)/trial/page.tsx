@@ -67,9 +67,11 @@ async function TrialSignup({ offer }: { offer: TrialOffer }) {
         {offer.days} days of {offer.name}
       </h1>
       <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
-        {offer.isSection
-          ? 'Every report in it, including editions published before today. Read it properly before you decide — a summary of research is not research.'
-          : 'The whole thing, not a cut-down version. Import your own fills and see your real book — that is the only way to judge it.'}
+        {offer.isResearch
+          ? 'Everything a member reads: three reports a week and the complete archive of everything published before today. No card, and it stops on its own — there is nothing to cancel.'
+          : offer.isSection
+            ? 'Every report in it, including editions published before today. Read it properly before you decide — a summary of research is not research.'
+            : 'The whole thing, not a cut-down version. Import your own fills and see your real book — that is the only way to judge it.'}
       </p>
 
       <TrialForm days={offer.days} itemSlug={offer.slug} />
@@ -110,7 +112,7 @@ function TrialChooser({ offers }: { offers: TrialOffer[] }) {
               <span>
                 <span className="block text-[16px] font-medium text-ink">{offer.name}</span>
                 <span className="mt-1 block text-[13px] text-ink-dim">
-                  {offer.isSection ? 'Research' : 'Platform'}
+                  {offer.isResearch ? 'Membership' : offer.isSection ? 'Research' : 'Platform'}
                 </span>
               </span>
               <span className="shrink-0 text-[14px] font-medium text-accent">

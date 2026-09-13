@@ -3,7 +3,8 @@ import { z } from 'zod'
 
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { clampDays, migrateLegacyTrialSettings, setItemTrial } from '@/lib/trial'
+import { clampDays, migrateLegacyTrialSettings, setItemTrial, setResearchTrial } from '@/lib/trial'
+import { RESEARCH_TRIAL_SLUG } from '@/lib/research-trial'
 import { offerUsable } from '@/lib/trial-offer-shape'
 
 export const runtime = 'nodejs'
@@ -34,7 +35,6 @@ export async function PATCH(request: Request) {
     }
     throw error
   }
-  void admin
 
   const parsed = schema.safeParse(await request.json().catch(() => null))
   if (!parsed.success) {
@@ -42,6 +42,21 @@ export async function PATCH(request: Request) {
       { error: 'Check the trial length — 1 to 365 days, or blank for the default.' },
       { status: 400 },
     )
+  }
+
+  /*
+   * The research membership is settings, not an item, so it never reaches the lookup
+   * below — there is no row with this slug and the lookup would refuse it as archived.
+   */
+  if (parsed.data.itemSlug === RESEARCH_TRIAL_SLUG) {
+    await setResearchTrial(
+      { enabled: parsed.data.enabled, days: parsed.data.days },
+      admin.id,
+    )
+    return NextResponse.json({
+      ok: true,
+      item: { slug: RESEARCH_TRIAL_SLUG, trialEnabled: parsed.data.enabled, trialDays: parsed.data.days },
+    })
   }
 
   /*

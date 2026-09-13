@@ -118,7 +118,7 @@ export function MemberCrmPanel({ member }: { member: CrmMember }) {
           onChange={(event) => setStatus(event.target.value)}
           className="sm:w-56"
         >
-          {['pending', 'active', 'expired', 'cancelled'].map((option) => (
+          {['pending', 'trialing', 'active', 'expired', 'cancelled'].map((option) => (
             <option key={option} value={option}>
               {option}
             </option>

@@ -133,9 +133,17 @@ export async function GET(request: Request) {
     }
   }
 
+  /*
+   * Lapsed memberships AND lapsed research trials, both to `expired`.
+   *
+   * Access does not depend on this having run — every check reads the date as well as the
+   * status — so this is bookkeeping rather than enforcement. But leaving a finished trial
+   * reading `trialing` forever would mean the members list, and anybody counting from it,
+   * seeing trials in progress that ended months ago.
+   */
   const expired = await db.member.updateMany({
     where: {
-      subscriptionStatus: 'active',
+      subscriptionStatus: { in: ['active', 'trialing'] },
       role: 'member',
       subscriptionRenewsAt: { lt: now },
     },

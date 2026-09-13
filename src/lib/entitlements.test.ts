@@ -100,6 +100,65 @@ describe('existing members are untouched', () => {
   })
 })
 
+/**
+ * The research trial.
+ *
+ * A trial of the membership reads exactly what a membership reads, including the archive,
+ * and stops on the date. These say so, and they say what happens when the date is missing
+ * — which is the one way a trial could quietly become a free membership forever.
+ */
+describe('a research trial reads what a member reads, until it does not', () => {
+  const trialist = (renewsAt: Date | null): MemberAccess => ({
+    role: 'member',
+    subscriptionStatus: 'trialing',
+    subscriptionRenewsAt: renewsAt,
+  })
+
+  it('reads everything while it runs, archive included', () => {
+    const member = trialist(future)
+    assert.equal(isAllAccess(member, now), true)
+    assert.equal(hasAnyAccess(member, [], now), true)
+    // A null section is a report published before sections existed — the back archive.
+    // This is the one the trial is worth paying attention to: it is the whole catalogue.
+    assert.equal(canReadReport(member, { sectionId: null }, [], now), true)
+    assert.equal(canReadReport(member, { sectionId: 'sec_energy' }, [], now), true)
+  })
+
+  it('reads nothing the moment the date passes, without waiting for the nightly job', () => {
+    const member = trialist(past)
+    assert.equal(isAllAccess(member, now), false)
+    assert.equal(hasAnyAccess(member, [], now), false)
+    assert.equal(canReadReport(member, { sectionId: null }, [], now), false)
+  })
+
+  it('ends exactly on the boundary rather than a moment after it', () => {
+    assert.equal(isAllAccess(trialist(now), now), false)
+  })
+
+  /*
+   * The asymmetry with a paid membership, stated as a test because it looks like a bug
+   * until you know why. For `active`, a null renewal is an open-ended comp and means
+   * access. For `trialing` it cannot: a trial with no end is a free membership forever,
+   * and nobody would have granted that on purpose.
+   */
+  it('a trial with no end date grants nothing, where a comp would grant everything', () => {
+    assert.equal(isAllAccess(trialist(null), now), false)
+    assert.equal(hasAnyAccess(trialist(null), [], now), false)
+    assert.equal(
+      isAllAccess({ role: 'member', subscriptionStatus: 'active', subscriptionRenewsAt: null }, now),
+      true,
+    )
+  })
+
+  it('a lapsed trial is not rescued by a section they never bought', () => {
+    assert.equal(hasAnyAccess(trialist(past), [ent('sec_energy', { renewsAt: past })], now), false)
+  })
+
+  it('an admin is an admin whatever the status column says', () => {
+    assert.equal(isAllAccess({ ...trialist(past), role: 'admin' }, now), true)
+  })
+})
+
 describe('section buyers get their section and nothing else', () => {
   it('reads their own section', () => {
     const member = sectionBuyer()

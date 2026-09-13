@@ -6,7 +6,7 @@ import { CopyableUrl, PaymentChecks } from '@/app/admin/payments/settings/paymen
 import { CregisForm, type CregisFormState } from '@/app/admin/payments/settings/cregis-form'
 import { PricingForm, type PricingState } from '@/app/admin/payments/settings/pricing-form'
 import { TestPayments, type TestState } from '@/app/admin/payments/settings/test-payments'
-import { TrialForm, type TrialState } from '@/app/admin/payments/settings/trial-form'
+import { TrialForm, type TrialItem, type TrialState } from '@/app/admin/payments/settings/trial-form'
 import { CREGIS_SETTING_KEYS, resolveCregisSettings } from '@/lib/cregis-settings'
 import { settingsMetadata } from '@/lib/secure-settings'
 import { formatDate } from '@/lib/utils'
@@ -18,7 +18,13 @@ import { db } from '@/lib/db'
 import { cregisConfigured } from '@/lib/cregis'
 import { stripeConfigured } from '@/lib/stripe'
 import { productAuthCheck, productAuthConfigured, productAuthItemSlug } from '@/lib/product-auth'
-import { migrateLegacyTrialSettings, trialSettings } from '@/lib/trial'
+import {
+  migrateLegacyTrialSettings,
+  RESEARCH_TRIAL_NAME,
+  RESEARCH_TRIAL_SLUG,
+  researchTrialOffer,
+  trialSettings,
+} from '@/lib/trial'
 import { isFallbackPackage, priceLine } from '@/lib/package-shape'
 import { defaultPackage, sellablePackages } from '@/lib/packages'
 import { CANONICAL_BASE_URL } from '@/lib/env'
@@ -168,8 +174,9 @@ export default async function PaymentSettingsPage() {
           <TrialForm state={trialState} />
 
           <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
-            A trial grants the product and nothing else — not the research archive, and not a
-            subscription that renews. Trialists appear in{' '}
+            A membership trial grants everything a member reads, the full archive included, and
+            expires on its own. A product trial grants that product and nothing else. Neither
+            takes a card or creates a subscription that renews. Trialists appear in{' '}
             <Link
               href="/admin/members?source=trial"
               className="text-accent underline underline-offset-4"
@@ -506,8 +513,9 @@ async function buildTrialState(): Promise<TrialState> {
   // switches below show the offer that is actually live rather than all-off.
   await migrateLegacyTrialSettings()
 
-  const [settings, items] = await Promise.all([
+  const [settings, research, items] = await Promise.all([
     trialSettings(),
+    researchTrialOffer(),
     db.item.findMany({
       where: { archivedAt: null },
       select: {
@@ -532,9 +540,25 @@ async function buildTrialState(): Promise<TrialState> {
       trialDays: item.trialDays,
     }))
 
+  /*
+   * The research membership sits at the top, because it is what this site sells.
+   *
+   * It is not an item and has no row, so its switch is read from settings — but it is
+   * listed here beside the items, because from an operator's chair it is one more thing
+   * that is either on trial or not, and where the flag is stored is our problem rather
+   * than theirs.
+   */
+  const researchRow: TrialItem = {
+    slug: RESEARCH_TRIAL_SLUG,
+    name: RESEARCH_TRIAL_NAME,
+    kind: 'research',
+    trialEnabled: research !== null,
+    trialDays: research?.days ?? null,
+  }
+
   return {
     defaultDays: settings.days,
-    grantable,
+    grantable: [researchRow, ...grantable],
     productAuthReady: productAuthConfigured(),
   }
 }

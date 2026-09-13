@@ -177,6 +177,14 @@ export function hasActiveSubscription(
   member: Pick<Member, 'role' | 'subscriptionStatus' | 'subscriptionRenewsAt'>,
 ): boolean {
   if (member.role === 'admin') return true
+  /*
+   * A live research trial reads everything, and fails closed without an end date — a trial
+   * that never ends is a free membership granted by a bug. Mirrors isAllAccess, which the
+   * test suite holds to agreeing with this function across every combination.
+   */
+  if (member.subscriptionStatus === 'trialing') {
+    return member.subscriptionRenewsAt !== null && member.subscriptionRenewsAt.getTime() > Date.now()
+  }
   if (member.subscriptionStatus !== 'active') return false
   // A null renewal date means a legacy or comped account with no expiry.
   if (!member.subscriptionRenewsAt) return true

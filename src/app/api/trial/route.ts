@@ -6,7 +6,15 @@ import { z } from 'zod'
 import { getCurrentMember, hashPassword, startSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { syncProductAccess } from '@/lib/product-auth'
-import { refusalMessage, trialEndsAt, trialOfferFor, trialOffers, trialRefusal } from '@/lib/trial'
+import {
+  refusalMessage,
+  researchTrialRefusal,
+  researchTrialRefusalMessage,
+  trialEndsAt,
+  trialOfferFor,
+  trialOffers,
+  trialRefusal,
+} from '@/lib/trial'
 
 /**
  * Start a free trial.
@@ -67,6 +75,15 @@ export async function POST(request: Request) {
     else if (open.length > 1) return fail('Choose which trial you would like.', 400)
   }
   if (!offer) return fail(refusalMessage('disabled'), 403)
+
+  /*
+   * The research membership is granted differently, so it forks here.
+   *
+   * Everything below writes an Entitlement row pointing at an Item. The research
+   * membership is not an item — it is two columns on Member — so there is nothing for one
+   * to point at, and the two paths share the signup but not the grant.
+   */
+  if (offer.isResearch) return grantResearchTrial(offer.days, rawBody)
 
   /*
    * Read before anything is written, so a refusal cannot leave half an account behind.
@@ -240,4 +257,101 @@ export async function POST(request: Request) {
     days: offer.days,
     endsAt: endsAt.toISOString(),
   })
+}
+
+/**
+ * A free trial of the research membership itself.
+ *
+ * Writes `subscriptionStatus: 'trialing'` and an end date on Member, which every access
+ * check already reads — so a trialist reads exactly what a member reads, including the
+ * back archive, and stops reading the moment the date passes whether or not the nightly
+ * job has run.
+ *
+ * `trialing` rather than `active` matters more than it looks. A trialist has paid nothing.
+ * Recording them as active would make a trial indistinguishable from a sale in the members
+ * list and in every count taken from it, which is the sort of thing that is only noticed
+ * when the figures are checked against what actually arrived in the bank.
+ */
+async function grantResearchTrial(days: number, rawBody: Record<string, unknown> | null) {
+  const signedIn = await getCurrentMember()
+  const now = new Date()
+  const endsAt = trialEndsAt(days, now)
+
+  if (signedIn) {
+    const refusal = researchTrialRefusal({
+      enabled: true,
+      subscriptionStatus: signedIn.subscriptionStatus,
+      researchTrialStartedAt: signedIn.researchTrialStartedAt,
+    })
+    if (refusal) {
+      return fail(researchTrialRefusalMessage(refusal), refusal === 'disabled' ? 403 : 409)
+    }
+
+    /*
+     * Conditional on the marker still being null.
+     *
+     * Two requests arriving together would both pass the check above and the second would
+     * extend the first's trial by another fortnight. `updateMany` with the condition in
+     * the WHERE makes exactly one of them match; the loser changes nothing and is told it
+     * has already had one, which is true.
+     */
+    const claimed = await db.member.updateMany({
+      where: { id: signedIn.id, researchTrialStartedAt: null, subscriptionStatus: 'pending' },
+      data: {
+        subscriptionStatus: 'trialing',
+        subscriptionStartedAt: now,
+        subscriptionRenewsAt: endsAt,
+        researchTrialStartedAt: now,
+      },
+    })
+    if (claimed.count === 0) return fail(researchTrialRefusalMessage('already_trialled'), 409)
+
+    return NextResponse.json({ ok: true, days, endsAt: endsAt.toISOString() })
+  }
+
+  // Signed out: an account is created, exactly as the item path does.
+  const result = Body.safeParse(rawBody)
+  if (!result.success) {
+    return fail(result.error.issues[0]?.message ?? 'Check the form and try again.')
+  }
+  const email = result.data.email.trim().toLowerCase()
+
+  const already = await db.member.findUnique({ where: { email }, select: { id: true } })
+  if (already) {
+    // Never overwrite a password, and never say more than whoever holds the address can
+    // already find out by signing in.
+    return fail(
+      'That email already has an account. Sign in and the trial is waiting on your dashboard.',
+      409,
+      '/login?next=/dashboard',
+    )
+  }
+
+  const member = await db.member.create({
+    data: {
+      email,
+      passwordHash: await hashPassword(result.data.password),
+      firstName: result.data.firstName || null,
+      lastName: result.data.lastName || null,
+      role: 'member',
+      subscriptionStatus: 'trialing',
+      subscriptionStartedAt: now,
+      subscriptionRenewsAt: endsAt,
+      researchTrialStartedAt: now,
+      // Paid nothing. Counting a trialist as a crypto customer would overstate every
+      // conversion figure the members list is read for.
+      source: 'trial',
+    },
+  })
+
+  /*
+   * Signed in immediately.
+   *
+   * They have just chosen a password and been granted access; sending them to a login
+   * form to type it again is a step that exists only because the code was written in that
+   * order. The item path does the same thing.
+   */
+  await startSession(member)
+
+  return NextResponse.json({ ok: true, days, endsAt: endsAt.toISOString() })
 }
