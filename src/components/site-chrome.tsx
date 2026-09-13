@@ -177,3 +177,39 @@ export async function SiteFooter() {
     </footer>
   )
 }
+
+/**
+ * The Nexus RAMP wordmark, for pages wearing that brand.
+ *
+ * Deliberately not a parameterised version of `Wordmark` above: the two are different
+ * marks, not one mark with a variable in it. NordStar Pro carries a parent-brand
+ * attribution line and splits its name across two typefaces; Nexus sets the product name
+ * in mono beside it and names what the software is underneath. Folding them together
+ * would mean a prop for every difference and a component nobody could read.
+ *
+ * Links out to the product rather than to `/`, because somebody who arrived here from
+ * Nexus RAMP should be able to get back to Nexus RAMP.
+ */
+export function NexusWordmark() {
+  return (
+    <a
+      href="https://nexus-funds.vercel.app/"
+      className="group inline-flex items-center gap-3 leading-none"
+    >
+      <span className="grid h-9 w-9 place-items-center rounded-lg bg-accent text-[19px] font-bold tracking-tight text-panel">
+        N
+      </span>
+      <span className="inline-flex flex-col gap-1">
+        <span className="inline-flex items-baseline gap-2">
+          <span className="font-display text-[21px] tracking-tight text-ink">Nexus</span>
+          <span className="font-mono text-[12px] uppercase tracking-[0.22em] text-accent">
+            RAMP
+          </span>
+        </span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ink-dim">
+          Risk and Margin Platform
+        </span>
+      </span>
+    </a>
+  )
+}

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { db } from '@/lib/db'
-import { trialSettings } from '@/lib/trial'
+import { currentTrialOffer } from '@/lib/trial'
 
 /**
  * Is a trial open, and what does it grant?
@@ -46,40 +45,18 @@ export async function OPTIONS() {
 }
 
 export async function GET() {
-  const settings = await trialSettings()
+  const offer = await currentTrialOffer()
 
-  if (!settings.enabled) {
-    return NextResponse.json({ open: false as const }, { headers: CORS })
-  }
-
-  const item = await db.item.findUnique({
-    where: { slug: settings.itemSlug },
-    select: {
-      name: true,
-      kind: true,
-      archivedAt: true,
-      section: { select: { archivedAt: true } },
-    },
-  })
-
-  // Archived as an item, or — for a research section — as a section. Two separate
-  // columns, and either one being set means the offer is off the shelf. Same test the
-  // /trial page makes, so the two cannot disagree about whether an offer exists.
-  const usable =
-    item &&
-    !item.archivedAt &&
-    (item.kind !== 'section' || (item.section && !item.section.archivedAt))
-
-  if (!usable) {
+  if (!offer.open) {
     return NextResponse.json({ open: false as const }, { headers: CORS })
   }
 
   return NextResponse.json(
     {
       open: true as const,
-      days: settings.days,
-      slug: settings.itemSlug,
-      name: item.name,
+      days: offer.days,
+      slug: offer.slug,
+      name: offer.name,
       url: 'https://nordstarpro.com/trial',
     },
     { headers: CORS },

@@ -4,29 +4,33 @@ const config: Config = {
   content: ['./src/**/*.{ts,tsx,mdx}'],
   theme: {
     extend: {
+      /*
+       * Every brand colour resolves through a CSS variable rather than a literal, so a
+       * subtree can be re-skinned by redefining the variables on it — which is how a
+       * Nexus-branded signup wears blue and white while the rest of the site stays black
+       * and lime. The values themselves live in globals.css.
+       *
+       * The variables hold SPACE-SEPARATED RGB CHANNELS, not hex, because Tailwind's
+       * opacity modifiers have to be able to write the alpha in: `text-ink-dim/70`
+       * compiles to `rgb(var(--ink-dim) / 0.7)`, which only works on channels. A hex
+       * value here would silently break every `/nn` class on the site.
+       *
+       * The channels are exactly the hexes these were before, so this change is invisible
+       * everywhere: #000000 is 0 0 0, #D0F53C is 208 245 60, and so on.
+       */
       colors: {
-        // True black, not near-black: the reference design runs pure #000 and the
-        // surfaces sit only a few points above it, which is what gives the imagery
-        // its contrast.
-        bg: '#000000',
-        panel: '#0B0B0B',
-        'panel-2': '#060606',
-        line: '#1F1F1F',
-        ink: '#FFFFFF',
-        'ink-dim': '#A3A3A3',
-        // Acid lime, yellow-leaning rather than a pure green.
-        accent: '#D0F53C',
-        // The parent-brand attribution under the wordmark. A warm parchment, chosen to
-        // sit apart from both the white ink and the lime accent without competing with
-        // either — it reads as an imprint line rather than a third brand colour.
-        imprint: '#D8CFC0',
-        up: '#00E08A',
-        down: '#FF4D5E',
-        // Chart series. Kept green rather than re-hued to the lime accent: the accent
-        // is far too light for a data mark, and this pair holds better colour-blind
-        // margins than a lime step does (tritan ΔE 10.4 vs 5.8).
-        'series-1': '#3FA82F',
-        'series-2': '#8B6FE8',
+        bg: 'rgb(var(--bg) / <alpha-value>)',
+        panel: 'rgb(var(--bg-panel) / <alpha-value>)',
+        'panel-2': 'rgb(var(--bg-panel-2) / <alpha-value>)',
+        line: 'rgb(var(--line) / <alpha-value>)',
+        ink: 'rgb(var(--ink) / <alpha-value>)',
+        'ink-dim': 'rgb(var(--ink-dim) / <alpha-value>)',
+        accent: 'rgb(var(--accent) / <alpha-value>)',
+        imprint: 'rgb(var(--imprint) / <alpha-value>)',
+        up: 'rgb(var(--up) / <alpha-value>)',
+        down: 'rgb(var(--down) / <alpha-value>)',
+        'series-1': 'rgb(var(--series-1) / <alpha-value>)',
+        'series-2': 'rgb(var(--series-2) / <alpha-value>)',
       },
       fontFamily: {
         // Headings are a tightly-tracked grotesque, not a serif — the reference design
