@@ -28,7 +28,7 @@ export default async function AccountPage() {
   })
 
   return (
-    <div className="mx-auto max-w-2xl px-5 py-12">
+    <div className="mx-auto max-w-4xl px-5 py-12">
       <span className="eyebrow">Your account</span>
       <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Settings</h1>
 
@@ -52,11 +52,7 @@ export default async function AccountPage() {
             .
           </p>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {access.map((line) => (
-              <AccessRow key={`${line.kind}:${line.name}`} line={line} />
-            ))}
-          </ul>
+          <AccessTable lines={access} />
         )}
       </section>
 
@@ -138,43 +134,104 @@ export default async function AccountPage() {
 }
 
 /**
- * One thing the member holds.
+ * What the member holds, one row each.
+ *
+ * A table because these are the same five facts about every entitlement, and columns let
+ * somebody holding four of them compare down a column instead of reading four paragraphs.
+ * The stacked cards it replaces made every row look like an announcement.
+ *
+ * Below 640px it is not a table at all: five columns in 390px either overflow or crush the
+ * product name to three characters. The same rows render as cards there, each field
+ * labelled, which is the only honest way to show a table that does not fit.
  *
  * The dates and the billing line are facts off the row, not inferences. Where nothing is
  * attached it says so in the terms that matter to somebody reading it — that no payment is
  * coming — rather than naming our internal absence of a provider.
  */
-function AccessRow({ line }: { line: AccessLine }) {
-  const ends = line.endsAt
-    ? `Runs until ${formatDate(line.endsAt)}`
-    : 'Open-ended — no end date set'
-  const billing =
-    line.billing === 'stripe'
-      ? 'Renews automatically by card'
-      : line.billing === 'cregis'
-        ? 'Renew manually — crypto'
-        : 'No payment attached'
-
+function AccessTable({ lines }: { lines: AccessLine[] }) {
   return (
-    <li className="rounded-lg border border-line bg-panel-2 p-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 className="text-[16px] font-medium text-ink">{line.name}</h3>
-        <Badge tone={line.kind === 'product' ? 'accent' : 'up'}>
-          {line.kind === 'product' ? 'Platform' : 'Research'}
-        </Badge>
+    <>
+      {/* The table, from 640px up. */}
+      <div className="hidden overflow-x-auto rounded-lg border border-line bg-panel sm:block">
+        <table className="w-full min-w-[560px] text-left">
+          <thead>
+            <tr className="border-b border-line font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
+              <th className="w-[42%] px-4 py-3 font-medium">What you hold</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium">Type</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium">Runs until</th>
+              <th className="whitespace-nowrap px-4 py-3 font-medium">Billing</th>
+              <th className="px-4 py-3 font-medium" />
+            </tr>
+          </thead>
+          <tbody>
+            {lines.map((line) => (
+              <tr key={`${line.kind}:${line.name}`} className="border-b border-line last:border-b-0 align-top">
+                <td className="px-4 py-3">
+                  <span className="block text-[15px] text-ink">{line.name}</span>
+                  <span className="mt-0.5 block text-[13px] leading-relaxed text-ink-dim">{line.detail}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <Badge tone={line.kind === 'product' ? 'accent' : 'up'}>
+                    {line.kind === 'product' ? 'Platform' : 'Research'}
+                  </Badge>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 font-mono text-[13px] text-ink">
+                  {endsText(line)}
+                </td>
+                <td className="px-4 py-3 text-[13px] leading-relaxed text-ink-dim">{billingText(line)}</td>
+                <td className="whitespace-nowrap px-4 py-3 text-right">
+                  {line.openHref && (
+                    <a href={line.openHref} className="text-[14px] font-medium text-accent underline underline-offset-4">
+                      Open
+                    </a>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-      <p className="mt-1.5 text-[14px] leading-relaxed text-ink-dim">{line.detail}</p>
-      <p className="mt-2 font-mono text-[12px] text-ink-dim">
-        {ends} · {billing}
-      </p>
-      {line.openHref && (
-        <a
-          href={line.openHref}
-          className="mt-2.5 inline-block text-[14px] font-medium text-accent underline underline-offset-4"
-        >
-          Open {line.name}
-        </a>
-      )}
-    </li>
+
+      {/* The same rows as cards, below 640px. */}
+      <ul className="flex flex-col gap-3 sm:hidden">
+        {lines.map((line) => (
+          <li key={`${line.kind}:${line.name}`} className="rounded-lg border border-line bg-panel-2 p-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h3 className="text-[16px] font-medium text-ink">{line.name}</h3>
+              <Badge tone={line.kind === 'product' ? 'accent' : 'up'}>
+                {line.kind === 'product' ? 'Platform' : 'Research'}
+              </Badge>
+            </div>
+            <p className="mt-1.5 text-[14px] leading-relaxed text-ink-dim">{line.detail}</p>
+            <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
+              <dt className="text-ink-dim">Runs until</dt>
+              <dd className="font-mono text-ink">{endsText(line)}</dd>
+              <dt className="text-ink-dim">Billing</dt>
+              <dd className="text-ink-dim">{billingText(line)}</dd>
+            </dl>
+            {line.openHref && (
+              <a href={line.openHref} className="mt-3 inline-block text-[14px] font-medium text-accent underline underline-offset-4">
+                Open {line.name}
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+    </>
   )
 }
+
+const endsText = (line: AccessLine) =>
+  line.endsAt ? formatDate(line.endsAt) : 'No end date'
+
+/*
+ * Short, because the column above already says "Billing" and a wrapped two-line cell in a
+ * four-word column reads worse than the extra words are worth. "None" under that header
+ * says exactly what a trialist needs to know: nothing is going to be charged.
+ */
+const billingText = (line: AccessLine) =>
+  line.billing === 'stripe'
+    ? 'Card, automatic'
+    : line.billing === 'cregis'
+      ? 'Crypto, manual'
+      : 'None'
