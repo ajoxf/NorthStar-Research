@@ -64,7 +64,14 @@ export async function readSettings(keys: string[]): Promise<Record<string, strin
 export async function writeSetting(
   key: string,
   value: string | null,
-  adminId: string,
+  /**
+   * Who changed it, or null when nothing did.
+   *
+   * The column is a nullable foreign key to Member, so it takes an id that exists or
+   * nothing at all. A descriptive string is neither: passing "system:migration" here
+   * violates the constraint and throws, which took the homepage down.
+   */
+  adminId: string | null,
 ): Promise<void> {
   if (value === null || value.trim() === '') {
     await db.appSetting.deleteMany({ where: { key } })

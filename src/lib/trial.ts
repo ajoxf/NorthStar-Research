@@ -144,9 +144,31 @@ export async function trialOfferFor(slug: string): Promise<TrialOffer | null> {
  * lookup, which that read was making anyway.
  */
 export async function migrateLegacyTrialSettings(): Promise<void> {
+  try {
+    await runLegacyTrialMigration()
+  } catch (error) {
+    /*
+     * Never fatal. This runs from trialOffers(), which the homepage and the login page
+     * both call — so a failure here is a failure of those pages, and it was: an invalid
+     * foreign key in the write below 500'd nordstarpro.com. Carrying one setting across
+     * is a convenience; serving the site is not.
+     *
+     * The consequence of swallowing it is that trials read as closed until it succeeds,
+     * which is the safe direction to fail in — an offer that is not advertised is
+     * recoverable, a site that does not load is not.
+     */
+    console.error('[trial:migrate] could not carry the legacy trial setting across', error)
+  }
+}
+
+async function runLegacyTrialMigration(): Promise<void> {
   const raw = await readSettings([TRIAL_MIGRATED_KEY])
   if (raw[TRIAL_MIGRATED_KEY] === 'true') return
 
+  /*
+   * Null, not a label. updatedByAdminId is a foreign key to Member: it takes the id of
+   * somebody who exists, or nothing. No admin did this, so it is nothing.
+   */
   const settings = await trialSettings()
   if (settings.enabled && settings.itemSlug) {
     await db.item.updateMany({
@@ -154,7 +176,7 @@ export async function migrateLegacyTrialSettings(): Promise<void> {
       data: { trialEnabled: true, trialDays: settings.days },
     })
   }
-  await writeSetting(TRIAL_MIGRATED_KEY, 'true', 'system:migration')
+  await writeSetting(TRIAL_MIGRATED_KEY, 'true', null)
 }
 
 export async function setItemTrial(
