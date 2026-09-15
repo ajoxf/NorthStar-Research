@@ -40,6 +40,8 @@ export function toShape(row: Package): PackageShape {
     isDefault: row.isDefault,
     archivedAt: row.archivedAt,
     authorId: row.authorId,
+    trialEnabled: row.trialEnabled,
+    trialDays: row.trialDays,
   }
 }
 

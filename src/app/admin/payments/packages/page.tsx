@@ -6,6 +6,7 @@ import { PackageManager, type AdminPackage } from '@/app/admin/payments/packages
 import { ToastProvider } from '@/components/ui/toast'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { grantableItems } from '@/lib/package-trial'
 import { allPackages, packageUsageMap } from '@/lib/packages'
 import { stripeConfigured } from '@/lib/stripe'
 
@@ -24,7 +25,7 @@ export const dynamic = 'force-dynamic'
 export default async function PackagesPage() {
   await requireAdmin()
 
-  const [packages, usage, authors] = await Promise.all([
+  const [packages, usage, authors, contents] = await Promise.all([
     allPackages(),
     packageUsageMap(),
     db.author.findMany({
@@ -32,7 +33,33 @@ export default async function PackagesPage() {
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       select: { id: true, name: true },
     }),
+    /*
+     * What each package would actually open on a trial: its live research sections.
+     * Read here so the form can refuse to advertise a trial of a bundle that grants
+     * nothing, rather than leaving that to be discovered by whoever signs up for it.
+     */
+    db.package.findMany({
+      select: {
+        id: true,
+        items: {
+          select: {
+            item: {
+              select: {
+                id: true,
+                archivedAt: true,
+                kind: true,
+                section: { select: { id: true, archivedAt: true } },
+              },
+            },
+          },
+        },
+      },
+    }),
   ])
+
+  const grantable = new Map(
+    contents.map((row) => [row.id, grantableItems(row.items.map((entry) => entry.item)).length]),
+  )
 
   const rows: AdminPackage[] = packages.map((pkg) => ({
     id: pkg.id,
@@ -50,6 +77,9 @@ export default async function PackagesPage() {
     members: usage[pkg.id]?.members ?? 0,
     orders: usage[pkg.id]?.orders ?? 0,
     authorId: pkg.authorId,
+    trialEnabled: pkg.trialEnabled,
+    trialDays: pkg.trialDays,
+    grantableItems: grantable.get(pkg.id) ?? 0,
   }))
 
   return (

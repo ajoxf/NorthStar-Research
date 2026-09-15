@@ -640,6 +640,22 @@ model Package {
   authorId String?
   author   Author? @relation(fields: [authorId], references: [id])
 
+  /// Is a free trial of THIS package open, and for how long?
+  ///
+  /// Per package, alongside the same pair on Item, because the two answer different
+  /// questions: a package trial opens everything in the bundle at once, on one end date,
+  /// where an item trial opens a single section. An operator selling "Everything by Dean"
+  /// wants to offer a fortnight of both his sections, not two trials that have to be
+  /// started separately and lapse on different days.
+  ///
+  /// Off by default, and the default is load-bearing — a package created tomorrow must not
+  /// arrive giving away a free fortnight nobody decided on.
+  ///
+  /// `trialDays` null means "use the house default", so changing that default moves every
+  /// package that never had a number set of its own.
+  trialEnabled Boolean @default(false)
+  trialDays    Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

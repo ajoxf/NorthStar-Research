@@ -78,6 +78,8 @@ export async function POST(request: Request) {
       features: input.features,
       sortOrder: input.sortOrder,
       authorId: input.authorId ?? null,
+      trialEnabled: input.trialEnabled,
+      trialDays: input.trialDays ?? null,
       isDefault: existing === 0,
     },
   })

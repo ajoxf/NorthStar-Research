@@ -37,6 +37,9 @@ export type PackageShape = {
    * same breath on the homepage, the contributor's page and the join page.
    */
   authorId: string | null
+  /** Is a free trial of this package open, and for how long? Null days means the house default. */
+  trialEnabled: boolean
+  trialDays: number | null
 }
 
 /**
@@ -64,6 +67,13 @@ export const FALLBACK_PACKAGE: PackageShape = {
   archivedAt: null,
   // The built-in plan is the house membership by definition — it predates contributors.
   authorId: null,
+  /*
+   * No trial on the built-in plan. It corresponds to no row, so there is nowhere to store
+   * the operator's answer — and a trial nobody can switch off is worse than none.
+   * The research membership has its own trial switch, on the payment settings screen.
+   */
+  trialEnabled: false,
+  trialDays: null,
 }
 
 export function isFallbackPackage(pkg: { id: string }): boolean {
@@ -229,6 +239,21 @@ export const packageInputSchema = z.object({
    * first mis-assignment permanent.
    */
   authorId: z.string().trim().min(1).nullable().optional(),
+  /**
+   * Offer a free trial of this package.
+   *
+   * Off unless asked for, like every other trial switch here — a package created tomorrow
+   * must not arrive giving away a fortnight nobody decided on.
+   */
+  trialEnabled: z.boolean().default(false),
+  /** Null means "use the house default", so changing that default moves every blank one. */
+  trialDays: z
+    .number()
+    .int()
+    .min(1, 'A trial is at least a day.')
+    .max(365, 'A year is the longest trial this will set.')
+    .nullable()
+    .optional(),
 })
 
 export type PackageInput = z.infer<typeof packageInputSchema>

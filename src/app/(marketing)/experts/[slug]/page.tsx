@@ -11,6 +11,8 @@ import { ToastProvider } from '@/components/ui/toast'
 import { db } from '@/lib/db'
 import { formatPrice, type PackageShape } from '@/lib/package-shape'
 import { packagesForAuthor } from '@/lib/packages'
+import { packageSlugFromTrial, packageTrialSlug } from '@/lib/package-trial'
+import { trialOffers } from '@/lib/trial'
 import { sectionName } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
 import { formatDate } from '@/lib/utils'
@@ -65,6 +67,20 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
    * visual emphasis only; every package on the page is one click to buy.
    */
   const packages = await packagesForAuthor(author.id)
+
+  /*
+   * Which of those packages a trial is actually open on, and for how many days.
+   *
+   * Asked of the trial system rather than read off `pkg.trialEnabled`, because the switch
+   * and the offer are not the same thing: a package whose sections have all been archived
+   * has the switch on and nothing to open, and `trialOffers` is the one place that knows
+   * the difference. Keyed by package slug, the offer slug being the prefixed form.
+   */
+  const trialOpen = new Map(
+    (await trialOffers())
+      .filter((offer) => offer.isPackage)
+      .map((offer) => [packageSlugFromTrial(offer.slug) ?? '', offer.days] as const),
+  )
   const featured = packages.reduce<PackageShape | null>(
     (low, pkg) => (low === null || pkg.priceCents > low.priceCents ? pkg : low),
     null,
@@ -195,11 +211,33 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                     </ul>
                   )}
 
+                  {/*
+                    The trial leads where one is open, with payment underneath rather than
+                    behind it — the price is already on the card above, so neither button
+                    is hiding a figure from anybody.
+
+                    `trialOpen` is the offer as the trial system sees it, not the package's
+                    own switch: a bundle with nothing live in it has the switch on and no
+                    offer, and a button to a page that refuses everybody is worse than no
+                    button.
+                  */}
+                  {trialOpen.has(pkg.slug) && (
+                    <ButtonLink
+                      href={`/trial?item=${encodeURIComponent(packageTrialSlug(pkg.slug))}`}
+                      size="lg"
+                      className="mt-6 w-full"
+                    >
+                      Try {trialOpen.get(pkg.slug)} days free
+                    </ButtonLink>
+                  )}
+
                   <ButtonLink
                     href={`/join?package=${pkg.slug}`}
                     size="lg"
-                    className="mt-6 w-full"
-                    variant={pkg.id === featured?.id ? 'primary' : 'secondary'}
+                    className={trialOpen.has(pkg.slug) ? 'mt-3 w-full' : 'mt-6 w-full'}
+                    variant={
+                      pkg.id === featured?.id && !trialOpen.has(pkg.slug) ? 'primary' : 'secondary'
+                    }
                   >
                     Subscribe
                   </ButtonLink>

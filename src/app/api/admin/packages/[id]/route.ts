@@ -73,6 +73,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
   }
 
+
   await db.package.update({
     where: { id: existing.id },
     data: {
@@ -94,6 +95,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
        * — a partial body must not silently unassign somebody's package.
        */
       authorId: input.authorId === undefined ? undefined : input.authorId,
+      trialEnabled: input.trialEnabled,
+      trialDays: input.trialDays ?? null,
     },
   })
 
