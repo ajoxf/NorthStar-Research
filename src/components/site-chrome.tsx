@@ -4,7 +4,7 @@ import { DisclaimerText } from '@/components/disclaimer'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember } from '@/lib/auth'
 import { formatPrice } from '@/lib/package-shape'
-import { defaultPackage } from '@/lib/packages'
+import { defaultPackage, sellablePackages } from '@/lib/packages'
 import { sectionsPublic } from '@/lib/sections-mode'
 
 export function Wordmark({ href = '/' }: { href?: string }) {
@@ -38,6 +38,16 @@ export async function SiteHeader() {
   // site ends up advertising last month's price in its own navigation.
   const plan = await defaultPackage()
 
+  /*
+   * How many things are actually for sale.
+   *
+   * Past one, the button stops naming a figure and sends people to the packages instead.
+   * A header reading "Join — $199/mo" above a grid whose cheapest card says $49 tells a
+   * visitor two different things about what this costs, and the one in the navigation
+   * follows them onto every page.
+   */
+  const onSale = await sellablePackages()
+
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-3 px-4 sm:px-5">
@@ -65,11 +75,21 @@ export async function SiteHeader() {
               </Link>
               {/* The price is the point of the button, but it is what makes it wide;
                   at phone width the label shortens rather than wrapping the header. */}
-              <ButtonLink href="/join" size="sm" className="whitespace-nowrap">
+              <ButtonLink
+                href={onSale.length > 1 ? '/#pricing' : '/join'}
+                size="sm"
+                className="whitespace-nowrap"
+              >
                 <span className="sm:hidden">Join</span>
                 <span className="hidden sm:inline">
-                  Join — {formatPrice(plan.priceCents, plan.currency)}/
-                  {plan.interval === 'year' ? 'yr' : 'mo'}
+                  {onSale.length > 1 ? (
+                    'See packages'
+                  ) : (
+                    <>
+                      Join — {formatPrice(plan.priceCents, plan.currency)}/
+                      {plan.interval === 'year' ? 'yr' : 'mo'}
+                    </>
+                  )}
                 </span>
               </ButtonLink>
             </>
