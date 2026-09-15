@@ -7,7 +7,7 @@ import { AlertTriangle, Upload } from 'lucide-react'
 import { upload } from '@vercel/blob/client'
 
 import { Button, Spinner } from '@/components/ui/button'
-import { FieldError, Hint, Input, Label, Textarea } from '@/components/ui/field'
+import { FieldError, Hint, Input, Label, Select, Textarea } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 import { compressReportPdf } from '@/lib/pdf-compress'
 import { MAX_PDF_BYTES, REPORT_BLOB_PREFIX, formatBytes, slugify } from '@/lib/report-upload'
@@ -63,7 +63,12 @@ const INSTRUMENT_TEMPLATE = JSON.stringify(
   2,
 )
 
-export function ReportUploadForm() {
+export function ReportUploadForm({
+  sections,
+}: {
+  /** Every section on sale, so the edition can be filed as it is uploaded. */
+  sections: { id: string; name: string }[]
+}) {
   const router = useRouter()
   const toast = useToast()
 
@@ -258,9 +263,44 @@ export function ReportUploadForm() {
           </Hint>
         </div>
 
-        <div>
+        <div className="mb-4">
           <Label htmlFor="publishDate">Publish date</Label>
           <Input id="publishDate" name="publishDate" type="date" defaultValue={today} required />
+        </div>
+
+        {/*
+          Filed as it is uploaded, rather than afterwards on the edit screen.
+
+          The section decides who may read the edition, so leaving it until later means
+          every report exists for a while as all-access — and the one that gets published
+          in that window reaches the wrong list. Blank is still a real answer, and the
+          default: an untagged report is an all-access report, which is what every
+          edition published before sections existed is.
+        */}
+        <div>
+          <Label htmlFor="sectionId">Section</Label>
+          {sections.length > 0 ? (
+            <>
+              <Select id="sectionId" name="sectionId" defaultValue="">
+                <option value="">All-access only — no section</option>
+                {sections.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.name}
+                  </option>
+                ))}
+              </Select>
+              <Hint>
+                Who can read this edition: the members who bought this section, plus every
+                all-access member. Leave it blank and only all-access members can read it.
+                Changeable later.
+              </Hint>
+            </>
+          ) : (
+            <Hint>
+              No sections have been set up yet, so this report will be all-access — readable
+              by every member, exactly as reports were before contributors existed.
+            </Hint>
+          )}
         </div>
       </div>
 

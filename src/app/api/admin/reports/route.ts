@@ -29,6 +29,15 @@ const schema = z.object({
   // Where the browser already put the PDF. Validated below, not trusted as given.
   pdfBlobUrl: z.string().optional(),
   pdfBlobPathname: z.string().optional(),
+  /**
+   * Which section this edition belongs to, chosen at upload time.
+   *
+   * Optional, and absent means all-access — the same thing every report published before
+   * sections existed means, and the same default the edit screen has always shown. Filing
+   * it here rather than only afterwards matters because the gap between the two is a
+   * window in which the report is publishable to the wrong audience.
+   */
+  sectionId: z.string().trim().min(1).optional(),
 })
 
 /** Create a report. Upload does not send anything — publishing does (see /publish). */
@@ -57,6 +66,7 @@ export async function POST(request: Request) {
     instruments: form.get('instruments') || undefined,
     pdfBlobUrl: form.get('pdfBlobUrl') || undefined,
     pdfBlobPathname: form.get('pdfBlobPathname') || undefined,
+    sectionId: form.get('sectionId') || undefined,
   })
 
   if (!parsed.success) {
@@ -112,9 +122,32 @@ export async function POST(request: Request) {
     ? sanitiseReportHtml(parsed.data.htmlContent)
     : null
 
+  /*
+   * Checked before the write, not left to the foreign key.
+   *
+   * An unknown id would otherwise surface as a Prisma constraint error — a 500 with a
+   * stack trace, after the PDF has already been uploaded — where what an operator needs
+   * is to be told the section is gone and to pick another one.
+   */
+  let sectionId: string | null = null
+  if (parsed.data.sectionId) {
+    const section = await db.section.findUnique({
+      where: { id: parsed.data.sectionId },
+      select: { id: true },
+    })
+    if (!section) {
+      return NextResponse.json(
+        { error: 'That section no longer exists. Reload the page and choose again.' },
+        { status: 400 },
+      )
+    }
+    sectionId = section.id
+  }
+
   const report = await db.report.create({
     data: {
       type: parsed.data.type,
+      sectionId,
       title: parsed.data.title,
       summary: parsed.data.summary || null,
       shareHook: parsed.data.shareHook || null,

@@ -626,6 +626,20 @@ model Package {
   /// Withdrawn from sale, still resolvable by everything that references it.
   archivedAt DateTime?
 
+  /// Whose package this is, when it belongs to one contributor.
+  ///
+  /// **At most one author, deliberately** — the same constraint Section carries, for the
+  /// same reason. A package attributed to one person makes the revenue share an
+  /// attribution rather than a percentage split, and "everything by Dean" is a fact
+  /// somebody can check rather than a formula somebody has to agree to.
+  ///
+  /// Null is the house package: the whole-site membership, which belongs to the desk
+  /// rather than to any one contributor. Every package that existed before this column
+  /// is null, which is why adding it changed nothing — the join page and the homepage
+  /// read exactly the same rows they always did.
+  authorId String?
+  author   Author? @relation(fields: [authorId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -635,6 +649,7 @@ model Package {
   items   PackageItem[]
 
   @@index([archivedAt, sortOrder])
+  @@index([authorId, archivedAt])
 }
 
 model Report {
@@ -797,6 +812,9 @@ model Author {
   updatedAt  DateTime  @updatedAt
 
   sections Section[]
+  /// The packages sold in this author's name. Empty for a contributor whose work is only
+  /// sold section by section, or through the house membership.
+  packages Package[]
 
   @@index([archivedAt])
 }
