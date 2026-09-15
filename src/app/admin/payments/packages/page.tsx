@@ -5,6 +5,7 @@ import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { PackageManager, type AdminPackage } from '@/app/admin/payments/packages/package-manager'
 import { ToastProvider } from '@/components/ui/toast'
 import { requireAdmin } from '@/lib/auth'
+import { db } from '@/lib/db'
 import { allPackages, packageUsageMap } from '@/lib/packages'
 import { stripeConfigured } from '@/lib/stripe'
 
@@ -23,7 +24,15 @@ export const dynamic = 'force-dynamic'
 export default async function PackagesPage() {
   await requireAdmin()
 
-  const [packages, usage] = await Promise.all([allPackages(), packageUsageMap()])
+  const [packages, usage, authors] = await Promise.all([
+    allPackages(),
+    packageUsageMap(),
+    db.author.findMany({
+      where: { archivedAt: null },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true },
+    }),
+  ])
 
   const rows: AdminPackage[] = packages.map((pkg) => ({
     id: pkg.id,
@@ -40,6 +49,7 @@ export default async function PackagesPage() {
     archived: pkg.archivedAt !== null,
     members: usage[pkg.id]?.members ?? 0,
     orders: usage[pkg.id]?.orders ?? 0,
+    authorId: pkg.authorId,
   }))
 
   return (
@@ -86,7 +96,7 @@ export default async function PackagesPage() {
           </a>
         </div>
 
-        <PackageManager packages={rows} stripeReady={stripeConfigured()} />
+        <PackageManager packages={rows} authors={authors} stripeReady={stripeConfigured()} />
 
         <section className="mt-12 border-t border-line pt-8">
           <h2 className="mb-3 text-[17px] text-ink">Archive, not delete</h2>

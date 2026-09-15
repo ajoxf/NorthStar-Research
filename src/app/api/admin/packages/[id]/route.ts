@@ -60,6 +60,19 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   })
   if (!price.ok) return NextResponse.json({ error: price.error }, { status: 400 })
 
+  if (input.authorId) {
+    const author = await db.author.findUnique({
+      where: { id: input.authorId },
+      select: { id: true },
+    })
+    if (!author) {
+      return NextResponse.json(
+        { error: 'That contributor no longer exists. Reload the page and choose again.' },
+        { status: 400 },
+      )
+    }
+  }
+
   await db.package.update({
     where: { id: existing.id },
     data: {
@@ -75,6 +88,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       stripeProductId: price.stripeProductId,
       features: input.features,
       sortOrder: input.sortOrder,
+      /*
+       * `undefined` leaves the attribution alone, `null` clears it back to the house.
+       * The form always sends one or the other, so this is really about any other caller
+       * — a partial body must not silently unassign somebody's package.
+       */
+      authorId: input.authorId === undefined ? undefined : input.authorId,
     },
   })
 

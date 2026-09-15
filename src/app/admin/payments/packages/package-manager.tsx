@@ -47,19 +47,39 @@ export type AdminPackage = {
   archived: boolean
   members: number
   orders: number
+  /** Whose package this is. Null is the house membership. */
+  authorId: string | null
 }
+
+export type AuthorOption = { id: string; name: string }
 
 export function PackageManager({
   packages,
+  authors,
   stripeReady,
 }: {
   packages: AdminPackage[]
+  /** Every contributor a package can be attributed to. Empty until any exist. */
+  authors: AuthorOption[]
   stripeReady: boolean
 }) {
   const [creating, setCreating] = React.useState(false)
 
   const live = packages.filter((pkg) => !pkg.archived)
   const archived = packages.filter((pkg) => pkg.archived)
+
+  /*
+   * Grouped by whose it is, once there is more than one seller on the site.
+   *
+   * Below that threshold the grouping is noise — one heading over the only list there
+   * is — so the flat list stays exactly as it was until contributors actually exist.
+   */
+  const byAuthor = authors
+    .map((author) => ({ author, rows: live.filter((pkg) => pkg.authorId === author.id) }))
+    .filter((group) => group.rows.length > 0)
+
+  const houseIds = new Set(byAuthor.flatMap((group) => group.rows.map((row) => row.id)))
+  const house = live.filter((pkg) => !houseIds.has(pkg.id))
 
   return (
     <div>
@@ -70,16 +90,69 @@ export function PackageManager({
         </div>
       )}
 
-      <ul className="space-y-3">
-        {live.map((pkg) => (
-          <PackageRow key={pkg.id} pkg={pkg} stripeReady={stripeReady} onlyLive={live.length === 1} />
-        ))}
-      </ul>
+      {byAuthor.length === 0 ? (
+        <ul className="space-y-3">
+          {live.map((pkg) => (
+            <PackageRow
+              key={pkg.id}
+              pkg={pkg}
+              authors={authors}
+              stripeReady={stripeReady}
+              onlyLive={live.length === 1}
+            />
+          ))}
+        </ul>
+      ) : (
+        <div className="space-y-8">
+          {house.length > 0 && (
+            <section>
+              <h2 className="mb-1 text-[15px] text-ink">The house</h2>
+              <p className="mb-3 text-[13px] leading-relaxed text-ink-dim">
+                Not attributed to any one contributor — the whole-site membership and anything
+                spanning several people.
+              </p>
+              <ul className="space-y-3">
+                {house.map((pkg) => (
+                  <PackageRow
+                    key={pkg.id}
+                    pkg={pkg}
+                    authors={authors}
+                    stripeReady={stripeReady}
+                    onlyLive={live.length === 1}
+                  />
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {byAuthor.map((group) => (
+            <section key={group.author.id}>
+              <h2 className="mb-1 text-[15px] text-ink">{group.author.name}</h2>
+              <p className="mb-3 text-[13px] leading-relaxed text-ink-dim">
+                Shown on this contributor&rsquo;s own page. One author per package, so what they
+                are owed is a sum of these rather than a split of somebody else&rsquo;s.
+              </p>
+              <ul className="space-y-3">
+                {group.rows.map((pkg) => (
+                  <PackageRow
+                    key={pkg.id}
+                    pkg={pkg}
+                    authors={authors}
+                    stripeReady={stripeReady}
+                    onlyLive={live.length === 1}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
 
       {creating ? (
         <div className="mt-4 rounded-lg border border-accent/40 bg-panel p-5">
           <h3 className="mb-4 text-[15px] text-ink">New package</h3>
           <PackageForm
+            authors={authors}
             stripeReady={stripeReady}
             submitLabel="Create package"
             onCancel={() => setCreating(false)}
@@ -110,7 +183,13 @@ export function PackageManager({
           </p>
           <ul className="space-y-3">
             {archived.map((pkg) => (
-              <PackageRow key={pkg.id} pkg={pkg} stripeReady={stripeReady} onlyLive={false} />
+              <PackageRow
+                key={pkg.id}
+                pkg={pkg}
+                authors={authors}
+                stripeReady={stripeReady}
+                onlyLive={false}
+              />
             ))}
           </ul>
         </section>
@@ -121,10 +200,12 @@ export function PackageManager({
 
 function PackageRow({
   pkg,
+  authors,
   stripeReady,
   onlyLive,
 }: {
   pkg: AdminPackage
+  authors: AuthorOption[]
   stripeReady: boolean
   onlyLive: boolean
 }) {
@@ -263,6 +344,7 @@ function PackageRow({
         <div className="border-t border-line bg-panel-2 p-5">
           <PackageForm
             initial={pkg}
+            authors={authors}
             stripeReady={stripeReady}
             submitLabel="Save changes"
             onCancel={() => setOpen(false)}
@@ -283,6 +365,7 @@ function PackageRow({
 
 function PackageForm({
   initial,
+  authors,
   stripeReady,
   submitLabel,
   onSubmit,
@@ -290,6 +373,7 @@ function PackageForm({
   onDone,
 }: {
   initial?: AdminPackage
+  authors: AuthorOption[]
   stripeReady: boolean
   submitLabel: string
   onSubmit: (body: unknown) => Promise<Response>
@@ -311,6 +395,7 @@ function PackageForm({
   const [stripePriceId, setStripePriceId] = React.useState(initial?.stripePriceId ?? '')
   const [features, setFeatures] = React.useState((initial?.features ?? []).join('\n'))
   const [sortOrder, setSortOrder] = React.useState(String(initial?.sortOrder ?? 0))
+  const [authorId, setAuthorId] = React.useState(initial?.authorId ?? '')
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
 
@@ -337,6 +422,9 @@ function PackageForm({
         stripePriceId: stripePriceId.trim() || null,
         features: parseFeatures(features),
         sortOrder: Number(sortOrder) || 0,
+        // Explicitly null rather than omitted, so choosing "the house" on a package that
+        // had an author actually clears it.
+        authorId: authorId || null,
       })
 
       const data = await response.json().catch(() => null)
@@ -409,6 +497,36 @@ function PackageForm({
             <option value="year">Year</option>
           </Select>
         </div>
+
+        {/*
+          Whose package this is, and therefore whose page it appears on.
+
+          Only rendered once a contributor exists — a select with one option that means
+          "nobody" is a question with no answer. Until then every package is the house's,
+          which is what they all are today.
+        */}
+        {authors.length > 0 && (
+          <div className="sm:col-span-2">
+            <Label htmlFor={`author-${initial?.id ?? 'new'}`}>Attributed to</Label>
+            <Select
+              id={`author-${initial?.id ?? 'new'}`}
+              value={authorId}
+              onChange={(event) => setAuthorId(event.target.value)}
+            >
+              <option value="">The house — no single contributor</option>
+              {authors.map((author) => (
+                <option key={author.id} value={author.id}>
+                  {author.name}
+                </option>
+              ))}
+            </Select>
+            <Hint>
+              A package attributed to a contributor is sold on their page and counts as
+              theirs. One author per package, so what each is owed is a sum rather than a
+              percentage of anything.
+            </Hint>
+          </div>
+        )}
 
         <div className="sm:col-span-2">
           <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">

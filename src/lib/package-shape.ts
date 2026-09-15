@@ -29,6 +29,14 @@ export type PackageShape = {
   sortOrder: number
   isDefault: boolean
   archivedAt: Date | null
+  /**
+   * The contributor this package belongs to, or null for the house membership.
+   *
+   * Carried on the shape rather than joined for at each call site, because the two
+   * questions a package is asked — what does it cost, and whose is it — are asked in the
+   * same breath on the homepage, the contributor's page and the join page.
+   */
+  authorId: string | null
 }
 
 /**
@@ -54,6 +62,8 @@ export const FALLBACK_PACKAGE: PackageShape = {
   sortOrder: 0,
   isDefault: true,
   archivedAt: null,
+  // The built-in plan is the house membership by definition — it predates contributors.
+  authorId: null,
 }
 
 export function isFallbackPackage(pkg: { id: string }): boolean {
@@ -210,6 +220,15 @@ export const packageInputSchema = z.object({
   stripePriceId: stripePriceIdSchema.optional().nullable(),
   features: z.array(z.string().trim().min(1).max(80)).max(12, 'Twelve bullet points is plenty.').default([]),
   sortOrder: z.number().int().min(0).max(999).default(0),
+  /**
+   * Whose package this is. Null — the default — is the house membership.
+   *
+   * Nullable rather than optional so that clearing the attribution is expressible: an
+   * omitted field on a PATCH means "leave it alone", and an explicit null means "this is
+   * the house's after all". A form that could only ever set an author would make the
+   * first mis-assignment permanent.
+   */
+  authorId: z.string().trim().min(1).nullable().optional(),
 })
 
 export type PackageInput = z.infer<typeof packageInputSchema>
