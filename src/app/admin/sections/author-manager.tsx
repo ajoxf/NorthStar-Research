@@ -23,6 +23,7 @@ export type AuthorRow = {
   linkedinUrl: string | null
   xUrl: string | null
   credentials: string[]
+  sortOrder: number
   archived: boolean
   sectionCount: number
 }
@@ -36,6 +37,7 @@ const EMPTY = {
   linkedinUrl: '',
   xUrl: '',
   credentials: '',
+  sortOrder: '0',
 }
 
 /**
@@ -65,6 +67,7 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
       linkedinUrl: author.linkedinUrl ?? '',
       xUrl: author.xUrl ?? '',
       credentials: author.credentials.join('\n'),
+      sortOrder: String(author.sortOrder),
     })
   }
 
@@ -96,7 +99,12 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
     event.preventDefault()
     // Empty strings are sent as-is; the schema normalises them to "absent", which is what
     // clearing a field in this form should mean.
-    const body = { ...form, credentials: parseCredentials(form.credentials) }
+    const body = {
+      ...form,
+      credentials: parseCredentials(form.credentials),
+      // Blank means "leave it at the front of the tie-break", not NaN.
+      sortOrder: Number(form.sortOrder) || 0,
+    }
     const ok = editing
       ? await send(`/api/admin/authors/${editing}`, 'PATCH', body, `${form.name} saved`)
       : await send('/api/admin/authors', 'POST', body, `${form.name} added`)
@@ -170,6 +178,21 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
               maxLength={4000}
             />
             <Hint>Public. Shown in full on their profile page.</Hint>
+          </div>
+
+          <div className="mt-4">
+            <Label htmlFor="a-order">Display order</Label>
+            <Input
+              id="a-order"
+              value={form.sortOrder}
+              onChange={(e) => setForm({ ...form, sortOrder: e.target.value })}
+              inputMode="numeric"
+              className="max-w-[10rem]"
+            />
+            <Hint>
+              Lowest first on the homepage and the contributors list. Ties fall back to the
+              name, so the order never reshuffles on its own.
+            </Hint>
           </div>
 
           <div className="mt-4">

@@ -5,7 +5,10 @@ import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { BackfillSections } from '@/app/admin/reports/backfill-sections'
 import { CopyShareMessage } from '@/app/admin/reports/share-actions'
+import { ToastProvider } from '@/components/ui/toast'
+import { sectionName } from '@/lib/section-shape'
 import { appBaseUrl } from '@/lib/env'
 import { reportShareMessage, whatsappShareUrl } from '@/lib/share-message'
 import { reportTypeLabel } from '@/lib/report-content'
@@ -19,12 +22,21 @@ export default async function AdminReportsPage() {
 
   const base = appBaseUrl()
 
-  const reports = await db.report.findMany({
-    orderBy: { publishDate: 'desc' },
-    include: { _count: { select: { views: true, deliveryLogs: true } } },
-  })
+  const [reports, untagged, sections] = await Promise.all([
+    db.report.findMany({
+      orderBy: { publishDate: 'desc' },
+      include: { _count: { select: { views: true, deliveryLogs: true } } },
+    }),
+    db.report.count({ where: { sectionId: null } }),
+    db.section.findMany({
+      where: { archivedAt: null },
+      orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
+      include: { topic: true, author: true },
+    }),
+  ])
 
   return (
+    <ToastProvider>
     <div className="mx-auto max-w-6xl px-5 py-10">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
@@ -37,6 +49,16 @@ export default async function AdminReportsPage() {
           Upload a report
         </ButtonLink>
       </div>
+
+      {/*
+        Offered only while there is a back catalogue with no owner and somewhere to put
+        it. Once the archive is filed this disappears rather than staying on as a button
+        with nothing left to do.
+      */}
+      <BackfillSections
+        untagged={untagged}
+        sections={sections.map((section) => ({ id: section.id, name: sectionName(section) }))}
+      />
 
       <div className="mt-5 overflow-x-auto rounded-lg border border-line bg-panel">
         <table className="w-full min-w-[720px] text-left">
@@ -149,5 +171,6 @@ export default async function AdminReportsPage() {
         </table>
       </div>
     </div>
+    </ToastProvider>
   )
 }

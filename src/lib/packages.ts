@@ -68,7 +68,7 @@ export async function packagesByAuthor(): Promise<{
     sellablePackages(),
     db.author.findMany({
       where: { archivedAt: null },
-      orderBy: { name: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       select: { id: true, name: true, slug: true, headline: true, photoUrl: true },
     }),
   ])

@@ -30,7 +30,7 @@ export default async function AdminSectionsPage() {
       include: { _count: { select: { sections: true } } },
     }),
     db.author.findMany({
-      orderBy: { name: 'asc' },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       include: { _count: { select: { sections: true } } },
     }),
     db.section.findMany({
@@ -84,6 +84,7 @@ export default async function AdminSectionsPage() {
             linkedinUrl: author.linkedinUrl,
             xUrl: author.xUrl,
             credentials: author.credentials,
+            sortOrder: author.sortOrder,
             archived: author.archivedAt !== null,
             sectionCount: author._count.sections,
           }))}

@@ -27,7 +27,7 @@ export default async function ExpertsPage() {
 
   const authors = await db.author.findMany({
     where: { archivedAt: null },
-    orderBy: { name: 'asc' },
+    orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     include: {
       sections: {
         where: { archivedAt: null },

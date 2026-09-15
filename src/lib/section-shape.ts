@@ -120,6 +120,8 @@ export const authorInputSchema = z.object({
   xUrl: optionalUrl,
   /** One per line in the form; already split by the time it reaches here. */
   credentials: z.array(z.string().trim().min(1).max(120)).max(12, 'Twelve is plenty.').default([]),
+  /** Low first on the homepage and the contributors list. */
+  sortOrder: z.number().int().min(0).max(999).default(0),
 })
 
 export const sectionInputSchema = z.object({

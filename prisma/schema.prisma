@@ -807,6 +807,14 @@ model Author {
   linkedinUrl String?
   xUrl        String?
 
+  /// Where this contributor sits on the homepage and in the contributors list.
+  ///
+  /// Alphabetical order is arbitrary as soon as there is a house desk among the names —
+  /// the team that writes most of the archive should be able to lead without being
+  /// renamed to sort first. Low first; ties fall back to the name, so the order is
+  /// stable rather than whatever the database returns.
+  sortOrder Int @default(0)
+
   archivedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt

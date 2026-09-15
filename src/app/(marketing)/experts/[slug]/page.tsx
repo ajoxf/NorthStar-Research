@@ -1,14 +1,16 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { ExternalLink, Lock } from 'lucide-react'
+import { Check, ExternalLink, Lock } from 'lucide-react'
 
 import { SectionBuy } from '@/app/(marketing)/coverage/section-buy'
 import { AuthorAvatar } from '@/components/author-avatar'
+import { ButtonLink } from '@/components/ui/button'
 import { PreviewBanner } from '@/components/preview-banner'
 import { ToastProvider } from '@/components/ui/toast'
 import { db } from '@/lib/db'
-import { formatPrice } from '@/lib/package-shape'
+import { formatPrice, type PackageShape } from '@/lib/package-shape'
+import { packagesForAuthor } from '@/lib/packages'
 import { sectionName } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
 import { formatDate } from '@/lib/utils'
@@ -53,6 +55,20 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
   })
 
   if (!author || author.archivedAt !== null) notFound()
+
+  /*
+   * What this contributor sells, in the order the admin put them in.
+   *
+   * The fullest one — their dearest — carries the solid button, rather than a hand-picked
+   * "most popular" badge: there is no popularity data to base that claim on, and inventing
+   * one is the kind of small untruth a research product should not be built on. It is a
+   * visual emphasis only; every package on the page is one click to buy.
+   */
+  const packages = await packagesForAuthor(author.id)
+  const featured = packages.reduce<PackageShape | null>(
+    (low, pkg) => (low === null || pkg.priceCents > low.priceCents ? pkg : low),
+    null,
+  )
 
   const recent = await db.report.findMany({
     where: {
@@ -132,8 +148,71 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
           </div>
         )}
 
+        {/*
+          This contributor's own prices, above the per-section list.
+
+          The site no longer has one price: each contributor's packages are set for them
+          in the admin, and this is where a buyer meets them. The section list below stays
+          as the finer-grained option — a package is usually several sections at a keener
+          price, and somebody who only follows one subject should still be able to say so.
+        */}
+        {packages.length > 0 && (
+          <section className="mt-14">
+            <h2 className="font-display text-2xl text-ink">
+              Packages by {author.name}
+            </h2>
+            <p className="mt-2 text-[15px] leading-relaxed text-ink-dim">
+              {author.name} sets these prices. Card renews itself; crypto you renew when you
+              choose.
+            </p>
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              {packages.map((pkg) => (
+                <div key={pkg.id} className="panel flex flex-col p-6">
+                  <h3 className="font-display text-xl text-ink">{pkg.name}</h3>
+                  {pkg.description && (
+                    <p className="mt-2 text-[14px] leading-relaxed text-ink-dim">
+                      {pkg.description}
+                    </p>
+                  )}
+
+                  <div className="mt-5 flex flex-wrap items-baseline gap-x-2.5 border-t border-line pt-5">
+                    <span className="font-display text-3xl text-ink">
+                      {formatPrice(pkg.priceCents, pkg.currency)}
+                    </span>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                      per {pkg.interval}
+                    </span>
+                  </div>
+
+                  {pkg.features.length > 0 && (
+                    <ul className="mt-4 flex-1 space-y-2">
+                      {pkg.features.map((feature) => (
+                        <li key={feature} className="flex items-start gap-2 text-[14px] text-ink">
+                          <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-up" aria-hidden />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  <ButtonLink
+                    href={`/join?package=${pkg.slug}`}
+                    size="lg"
+                    className="mt-6 w-full"
+                    variant={pkg.id === featured?.id ? 'primary' : 'secondary'}
+                  >
+                    Subscribe
+                  </ButtonLink>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="mt-14">
-          <h2 className="font-display text-2xl text-ink">Subscribe to their coverage</h2>
+          <h2 className="font-display text-2xl text-ink">
+            {packages.length > 0 ? 'Or just one subject' : 'Subscribe to their coverage'}
+          </h2>
           <div className="mt-5 grid gap-4">
             {author.sections.map((section) => (
               <div key={section.id} className="panel p-6">

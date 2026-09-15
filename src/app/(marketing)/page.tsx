@@ -5,12 +5,11 @@ import { AuthorAvatar } from '@/components/author-avatar'
 import { HeroMedia } from '@/components/hero-media'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { defaultPackage } from '@/lib/packages'
+import { defaultPackage, packagesByAuthor } from '@/lib/packages'
 import { db } from '@/lib/db'
 import { trialOffers } from '@/lib/trial'
 import { sectionsPublic } from '@/lib/sections-mode'
 import { formatPrice, type PackageShape } from '@/lib/package-shape'
-import { cn } from '@/lib/utils'
 
 /**
  * The price quoted here is the default package's, falling back to the built-in plan when
@@ -60,82 +59,220 @@ export default async function LandingPage() {
     : []
 
   const covered = topics.filter((topic) => topic.sections.length > 0)
+  const allSections = covered.flatMap((topic) => topic.sections)
 
-  // One card per author, cheapest section first — the figure under a name should be the
-  // lowest price at which you can read them, not whichever section sorted first.
-  const authors = [...new Map(
-    covered
-      .flatMap((topic) => topic.sections)
-      .map((section) => [section.author.id, section.author]),
-  ).values()]
+  /*
+   * What each contributor sells, and the lowest price at which you can read them.
+   *
+   * The entry price spans both of the things a buyer can hold — a package of theirs, or
+   * one of their sections — because quoting only one of the two would name a figure that
+   * is not the cheapest way in, which is worse than naming none. Loaded only when the
+   * sections surface is public, so an operator who has not turned it on gets the page
+   * byte-for-byte as it was.
+   */
+  const sold = showSections ? await packagesByAuthor() : { house: [], authors: [] }
 
-  const cheapest = covered
-    .flatMap((topic) => topic.sections)
-    .reduce<number | null>(
-      (low, section) => (low === null || section.priceCents < low ? section.priceCents : low),
-      null,
-    )
+  const contributors = sold.authors
+    .map((entry) => {
+      const sections = allSections.filter((section) => section.author.id === entry.author.id)
+      const prices = [
+        ...entry.packages.map((pkg) => pkg.priceCents),
+        ...sections.map((section) => section.priceCents),
+      ]
+      return {
+        ...entry.author,
+        topics: [...new Set(sections.map((section) => section.topic.name))],
+        sectionCount: sections.length,
+        packageCount: entry.packages.length,
+        fromCents: prices.length > 0 ? Math.min(...prices) : null,
+      }
+    })
+    // Somebody with nothing to sell and nothing published is not yet a contributor as far
+    // as a visitor is concerned, and a card with no price and no subjects says nothing.
+    .filter((entry) => entry.sectionCount > 0 || entry.packageCount > 0)
+
+  const cheapest = allSections.reduce<number | null>(
+    (low, section) => (low === null || section.priceCents < low ? section.priceCents : low),
+    null,
+  )
 
   return (
     <>
-      <Hero plan={plan} trial={trial} hasSections={authors.length > 0} />
-      {covered.length > 0 ? <TopicCoverage topics={covered} /> : <CoverageSection />}
-      {authors.length > 0 && <ContributorsSection authors={authors} />}
+      <Hero plan={plan} trial={trial} hasSections={contributors.length > 0} />
+      {contributors.length > 0 ? (
+        <>
+          <ContributorStorefront contributors={contributors} currency={plan.currency} />
+          <CoverageTable sections={allSections} currency={plan.currency} />
+        </>
+      ) : (
+        <CoverageSection />
+      )}
       <PricingSection plan={plan} trial={trial} cheapestSectionCents={cheapest} />
     </>
   )
 }
 
 /**
- * The coverage cards, built from the topics that actually have somebody writing in them.
+ * The contributors, as a storefront rather than a row of faces.
  *
- * Replaces the three hand-written cards below once there is real coverage to describe.
- * Those were accurate when one desk wrote everything; with named experts they became a
- * claim about a product shape that no longer matches, and a visitor comparing this to the
- * contributors band would have found two different answers on one page.
+ * This replaces the two bands that used to sit here — topic cards, then an avatar strip —
+ * which between them told a visitor who existed but never what anything cost, so every
+ * price question led back to one figure at the bottom of the page. The site does not have
+ * one figure any more. Each card carries the person, their subjects, and the lowest price
+ * at which you can read them, and goes to their page where their own packages are priced.
  */
-function TopicCoverage({
-  topics,
+function ContributorStorefront({
+  contributors,
+  currency,
 }: {
-  topics: {
+  contributors: {
     id: string
+    slug: string
     name: string
-    blurb: string | null
-    sections: { id: string; author: { name: string } }[]
+    headline: string | null
+    photoUrl: string | null
+    topics: string[]
+    sectionCount: number
+    packageCount: number
+    fromCents: number | null
   }[]
+  currency: string
 }) {
   return (
     <section className="border-b border-line">
       <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
         <div className="max-w-2xl">
-          <span className="eyebrow">Coverage</span>
+          <span className="eyebrow">The desk</span>
           <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
-            Every edition works the same way.
+            Research from people who put their name on it.
           </h2>
           <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
-            Charts first. Technical structure read against the macro backdrop, with the
-            reasoning shown — so you can weigh it against your own view rather than take it on
-            trust.
+            Follow the whole desk, or just the contributor whose subject you trade. Each one
+            sets their own price.
           </p>
         </div>
 
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {topics.map((topic) => (
-            <div
-              key={topic.id}
-              className="flex flex-col rounded-lg border border-line bg-panel p-6 transition-colors hover:border-accent/40"
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {contributors.map((contributor) => (
+            <Link
+              key={contributor.id}
+              href={`/experts/${contributor.slug}`}
+              className="group flex flex-col rounded-lg border border-line bg-panel p-6 transition-colors hover:border-accent/40"
             >
-              <h3 className="text-[18px] text-ink">{topic.name}</h3>
-              {topic.blurb && (
-                <p className="mt-2 flex-1 text-[14px] leading-relaxed text-ink-dim">{topic.blurb}</p>
+              <div className="flex items-center gap-3.5">
+                <AuthorAvatar name={contributor.name} photoUrl={contributor.photoUrl} size={52} />
+                <div className="min-w-0">
+                  <h3 className="text-[17px] text-ink">{contributor.name}</h3>
+                  {contributor.headline && (
+                    <p className="mt-0.5 text-[13px] leading-snug text-ink-dim">
+                      {contributor.headline}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {contributor.topics.length > 0 && (
+                <ul className="mt-5 flex flex-1 flex-wrap gap-1.5">
+                  {contributor.topics.map((topic) => (
+                    <li
+                      key={topic}
+                      className="rounded-full border border-line px-2.5 py-1 text-[11px] uppercase tracking-[0.1em] text-ink-dim"
+                    >
+                      {topic}
+                    </li>
+                  ))}
+                </ul>
               )}
-              <p className="mt-3 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
-                {/* Named, because the name is the reason to trust the card. */}
-                {[...new Set(topic.sections.map((s) => s.author.name))].join(' · ')}
-              </p>
-            </div>
+
+              <div className="mt-6 border-t border-line pt-5">
+                {contributor.fromCents !== null && (
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="font-display text-[26px] text-ink">
+                      {formatPrice(contributor.fromCents, currency)}
+                    </span>
+                    <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                      per month
+                    </span>
+                  </div>
+                )}
+                <p className="mt-2 inline-flex items-center gap-1.5 text-[14px] text-accent">
+                  {contributor.packageCount > 0 ? 'View packages' : 'View coverage'}
+                  <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                </p>
+              </div>
+            </Link>
           ))}
         </div>
+      </div>
+    </section>
+  )
+}
+
+/**
+ * Every subject, who writes it and what it costs, in one table.
+ *
+ * The card grid above is how somebody browses when they are choosing a person. This is how
+ * they look when they already know the subject they want — and it is the shape that keeps
+ * working at thirty sections, where thirty cards would not.
+ */
+function CoverageTable({
+  sections,
+  currency,
+}: {
+  sections: {
+    id: string
+    priceCents: number
+    topic: { name: string }
+    author: { name: string; slug: string }
+  }[]
+  currency: string
+}) {
+  // One row per subject, naming everybody who covers it and the cheapest way in.
+  const byTopic = [...new Set(sections.map((section) => section.topic.name))].map((name) => {
+    const rows = sections.filter((section) => section.topic.name === name)
+    return {
+      name,
+      authors: [...new Set(rows.map((row) => row.author.name))],
+      fromCents: Math.min(...rows.map((row) => row.priceCents)),
+      href: rows.length === 1 ? `/experts/${rows[0].author.slug}` : '/coverage',
+    }
+  })
+
+  return (
+    <section className="border-b border-line bg-panel-2/40">
+      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
+        <div className="max-w-2xl">
+          <span className="eyebrow">Coverage</span>
+          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
+            Every subject, and who writes it.
+          </h2>
+          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
+            Buy a single subject from a single contributor, if that is all you follow.
+          </p>
+        </div>
+
+        <ul className="mt-10 divide-y divide-line border-y border-line">
+          {byTopic.map((topic) => (
+            <li key={topic.name}>
+              <Link
+                href={topic.href}
+                className="group flex flex-wrap items-baseline gap-x-5 gap-y-1 py-5 transition-colors hover:bg-panel/60"
+              >
+                <span className="min-w-[8rem] text-[17px] text-ink">{topic.name}</span>
+                <span className="flex-1 text-[14px] text-ink-dim">
+                  {topic.authors.join(' · ')}
+                </span>
+                <span className="font-mono text-[14px] text-ink">
+                  from {formatPrice(topic.fromCents, currency)}/mo
+                </span>
+                <ArrowRight
+                  className="h-4 w-4 shrink-0 text-ink-dim transition-colors group-hover:text-accent"
+                  aria-hidden
+                />
+              </Link>
+            </li>
+          ))}
+        </ul>
 
         <Link
           href="/coverage"
@@ -144,54 +281,6 @@ function TopicCoverage({
           See every subject and who covers it
           <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
-      </div>
-    </section>
-  )
-}
-
-/**
- * The people, above the price.
- *
- * Placed here rather than at the top on purpose: the hero still sells the research, and
- * the experts are the evidence for it. Faces and one line each — the biography is a click
- * away, and a paragraph per person on a landing page is a wall nobody reads.
- */
-function ContributorsSection({
-  authors,
-}: {
-  authors: { id: string; slug: string; name: string; headline: string | null; photoUrl: string | null }[]
-}) {
-  return (
-    <section className="border-b border-line bg-panel-2/40">
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
-        <div className="max-w-2xl">
-          <span className="eyebrow">Written by</span>
-          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
-            Independent experts, each covering what they know.
-          </h2>
-          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
-            Every report carries a name and the reasoning behind it. Subscribe to the people you
-            follow rather than to everything at once.
-          </p>
-        </div>
-
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {authors.map((author) => (
-            <Link
-              key={author.id}
-              href={`/experts/${author.slug}`}
-              className="group flex items-center gap-4 rounded-lg border border-line bg-panel p-5 transition-colors hover:border-accent/40"
-            >
-              <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={52} />
-              <div className="min-w-0">
-                <h3 className="text-[16px] text-ink">{author.name}</h3>
-                {author.headline && (
-                  <p className="mt-0.5 text-[13px] leading-snug text-ink-dim">{author.headline}</p>
-                )}
-              </div>
-            </Link>
-          ))}
-        </div>
       </div>
     </section>
   )
