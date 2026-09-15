@@ -39,14 +39,19 @@ export async function SiteHeader() {
   const plan = await defaultPackage()
 
   /*
-   * How many things are actually for sale.
+   * Whether the homepage is actually showing a package grid to point at.
    *
-   * Past one, the button stops naming a figure and sends people to the packages instead.
-   * A header reading "Join — $199/mo" above a grid whose cheapest card says $49 tells a
-   * visitor two different things about what this costs, and the one in the navigation
-   * follows them onto every page.
+   * Both halves matter. Past one package the button stops naming a figure, because a
+   * header reading "Join — $199/mo" above a grid whose cheapest card says $49 tells a
+   * visitor two different things about the price — and the navigation version follows
+   * them onto every page.
+   *
+   * But the grid is behind the same switch as the rest of the contributor surface, so
+   * counting packages alone would send somebody to "packages" that the homepage is not
+   * yet showing. The two conditions have to be the one condition.
    */
-  const onSale = await sellablePackages()
+  const [onSale, showPackages] = await Promise.all([sellablePackages(), sectionsPublic()])
+  const pickAPackage = showPackages && onSale.length > 1
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-md">
@@ -76,13 +81,13 @@ export async function SiteHeader() {
               {/* The price is the point of the button, but it is what makes it wide;
                   at phone width the label shortens rather than wrapping the header. */}
               <ButtonLink
-                href={onSale.length > 1 ? '/#pricing' : '/join'}
+                href={pickAPackage ? '/#pricing' : '/join'}
                 size="sm"
                 className="whitespace-nowrap"
               >
                 <span className="sm:hidden">Join</span>
                 <span className="hidden sm:inline">
-                  {onSale.length > 1 ? (
+                  {pickAPackage ? (
                     'See packages'
                   ) : (
                     <>
