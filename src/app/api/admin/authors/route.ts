@@ -30,6 +30,7 @@ export async function POST(request: Request) {
       linkedinUrl: input.data.linkedinUrl ?? null,
       xUrl: input.data.xUrl ?? null,
       credentials: input.data.credentials,
+      sortOrder: input.data.sortOrder,
     },
   })
   return NextResponse.json({ ok: true, author })

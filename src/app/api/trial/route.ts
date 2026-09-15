@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { getCurrentMember, hashPassword, startSession } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { grantableItems, packageSlugFromTrial, packageTrialHeldEver } from '@/lib/package-trial'
 import {
   refusalMessage,
   researchTrialRefusal,
@@ -81,6 +82,12 @@ export async function POST(request: Request) {
    * to point at, and the two paths share the signup but not the grant.
    */
   if (offer.isResearch) return grantResearchTrial(offer.days, rawBody)
+
+  /*
+   * A package is a third grant again: one entitlement per item in it, sharing one end
+   * date, so the whole bundle opens and lapses together.
+   */
+  if (offer.isPackage) return grantPackageTrial(offer, rawBody)
 
   /*
    * Read before anything is written, so a refusal cannot leave half an account behind.
@@ -223,6 +230,149 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     item: item.name,
+    days: offer.days,
+    endsAt: endsAt.toISOString(),
+  })
+}
+
+/**
+ * A free trial of a whole package.
+ *
+ * The same shape as the item grant above — read everything before writing anything, refuse
+ * before an account is created — but it writes one entitlement per item in the bundle,
+ * all sharing one end date so the package opens and lapses as a unit.
+ *
+ * Eligibility asks whether the member has ever held **any** part of the package, not all
+ * of it. Bundles overlap on purpose, and the looser rule would let somebody trial
+ * "Everything by Dean", let it lapse, then trial "Energy only" for a second free run at a
+ * section they have already had. See packageTrialHeldEver.
+ */
+async function grantPackageTrial(
+  offer: { days: number; slug: string; name: string },
+  rawBody: Record<string, unknown> | null,
+) {
+  const packageSlug = packageSlugFromTrial(offer.slug)
+  if (!packageSlug) return fail(refusalMessage('disabled'), 403)
+
+  const pkg = await db.package.findUnique({
+    where: { slug: packageSlug },
+    select: {
+      name: true,
+      items: {
+        select: {
+          item: {
+            select: {
+              id: true,
+              archivedAt: true,
+              kind: true,
+              section: { select: { id: true, archivedAt: true } },
+            },
+          },
+        },
+      },
+    },
+  })
+
+  /*
+   * Only what a trial can actually open: live sections. A product is excluded because this
+   * site no longer creates accounts on its domain, so granting one writes an entitlement
+   * that opens nothing.
+   */
+  const items = grantableItems((pkg?.items ?? []).map((row) => row.item))
+  if (items.length === 0) return fail(refusalMessage('no_item'), 403)
+
+  const signedIn = await getCurrentMember()
+
+  let heldEver = false
+  if (signedIn) {
+    const held = await db.entitlement.findMany({
+      where: { memberId: signedIn.id },
+      select: { itemId: true, sectionId: true },
+    })
+    heldEver = packageTrialHeldEver(
+      items,
+      held.map((row) => row.itemId).filter((id): id is string => id !== null),
+      held.map((row) => row.sectionId).filter((id): id is string => id !== null),
+    )
+  }
+
+  // Signed out: the account hangs off the email, so the body is parsed before anything.
+  let parsed: z.infer<typeof Body> | null = null
+  let email = signedIn?.email ?? ''
+
+  if (!signedIn) {
+    const result = Body.safeParse(rawBody)
+    if (!result.success) {
+      return fail(result.error.issues[0]?.message ?? 'Check the form and try again.')
+    }
+    parsed = result.data
+    email = parsed.email.trim().toLowerCase()
+
+    const already = await db.member.findUnique({ where: { email }, select: { id: true } })
+    if (already) {
+      return fail(
+        'That email already has an account. Sign in and the trial is waiting on your dashboard.',
+        409,
+        '/login?next=/dashboard',
+      )
+    }
+  }
+
+  const refusal = trialRefusal({ enabled: true, itemExists: true, heldEver })
+  if (refusal) return fail(refusalMessage(refusal), refusal === 'already_trialled' ? 409 : 403)
+
+  const now = new Date()
+  const endsAt = trialEndsAt(offer.days, now)
+
+  const member = signedIn
+    ? signedIn
+    : await db.member.create({
+        data: {
+          email,
+          passwordHash: await hashPassword(parsed!.password),
+          firstName: parsed!.firstName || null,
+          lastName: parsed!.lastName || null,
+          role: 'member',
+          // Deliberately absent, as in the item path: a trialist of one bundle is not a
+          // member of the research desk.
+          source: 'trial',
+        },
+      })
+
+  /*
+   * All of them or none.
+   *
+   * A transaction because a partial grant is the worst outcome available here: the member
+   * has used up their one trial of this package — `heldEver` will refuse them next time —
+   * and holds only the sections that happened to be written before the failure.
+   */
+  try {
+    await db.$transaction(
+      items.map((item) =>
+        db.entitlement.create({
+          data: {
+            memberId: member.id,
+            itemId: item.id,
+            // The field that decides whether the entitlement can read anything.
+            sectionId: item.section!.id,
+            status: 'active',
+            startedAt: now,
+            renewsAt: endsAt,
+          },
+        }),
+      ),
+    )
+  } catch {
+    // The unique key on (memberId, itemId) losing a race lands here, which is the same
+    // answer as the eligibility check: they already hold part of this.
+    return fail(refusalMessage('already_trialled'), 409)
+  }
+
+  if (!signedIn) await startSession(member)
+
+  return NextResponse.json({
+    ok: true,
+    item: pkg?.name ?? offer.name,
     days: offer.days,
     endsAt: endsAt.toISOString(),
   })

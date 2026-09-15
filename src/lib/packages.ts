@@ -39,7 +39,62 @@ export function toShape(row: Package): PackageShape {
     sortOrder: row.sortOrder,
     isDefault: row.isDefault,
     archivedAt: row.archivedAt,
+    authorId: row.authorId,
+    trialEnabled: row.trialEnabled,
+    trialDays: row.trialDays,
   }
+}
+
+/**
+ * Everything on sale, grouped by whose it is.
+ *
+ * The house packages come first and keep their own bucket, because "the whole site" is
+ * not one contributor's offer among several — it is the thing every contributor's work
+ * is also inside. Authors follow in their own order, each with only the packages
+ * attributed to them.
+ *
+ * An author with no packages of their own is included with an empty list rather than
+ * dropped. Their page still has to say something, and "nothing on sale by this
+ * contributor yet" is a better answer than a page that looks broken.
+ */
+export type AuthorPackages = {
+  author: { id: string; name: string; slug: string; headline: string | null; photoUrl: string | null }
+  packages: PackageShape[]
+}
+
+export async function packagesByAuthor(): Promise<{
+  house: PackageShape[]
+  authors: AuthorPackages[]
+}> {
+  const [sellable, authors] = await Promise.all([
+    sellablePackages(),
+    db.author.findMany({
+      where: { archivedAt: null },
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+      select: { id: true, name: true, slug: true, headline: true, photoUrl: true },
+    }),
+  ])
+
+  const known = new Set(authors.map((author) => author.id))
+
+  return {
+    /*
+     * Also catches a package whose author has since been archived. It has to land
+     * somewhere — dropping it would take a package off sale that is still being paid
+     * for, by way of a screen that never mentioned it.
+     */
+    house: sellable.filter((pkg) => pkg.authorId === null || !known.has(pkg.authorId)),
+    authors: authors.map((author) => ({
+      author,
+      packages: sellable.filter((pkg) => pkg.authorId === author.id),
+    })),
+  }
+}
+
+/** What this contributor sells, in sale order. Empty when they sell nothing of their own. */
+export async function packagesForAuthor(authorId: string): Promise<PackageShape[]> {
+  const rows = await db.package.findMany({ where: { authorId, archivedAt: null } })
+  return sortPackages(rows.map(toShape))
 }
 
 /** Everything, archived included. The admin list. */

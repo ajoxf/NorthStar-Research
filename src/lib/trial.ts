@@ -8,6 +8,7 @@ import {
   RESEARCH_TRIAL_NAME,
   RESEARCH_TRIAL_SLUG,
 } from '@/lib/research-trial'
+import { packageSlugFromTrial, packageTrial, packageTrialSlug } from '@/lib/package-trial'
 import { itemTrial, offerUsable } from '@/lib/trial-offer-shape'
 import {
   TRIAL_DAYS_KEY,
@@ -31,6 +32,7 @@ import {
 export * from '@/lib/trial-shape'
 export * from '@/lib/trial-offer-shape'
 export * from '@/lib/research-trial'
+export * from '@/lib/package-trial'
 
 /**
  * Trials are **off** unless switched on.
@@ -87,6 +89,15 @@ export type TrialOffer = {
    * each of those call sites would be the same knowledge, spread out and easy to miss.
    */
   isResearch: boolean
+  /**
+   * A bundle rather than a single thing.
+   *
+   * Granted differently again: one entitlement per item in the package, all sharing one
+   * end date. Carried on the offer for the same reason `isResearch` is — the caller has to
+   * know which of the three grants it is holding, and a slug comparison repeated at every
+   * call site is the same knowledge spread out and easy to miss.
+   */
+  isPackage: boolean
 }
 
 const OFFER_SELECT = {
@@ -119,6 +130,54 @@ function toOffer(
     name: item.name,
     isSection: item.kind === 'section',
     isResearch: false,
+    isPackage: false,
+  }
+}
+
+/** Every package trial that is open right now. */
+const PACKAGE_OFFER_SELECT = {
+  slug: true,
+  name: true,
+  archivedAt: true,
+  trialEnabled: true,
+  trialDays: true,
+  items: {
+    select: {
+      item: {
+        select: {
+          id: true,
+          archivedAt: true,
+          kind: true,
+          section: { select: { id: true, archivedAt: true } },
+        },
+      },
+    },
+  },
+} as const
+
+type PackageOfferRow = {
+  slug: string
+  name: string
+  archivedAt: Date | null
+  trialEnabled: boolean
+  trialDays: number | null
+  items: { item: { id: string; archivedAt: Date | null; kind: 'section' | 'product'; section: { id: string; archivedAt: Date | null } | null } }[]
+}
+
+function toPackageOffer(pkg: PackageOfferRow, defaultDays: number): TrialOffer | null {
+  const trial = packageTrial(
+    { ...pkg, items: pkg.items.map((row) => row.item) },
+    defaultDays,
+  )
+  if (!trial) return null
+  return {
+    days: trial.days,
+    // Prefixed, so this can never be mistaken for an item of the same name.
+    slug: packageTrialSlug(pkg.slug),
+    name: pkg.name,
+    isSection: false,
+    isResearch: false,
+    isPackage: true,
   }
 }
 
@@ -139,6 +198,7 @@ export async function researchTrialOffer(): Promise<TrialOffer | null> {
     name: RESEARCH_TRIAL_NAME,
     isSection: false,
     isResearch: true,
+    isPackage: false,
   }
 }
 
@@ -155,7 +215,7 @@ export async function setResearchTrial(
 export async function trialOffers(): Promise<TrialOffer[]> {
   await migrateLegacyTrialSettings()
   const settings = await trialSettings()
-  const [research, items] = await Promise.all([
+  const [research, items, packages] = await Promise.all([
     researchTrialOffer(),
     db.item.findMany({
       /*
@@ -170,18 +230,51 @@ export async function trialOffers(): Promise<TrialOffer[]> {
       select: OFFER_SELECT,
       orderBy: { name: 'asc' },
     }),
+    db.package.findMany({
+      where: { trialEnabled: true, archivedAt: null },
+      select: PACKAGE_OFFER_SELECT,
+      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
+    }),
   ])
   const fromItems = items
     .map((item) => toOffer(item, settings.days))
     .filter((offer): offer is TrialOffer => offer !== null)
+  /*
+   * Packages ahead of single sections, because a bundle is the bigger offer and the one an
+   * operator who set both would rather have taken.
+   */
+  const fromPackages = (packages as PackageOfferRow[])
+    .map((pkg) => toPackageOffer(pkg, settings.days))
+    .filter((offer): offer is TrialOffer => offer !== null)
   // Research first. It is what this site sells; a product is the side door.
-  return research ? [research, ...fromItems] : fromItems
+  const rest = [...fromPackages, ...fromItems]
+  return research ? [research, ...rest] : rest
 }
 
 /** One item's offer, or null if it is not on trial. */
 export async function trialOfferFor(slug: string): Promise<TrialOffer | null> {
   // The reserved slug names no row, so it is answered before the lookup rather than by it.
   if (slug === RESEARCH_TRIAL_SLUG) return researchTrialOffer()
+
+  /*
+   * A package, recognised by its prefix before any lookup happens.
+   *
+   * Package and item slugs are separate namespaces that can collide, so which table to
+   * read has to be decided by the shape of the slug rather than by trying one and falling
+   * back to the other — a fallback would hand somebody a trial of the wrong thing whenever
+   * the two names matched.
+   */
+  const packageSlug = packageSlugFromTrial(slug)
+  if (packageSlug !== null) {
+    await migrateLegacyTrialSettings()
+    const { days } = await trialSettings()
+    const pkg = await db.package.findUnique({
+      where: { slug: packageSlug },
+      select: PACKAGE_OFFER_SELECT,
+    })
+    return pkg ? toPackageOffer(pkg as PackageOfferRow, days) : null
+  }
+
   await migrateLegacyTrialSettings()
   const settings = await trialSettings()
   const item = await db.item.findUnique({ where: { slug }, select: OFFER_SELECT })

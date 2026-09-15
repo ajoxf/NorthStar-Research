@@ -46,6 +46,21 @@ export async function POST(request: Request) {
   })
   if (!price.ok) return NextResponse.json({ error: price.error }, { status: 400 })
 
+  // Checked rather than left to the foreign key, for the same reason the price is:
+  // a constraint violation is a 500, and what an operator needs is a sentence.
+  if (input.authorId) {
+    const author = await db.author.findUnique({
+      where: { id: input.authorId },
+      select: { id: true },
+    })
+    if (!author) {
+      return NextResponse.json(
+        { error: 'That contributor no longer exists. Reload the page and choose again.' },
+        { status: 400 },
+      )
+    }
+  }
+
   // The very first package becomes the default, because a site with packages and no
   // default would fall back to the built-in plan and quietly ignore what was just created.
   const existing = await db.package.count()
@@ -62,6 +77,9 @@ export async function POST(request: Request) {
       stripeProductId: price.stripeProductId,
       features: input.features,
       sortOrder: input.sortOrder,
+      authorId: input.authorId ?? null,
+      trialEnabled: input.trialEnabled,
+      trialDays: input.trialDays ?? null,
       isDefault: existing === 0,
     },
   })

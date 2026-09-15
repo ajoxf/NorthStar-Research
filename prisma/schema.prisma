@@ -626,6 +626,36 @@ model Package {
   /// Withdrawn from sale, still resolvable by everything that references it.
   archivedAt DateTime?
 
+  /// Whose package this is, when it belongs to one contributor.
+  ///
+  /// **At most one author, deliberately** — the same constraint Section carries, for the
+  /// same reason. A package attributed to one person makes the revenue share an
+  /// attribution rather than a percentage split, and "everything by Dean" is a fact
+  /// somebody can check rather than a formula somebody has to agree to.
+  ///
+  /// Null is the house package: the whole-site membership, which belongs to the desk
+  /// rather than to any one contributor. Every package that existed before this column
+  /// is null, which is why adding it changed nothing — the join page and the homepage
+  /// read exactly the same rows they always did.
+  authorId String?
+  author   Author? @relation(fields: [authorId], references: [id])
+
+  /// Is a free trial of THIS package open, and for how long?
+  ///
+  /// Per package, alongside the same pair on Item, because the two answer different
+  /// questions: a package trial opens everything in the bundle at once, on one end date,
+  /// where an item trial opens a single section. An operator selling "Everything by Dean"
+  /// wants to offer a fortnight of both his sections, not two trials that have to be
+  /// started separately and lapse on different days.
+  ///
+  /// Off by default, and the default is load-bearing — a package created tomorrow must not
+  /// arrive giving away a free fortnight nobody decided on.
+  ///
+  /// `trialDays` null means "use the house default", so changing that default moves every
+  /// package that never had a number set of its own.
+  trialEnabled Boolean @default(false)
+  trialDays    Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -635,6 +665,7 @@ model Package {
   items   PackageItem[]
 
   @@index([archivedAt, sortOrder])
+  @@index([authorId, archivedAt])
 }
 
 model Report {
@@ -792,11 +823,22 @@ model Author {
   linkedinUrl String?
   xUrl        String?
 
+  /// Where this contributor sits on the homepage and in the contributors list.
+  ///
+  /// Alphabetical order is arbitrary as soon as there is a house desk among the names —
+  /// the team that writes most of the archive should be able to lead without being
+  /// renamed to sort first. Low first; ties fall back to the name, so the order is
+  /// stable rather than whatever the database returns.
+  sortOrder Int @default(0)
+
   archivedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
   sections Section[]
+  /// The packages sold in this author's name. Empty for a contributor whose work is only
+  /// sold section by section, or through the house membership.
+  packages Package[]
 
   @@index([archivedAt])
 }
