@@ -63,34 +63,26 @@ export default async function LandingPage() {
   const allSections = covered.flatMap((topic) => topic.sections)
 
   /*
-   * What each contributor sells, and the lowest price at which you can read them.
+   * What is on sale, and who each package belongs to.
    *
-   * The entry price spans both of the things a buyer can hold — a package of theirs, or
-   * one of their sections — because quoting only one of the two would name a figure that
-   * is not the cheapest way in, which is worse than naming none. Loaded only when the
-   * sections surface is public, so an operator who has not turned it on gets the page
-   * byte-for-byte as it was.
+   * Loaded only when the sections surface is public, so an operator who has not turned it
+   * on gets this page byte-for-byte as it was.
    */
   const sold = showSections ? await packagesByAuthor() : { house: [], authors: [] }
 
+  /*
+   * Who to name in the byline strip.
+   *
+   * Somebody with nothing on sale and nothing published is not yet a contributor as far as
+   * a visitor is concerned — naming them promises work that cannot be read.
+   */
   const contributors = sold.authors
-    .map((entry) => {
-      const sections = allSections.filter((section) => section.author.id === entry.author.id)
-      const prices = [
-        ...entry.packages.map((pkg) => pkg.priceCents),
-        ...sections.map((section) => section.priceCents),
-      ]
-      return {
-        ...entry.author,
-        topics: [...new Set(sections.map((section) => section.topic.name))],
-        sectionCount: sections.length,
-        packageCount: entry.packages.length,
-        fromCents: prices.length > 0 ? Math.min(...prices) : null,
-      }
-    })
-    // Somebody with nothing to sell and nothing published is not yet a contributor as far
-    // as a visitor is concerned, and a card with no price and no subjects says nothing.
-    .filter((entry) => entry.sectionCount > 0 || entry.packageCount > 0)
+    .filter(
+      (entry) =>
+        entry.packages.length > 0 ||
+        allSections.some((section) => section.author.id === entry.author.id),
+    )
+    .map((entry) => entry.author)
 
   /*
    * Everything on sale, each package carrying the contributor it belongs to.
@@ -141,7 +133,7 @@ export default async function LandingPage() {
       />
       {contributors.length > 0 ? (
         <>
-          <ContributorStorefront contributors={contributors} currency={plan.currency} />
+          <ContributorStrip contributors={contributors} />
           <CoverageTable sections={allSections} currency={plan.currency} />
         </>
       ) : (
@@ -166,96 +158,61 @@ export default async function LandingPage() {
 }
 
 /**
- * The contributors, as a storefront rather than a row of faces.
+ * The people, in one line each.
  *
- * This replaces the two bands that used to sit here — topic cards, then an avatar strip —
- * which between them told a visitor who existed but never what anything cost, so every
- * price question led back to one figure at the bottom of the page. The site does not have
- * one figure any more. Each card carries the person, their subjects, and the lowest price
- * at which you can read them, and goes to their page where their own packages are priced.
+ * Deliberately thin. This band used to carry prices and a call to action per contributor,
+ * which made it a second storefront sitting above the real one — a visitor met the same
+ * names, the same faces and two different prices before reaching the packages. Selling is
+ * the grid's job now, so what is left here is the claim the grid rests on: real people,
+ * named, each covering what they know. The link goes to their page for anybody who wants
+ * to read about them before deciding.
  */
-function ContributorStorefront({
+function ContributorStrip({
   contributors,
-  currency,
 }: {
-  contributors: {
-    id: string
-    slug: string
-    name: string
-    headline: string | null
-    photoUrl: string | null
-    topics: string[]
-    sectionCount: number
-    packageCount: number
-    fromCents: number | null
-  }[]
-  currency: string
+  contributors: { id: string; slug: string; name: string; headline: string | null; photoUrl: string | null }[]
 }) {
   return (
     <section className="border-b border-line">
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
-        <div className="max-w-2xl">
-          <span className="eyebrow">The desk</span>
-          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
-            Research from people who put their name on it.
-          </h2>
-          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
-            Follow the whole desk, or just the contributor whose subject you trade. Each one
-            sets their own price.
-          </p>
+      <div className="mx-auto max-w-6xl px-5 py-14">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+          <div>
+            <span className="eyebrow">Written by</span>
+            <h2 className="mt-2 text-balance font-display text-2xl tracking-[-0.02em] text-ink sm:text-[28px]">
+              Independent experts, each covering what they know.
+            </h2>
+          </div>
+          <Link
+            href="/experts"
+            className="inline-flex items-center gap-1.5 text-[14px] text-accent underline underline-offset-4"
+          >
+            All contributors
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+          </Link>
         </div>
 
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="mt-8 flex flex-wrap gap-x-10 gap-y-5">
           {contributors.map((contributor) => (
-            <Link
-              key={contributor.id}
-              href={`/experts/${contributor.slug}`}
-              className="group flex flex-col rounded-lg border border-line bg-panel p-6 transition-colors hover:border-accent/40"
-            >
-              <div className="flex items-center gap-3.5">
-                <AuthorAvatar name={contributor.name} photoUrl={contributor.photoUrl} size={52} />
-                <div className="min-w-0">
-                  <h3 className="text-[17px] text-ink">{contributor.name}</h3>
+            <li key={contributor.id}>
+              <Link
+                href={`/experts/${contributor.slug}`}
+                className="group flex items-center gap-3"
+              >
+                <AuthorAvatar name={contributor.name} photoUrl={contributor.photoUrl} size={40} />
+                <span className="min-w-0">
+                  <span className="block text-[15px] text-ink transition-colors group-hover:text-accent">
+                    {contributor.name}
+                  </span>
                   {contributor.headline && (
-                    <p className="mt-0.5 text-[13px] leading-snug text-ink-dim">
+                    <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">
                       {contributor.headline}
-                    </p>
+                    </span>
                   )}
-                </div>
-              </div>
-
-              {contributor.topics.length > 0 && (
-                <ul className="mt-5 flex flex-1 flex-wrap gap-1.5">
-                  {contributor.topics.map((topic) => (
-                    <li
-                      key={topic}
-                      className="rounded-full border border-line px-2.5 py-1 text-[11px] uppercase tracking-[0.1em] text-ink-dim"
-                    >
-                      {topic}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              <div className="mt-6 border-t border-line pt-5">
-                {contributor.fromCents !== null && (
-                  <div className="flex flex-wrap items-baseline gap-x-2">
-                    <span className="font-display text-[26px] text-ink">
-                      {formatPrice(contributor.fromCents, currency)}
-                    </span>
-                    <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
-                      per month
-                    </span>
-                  </div>
-                )}
-                <p className="mt-2 inline-flex items-center gap-1.5 text-[14px] text-accent">
-                  {contributor.packageCount > 0 ? 'View packages' : 'View coverage'}
-                  <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-                </p>
-              </div>
-            </Link>
+                </span>
+              </Link>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   )
