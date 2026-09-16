@@ -12,7 +12,7 @@ import { formatPrice, type PackageShape } from '@/lib/package-shape'
 import { packagesForAuthor } from '@/lib/packages'
 import { packageSlugFromTrial, packageTrialSlug } from '@/lib/package-trial'
 import { trialOffers } from '@/lib/trial'
-import { sectionName } from '@/lib/section-shape'
+import { comingSoonVisible, sectionName } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
 import { formatDate } from '@/lib/utils'
 
@@ -106,6 +106,15 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
     }),
     db.report.count({ where: { published: true, section: { authorId: author.id } } }),
   ])
+
+  /*
+   * Is this person still forthcoming? The same rule the listing uses, so a card marked
+   * "coming soon" and the page it leads to cannot disagree.
+   */
+  const soon = comingSoonVisible({
+    comingSoon: author.comingSoon,
+    liveSectionCount: author.sections.length,
+  })
 
   const links = [
     { href: author.websiteUrl, label: 'Website' },
@@ -338,6 +347,34 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
           </section>
         )}
 
+        {/*
+          A forthcoming contributor, in place of the commerce.
+
+          Shown only while they genuinely have nothing on sale — `comingSoonVisible` is the
+          same rule the listing uses, so the page and the card it was reached from cannot
+          disagree about whether this person is available. The moment their first subject
+          goes live this disappears and the sections below take over, with nothing for an
+          operator to switch off.
+        */}
+        {soon && (
+          <section className="mt-14">
+            <div className="rounded-xl border border-accent/30 bg-accent/[0.06] p-7 sm:p-9">
+              <span className="eyebrow">Coming soon</span>
+              <h2 className="mt-3 font-display text-2xl text-ink">
+                {author.name.split(' ')[0]} has not published here yet.
+              </h2>
+              <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-dim">
+                Their first reports are being prepared. There is nothing to subscribe to on
+                this page yet — when there is, it will appear here and on the coverage page.
+              </p>
+              <ButtonLink href="/coverage" size="lg" variant="secondary" className="mt-6">
+                See what is published today
+              </ButtonLink>
+            </div>
+          </section>
+        )}
+
+        {author.sections.length > 0 && (
         <section className="mt-14">
           <h2 className="font-display text-2xl text-ink">
             {packages.length > 0 ? 'Or just one subject' : 'Subscribe to their coverage'}
@@ -387,6 +424,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
             ))}
           </div>
         </section>
+        )}
 
         {recent.length > 0 && (
           <section className="mt-14">

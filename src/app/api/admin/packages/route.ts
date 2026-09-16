@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { packageInputSchema } from '@/lib/package-shape'
+import { setPackageItems } from '@/lib/package-items'
 import { setDefaultPackage, uniqueSlug } from '@/lib/packages'
 import { resolveStripePrice } from '@/app/api/admin/packages/resolve-price'
 
@@ -83,6 +84,8 @@ export async function POST(request: Request) {
       isDefault: existing === 0,
     },
   })
+
+  if (input.itemIds) await setPackageItems(created.id, input.itemIds)
 
   if (created.isDefault) await setDefaultPackage(created.id)
 

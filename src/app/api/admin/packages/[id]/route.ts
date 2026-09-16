@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { packageInputSchema } from '@/lib/package-shape'
+import { setPackageItems } from '@/lib/package-items'
 import { packageById, packageUsage, setDefaultPackage, uniqueSlug } from '@/lib/packages'
 import { resolveStripePrice } from '@/app/api/admin/packages/resolve-price'
 
@@ -99,6 +100,10 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       trialDays: input.trialDays ?? null,
     },
   })
+
+  // Undefined means the caller said nothing about contents; an empty array means they
+  // deliberately emptied it. Only the second should clear the package.
+  if (input.itemIds !== undefined) await setPackageItems(existing.id, input.itemIds)
 
   return NextResponse.json({ ok: true })
 }

@@ -24,6 +24,7 @@ export type AuthorRow = {
   xUrl: string | null
   credentials: string[]
   sortOrder: number
+  comingSoon: boolean
   archived: boolean
   sectionCount: number
 }
@@ -38,6 +39,7 @@ const EMPTY = {
   xUrl: '',
   credentials: '',
   sortOrder: '0',
+  comingSoon: false,
 }
 
 /**
@@ -68,6 +70,7 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
       xUrl: author.xUrl ?? '',
       credentials: author.credentials.join('\n'),
       sortOrder: String(author.sortOrder),
+      comingSoon: author.comingSoon,
     })
   }
 
@@ -104,6 +107,7 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
       credentials: parseCredentials(form.credentials),
       // Blank means "leave it at the front of the tie-break", not NaN.
       sortOrder: Number(form.sortOrder) || 0,
+      comingSoon: form.comingSoon,
     }
     const ok = editing
       ? await send(`/api/admin/authors/${editing}`, 'PATCH', body, `${form.name} saved`)
@@ -178,6 +182,32 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
               maxLength={4000}
             />
             <Hint>Public. Shown in full on their profile page.</Hint>
+          </div>
+
+          {/*
+            Announcing somebody before their work is ready.
+
+            Says what it will actually do rather than just naming the flag, because the
+            behaviour is conditional: the badge appears only while they have nothing on
+            sale, and retires itself when their first subject goes live.
+          */}
+          <div className="mt-4">
+            <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+                checked={form.comingSoon}
+                onChange={(e) => setForm({ ...form, comingSoon: e.target.checked })}
+              />
+              <span className="min-w-0">
+                <span className="block text-[14px] text-ink">List as &ldquo;Coming soon&rdquo;</span>
+                <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
+                  Shows them on the contributors page before they have anything to sell, marked
+                  plainly as forthcoming. The badge disappears by itself as soon as their first
+                  subject goes on sale — there is nothing to switch off afterwards.
+                </span>
+              </span>
+            </label>
           </div>
 
           <div className="mt-4">
