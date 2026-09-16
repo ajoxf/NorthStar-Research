@@ -103,7 +103,10 @@ export default async function ExpertsPage() {
                 <img
                   src={author.photoUrl}
                   alt=""
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  /* object-top for the same reason the profile hero uses it: a wide
+                     headshot cropped to a portrait card should lose the floor, not the
+                     top of somebody's head. */
+                  className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
                   loading="lazy"
                 />
               ) : (
