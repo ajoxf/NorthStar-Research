@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation'
 import { Check, ExternalLink, Lock } from 'lucide-react'
 
 import { SectionBuy } from '@/app/(marketing)/coverage/section-buy'
-import { AuthorAvatar } from '@/components/author-avatar'
 import { ButtonLink } from '@/components/ui/button'
 import { PreviewBanner } from '@/components/preview-banner'
 import { ToastProvider } from '@/components/ui/toast'
@@ -91,15 +90,22 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
     null,
   )
 
-  const recent = await db.report.findMany({
-    where: {
-      published: true,
-      section: { authorId: author.id },
-    },
-    orderBy: { publishDate: 'desc' },
-    take: 8,
-    select: { id: true, title: true, publishDate: true },
-  })
+  /*
+   * The recent list is capped at eight; the counter is not.
+   *
+   * Two queries rather than `recent.length`, which would have quietly read "8 reports"
+   * for somebody with eighty — a figure on a marketing page understating the work by an
+   * order of magnitude is still a wrong figure.
+   */
+  const [recent, recentCount] = await Promise.all([
+    db.report.findMany({
+      where: { published: true, section: { authorId: author.id } },
+      orderBy: { publishDate: 'desc' },
+      take: 8,
+      select: { id: true, title: true, publishDate: true },
+    }),
+    db.report.count({ where: { published: true, section: { authorId: author.id } } }),
+  ])
 
   const links = [
     { href: author.websiteUrl, label: 'Website' },
@@ -110,45 +116,112 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
   return (
     <ToastProvider>
       {preview && <PreviewBanner />}
-      <div className="mx-auto max-w-3xl px-5 py-16 sm:py-20">
-        <Link
-          href="/experts"
-          className="font-mono text-[12px] text-ink-dim hover:text-ink"
-        >
-          ← All contributors
-        </Link>
 
-        {/*
-          The portrait is the page's opening image, not a bullet next to the name.
+      {/*
+        A photograph-led hero, because the person is the product here.
 
-          It was 84px, which on a page whose whole argument is "a named person with a
-          record stands behind this research" made the person the smallest thing on it.
-          Two sizes rather than one: 128 on a phone, where a 176px circle would push the
-          name off the first screen, and 176 from `sm` up.
-        */}
-        <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
-          <div className="sm:hidden">
-            <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={128} />
-          </div>
-          <div className="hidden sm:block">
-            <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={176} />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-balance text-3xl leading-tight text-ink sm:text-4xl">
+        The portrait fills the band and the copy sits over it, rather than the photograph
+        being an avatar beside a heading. The scrim is two gradients, not one: horizontal
+        so the text side stays dark whatever was uploaded, and vertical so the foot of the
+        band meets the page below it without a seam. Both are needed — a portrait cropped
+        light on the left would otherwise put white text on a white shirt.
+      */}
+      <section className="relative overflow-hidden border-b border-line">
+        {author.photoUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- an arbitrary host, which
+             next/image would need configuring for one URL at a time. */
+          <img
+            src={author.photoUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover object-[75%_20%]"
+          />
+        ) : (
+          <div className="absolute inset-0 grid-backdrop opacity-25" aria-hidden />
+        )}
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-bg via-bg/92 to-bg/25"
+          aria-hidden
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-bg to-transparent" aria-hidden />
+
+        <div className="relative mx-auto max-w-6xl px-5 py-16 sm:py-24">
+          <Link
+            href="/experts"
+            className="font-mono text-[12px] text-ink-dim transition-colors hover:text-ink"
+          >
+            ← All contributors
+          </Link>
+
+          <div className="mt-8 max-w-2xl">
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                The desk
+              </span>
+              {[...new Set(author.sections.map((section) => section.topic.name))]
+                .slice(0, 3)
+                .map((topic) => (
+                  <span
+                    key={topic}
+                    className="rounded-full border border-line bg-black/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim backdrop-blur-sm"
+                  >
+                    {topic}
+                  </span>
+                ))}
+            </div>
+
+            <h1 className="mt-6 text-balance font-display text-4xl leading-[1.04] text-ink sm:text-6xl">
               {author.name}
             </h1>
             {author.headline && (
-              <p className="mt-2.5 text-[17px] leading-relaxed text-imprint">{author.headline}</p>
+              <p className="mt-4 text-[17px] leading-relaxed text-imprint sm:text-[19px]">
+                {author.headline}
+              </p>
             )}
+
+            {/*
+              Two counts, and only ones that are true of this person: how many editions of
+              theirs are published, and how many subjects they cover. A figure that counted
+              the whole desk's output under one contributor's name would be the sort of
+              claim this product cannot afford to get wrong.
+            */}
+            <dl className="mt-10 flex flex-wrap gap-x-14 gap-y-6">
+              <div>
+                <dt className="font-display text-3xl text-ink">{recentCount}</dt>
+                <dd className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                  {recentCount === 1 ? 'report' : 'reports'}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-display text-3xl text-ink">{author.sections.length}</dt>
+                <dd className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                  {author.sections.length === 1 ? 'subject' : 'subjects'}
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
+      </section>
 
+      <div className="mx-auto max-w-5xl px-5 py-16 sm:py-20">
+        {/*
+          Label left, prose right — the reference's shape, and a useful one: the biography
+          is the longest text on the page and a heading above it would leave the eye with
+          no idea how far it runs.
+        */}
         {author.bio && (
-          <div className="mt-8 space-y-4 text-[16px] leading-relaxed text-ink-dim">
-            {author.bio.split('\n').filter(Boolean).map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </div>
+          <section className="grid gap-6 border-b border-line pb-14 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)] sm:gap-12">
+            <h2 className="font-display text-2xl leading-tight text-ink">
+              About {author.name.split(' ')[0]}
+            </h2>
+            <div className="space-y-4 text-[16px] leading-relaxed text-ink-dim">
+              {author.bio
+                .split('\n')
+                .filter(Boolean)
+                .map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+            </div>
+          </section>
         )}
 
         {author.credentials.length > 0 && (
