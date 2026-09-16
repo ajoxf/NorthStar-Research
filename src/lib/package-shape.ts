@@ -240,6 +240,14 @@ export const packageInputSchema = z.object({
    */
   authorId: z.string().trim().min(1).nullable().optional(),
   /**
+   * What this package actually grants.
+   *
+   * A package with an empty list is a price that gives nothing — buyable, and useless the
+   * moment somebody redeems it. Optional rather than required so a draft can be saved
+   * before its contents are decided; the admin says plainly when a live package is empty.
+   */
+  itemIds: z.array(z.string().trim().min(1)).max(50, 'Fifty items is plenty.').optional(),
+  /**
    * Offer a free trial of this package.
    *
    * Off unless asked for, like every other trial switch here — a package created tomorrow

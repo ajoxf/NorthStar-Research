@@ -53,18 +53,25 @@ export type AdminPackage = {
   trialDays: number | null
   /** How many live sections this package would actually open. Zero means a trial grants nothing. */
   grantableItems: number
+  /** What this package currently grants. */
+  itemIds: string[]
 }
+
+export type ItemOption = { id: string; name: string; kind: 'section' | 'product'; archived: boolean }
 
 export type AuthorOption = { id: string; name: string }
 
 export function PackageManager({
   packages,
   authors,
+  items,
   stripeReady,
 }: {
   packages: AdminPackage[]
   /** Every contributor a package can be attributed to. Empty until any exist. */
   authors: AuthorOption[]
+  /** Everything a package can grant. */
+  items: ItemOption[]
   stripeReady: boolean
 }) {
   const [creating, setCreating] = React.useState(false)
@@ -101,6 +108,7 @@ export function PackageManager({
               key={pkg.id}
               pkg={pkg}
               authors={authors}
+              items={items}
               stripeReady={stripeReady}
               onlyLive={live.length === 1}
             />
@@ -121,6 +129,7 @@ export function PackageManager({
                     key={pkg.id}
                     pkg={pkg}
                     authors={authors}
+                    items={items}
                     stripeReady={stripeReady}
                     onlyLive={live.length === 1}
                   />
@@ -142,6 +151,7 @@ export function PackageManager({
                     key={pkg.id}
                     pkg={pkg}
                     authors={authors}
+                    items={items}
                     stripeReady={stripeReady}
                     onlyLive={live.length === 1}
                   />
@@ -157,6 +167,7 @@ export function PackageManager({
           <h3 className="mb-4 text-[15px] text-ink">New package</h3>
           <PackageForm
             authors={authors}
+            items={items}
             stripeReady={stripeReady}
             submitLabel="Create package"
             onCancel={() => setCreating(false)}
@@ -191,6 +202,7 @@ export function PackageManager({
                 key={pkg.id}
                 pkg={pkg}
                 authors={authors}
+                items={items}
                 stripeReady={stripeReady}
                 onlyLive={false}
               />
@@ -205,11 +217,13 @@ export function PackageManager({
 function PackageRow({
   pkg,
   authors,
+  items,
   stripeReady,
   onlyLive,
 }: {
   pkg: AdminPackage
   authors: AuthorOption[]
+  items: ItemOption[]
   stripeReady: boolean
   onlyLive: boolean
 }) {
@@ -354,6 +368,7 @@ function PackageRow({
           <PackageForm
             initial={pkg}
             authors={authors}
+            items={items}
             stripeReady={stripeReady}
             submitLabel="Save changes"
             onCancel={() => setOpen(false)}
@@ -375,6 +390,7 @@ function PackageRow({
 function PackageForm({
   initial,
   authors,
+  items,
   stripeReady,
   submitLabel,
   onSubmit,
@@ -383,6 +399,7 @@ function PackageForm({
 }: {
   initial?: AdminPackage
   authors: AuthorOption[]
+  items: ItemOption[]
   stripeReady: boolean
   submitLabel: string
   onSubmit: (body: unknown) => Promise<Response>
@@ -405,6 +422,7 @@ function PackageForm({
   const [features, setFeatures] = React.useState((initial?.features ?? []).join('\n'))
   const [sortOrder, setSortOrder] = React.useState(String(initial?.sortOrder ?? 0))
   const [authorId, setAuthorId] = React.useState(initial?.authorId ?? '')
+  const [itemIds, setItemIds] = React.useState<string[]>(initial?.itemIds ?? [])
   const [trialEnabled, setTrialEnabled] = React.useState(initial?.trialEnabled ?? false)
   const [trialDays, setTrialDays] = React.useState(
     initial?.trialDays === null || initial?.trialDays === undefined ? '' : String(initial.trialDays),
@@ -443,6 +461,7 @@ function PackageForm({
         // Explicitly null rather than omitted, so choosing "the house" on a package that
         // had an author actually clears it.
         authorId: authorId || null,
+        itemIds,
         trialEnabled,
         // Blank means "use the house default", which is a real answer rather than a
         // missing one — so it is sent as null, not omitted.
@@ -549,6 +568,66 @@ function PackageForm({
             </Hint>
           </div>
         )}
+
+        {/*
+          What the package grants.
+
+          The most consequential field on the form and, until now, the one with no control
+          at all: PackageItem rows were read at redemption and written nowhere, so every
+          package created here granted nothing. An empty one is allowed — a draft is a
+          reasonable thing to save — and said out loud rather than left to be discovered by
+          the first person who buys it.
+        */}
+        <div className="sm:col-span-2">
+          <Label htmlFor={`items-${initial?.id ?? 'new'}`}>What this package includes</Label>
+          {items.length === 0 ? (
+            <Hint>
+              Nothing to include yet. Create a section first — each one becomes available
+              here automatically.
+            </Hint>
+          ) : (
+            <>
+              <div
+                id={`items-${initial?.id ?? 'new'}`}
+                className="mt-1 grid gap-2 rounded-lg border border-line bg-panel-2 p-3"
+              >
+                {items.map((item) => (
+                  <label key={item.id} className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+                      checked={itemIds.includes(item.id)}
+                      onChange={(event) =>
+                        setItemIds((current) =>
+                          event.target.checked
+                            ? [...current, item.id]
+                            : current.filter((id) => id !== item.id),
+                        )
+                      }
+                    />
+                    <span className="min-w-0 text-[14px] text-ink">
+                      {item.name}
+                      {item.archived && (
+                        <span className="ml-2 font-mono text-[11px] text-ink-dim">off sale</span>
+                      )}
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {itemIds.length === 0 ? (
+                <p className="mt-2 text-[13px] leading-relaxed text-down">
+                  Nothing ticked, so this package would grant no access at all. Tick at least
+                  one before putting it on sale.
+                </p>
+              ) : (
+                <Hint>
+                  Changing this changes what new buyers get. Anybody who has already bought it
+                  keeps exactly what they were granted at the time.
+                </Hint>
+              )}
+            </>
+          )}
+        </div>
 
         {/*
           A free trial of this package: everything in it, on one end date.

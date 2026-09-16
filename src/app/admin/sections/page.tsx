@@ -87,6 +87,7 @@ export default async function AdminSectionsPage() {
             xUrl: author.xUrl,
             credentials: author.credentials,
             sortOrder: author.sortOrder,
+            comingSoon: author.comingSoon,
             archived: author.archivedAt !== null,
             sectionCount: author._count.sections,
           }))}

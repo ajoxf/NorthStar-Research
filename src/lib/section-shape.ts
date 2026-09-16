@@ -130,6 +130,37 @@ export const topicInputSchema = z.object({
   sortOrder: z.number().int().min(0).max(999).default(0),
 })
 
+/**
+ * Should this contributor be shown as forthcoming?
+ *
+ * Only while they have nothing live. The flag is an announcement, and an announcement
+ * alongside a buy button is a contradiction — so the moment their first subject goes on
+ * sale the badge disappears on its own rather than waiting for somebody to remember it.
+ *
+ * That self-correcting behaviour is the point: the alternative is a stale "coming soon"
+ * sitting over a page that has been selling for a month.
+ */
+export function comingSoonVisible(author: {
+  comingSoon: boolean
+  liveSectionCount: number
+}): boolean {
+  return author.comingSoon && author.liveSectionCount === 0
+}
+
+/**
+ * Should this contributor appear in public listings at all?
+ *
+ * Somebody with a live subject, or somebody deliberately announced. Anybody else is a
+ * half-finished profile an operator is still writing, and listing it would send visitors
+ * to a page with nothing on it.
+ */
+export function authorListable(author: {
+  comingSoon: boolean
+  liveSectionCount: number
+}): boolean {
+  return author.liveSectionCount > 0 || author.comingSoon
+}
+
 export const authorInputSchema = z.object({
   name,
   headline: optionalText(140),
@@ -142,6 +173,8 @@ export const authorInputSchema = z.object({
   credentials: z.array(z.string().trim().min(1).max(120)).max(12, 'Twelve is plenty.').default([]),
   /** Low first on the homepage and the contributors list. */
   sortOrder: z.number().int().min(0).max(999).default(0),
+  /** List them before their work is ready. See comingSoonVisible. */
+  comingSoon: z.boolean().default(false),
 })
 
 export const sectionInputSchema = z.object({

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { adminInput } from '@/app/api/admin/_admin-route'
 import { db } from '@/lib/db'
-import { sectionInputSchema, sectionSlug, uniqueSlug } from '@/lib/section-shape'
+import { sectionInputSchema, sectionName, sectionSlug, uniqueSlug } from '@/lib/section-shape'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -39,20 +39,46 @@ export async function POST(request: Request) {
   }
 
   const taken = (await db.section.findMany({ select: { slug: true } })).map((s) => s.slug)
-  const section = await db.section.create({
-    data: {
-      slug: uniqueSlug(sectionSlug(topic.name, author.name), taken),
-      topicId: topic.id,
-      authorId: author.id,
-      displayName: input.data.displayName ?? null,
-      description: input.data.description ?? null,
-      imageUrl: input.data.imageUrl ?? null,
-      priceCents: input.data.priceCents,
-      currency: input.data.currency,
-      interval: input.data.interval,
-      sortOrder: input.data.sortOrder,
-    },
-    include: { topic: true, author: true },
+  const slug = uniqueSlug(sectionSlug(topic.name, author.name), taken)
+  const name = sectionName({
+    displayName: input.data.displayName ?? null,
+    topic: { name: topic.name },
+    author: { name: author.name },
   })
+
+  /*
+   * The section and its grantable item, together, or neither.
+   *
+   * A section without an item is not a thing anybody can be given: entitlements point at
+   * items, packages are made of items, and trials are switched on per item. A section
+   * created without one is therefore invisible to all three — it can be priced and
+   * displayed and cannot actually be sold in a bundle or trialled, which is a failure
+   * that shows up much later than it is caused.
+   *
+   * The `section-` prefix matches scripts/backfill-items.mjs, so a section's item and a
+   * product's can never collide on a slug.
+   */
+  const section = await db.$transaction(async (tx) => {
+    const item = await tx.item.create({
+      data: { kind: 'section', slug: `section-${slug}`, name },
+    })
+    return tx.section.create({
+      data: {
+        slug,
+        itemId: item.id,
+        topicId: topic.id,
+        authorId: author.id,
+        displayName: input.data.displayName ?? null,
+        description: input.data.description ?? null,
+        imageUrl: input.data.imageUrl ?? null,
+        priceCents: input.data.priceCents,
+        currency: input.data.currency,
+        interval: input.data.interval,
+        sortOrder: input.data.sortOrder,
+      },
+      include: { topic: true, author: true },
+    })
+  })
+
   return NextResponse.json({ ok: true, section })
 }

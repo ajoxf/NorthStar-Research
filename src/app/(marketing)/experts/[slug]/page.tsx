@@ -12,7 +12,7 @@ import { formatPrice, type PackageShape } from '@/lib/package-shape'
 import { packagesForAuthor } from '@/lib/packages'
 import { packageSlugFromTrial, packageTrialSlug } from '@/lib/package-trial'
 import { trialOffers } from '@/lib/trial'
-import { sectionName } from '@/lib/section-shape'
+import { comingSoonVisible, sectionName } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
 import { formatDate } from '@/lib/utils'
 
@@ -107,6 +107,15 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
     db.report.count({ where: { published: true, section: { authorId: author.id } } }),
   ])
 
+  /*
+   * Is this person still forthcoming? The same rule the listing uses, so a card marked
+   * "coming soon" and the page it leads to cannot disagree.
+   */
+  const soon = comingSoonVisible({
+    comingSoon: author.comingSoon,
+    liveSectionCount: author.sections.length,
+  })
+
   const links = [
     { href: author.websiteUrl, label: 'Website' },
     { href: author.linkedinUrl, label: 'LinkedIn' },
@@ -118,33 +127,28 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
       {preview && <PreviewBanner />}
 
       {/*
-        A photograph-led hero, because the person is the product here.
+        A photograph-led hero, with the portrait in its own frame rather than bled across
+        the band.
 
-        The portrait fills the band and the copy sits over it, rather than the photograph
-        being an avatar beside a heading. The scrim is two gradients, not one: horizontal
-        so the text side stays dark whatever was uploaded, and vertical so the foot of the
-        band meets the page below it without a seam. Both are needed — a portrait cropped
-        light on the left would otherwise put white text on a white shirt.
+        The bleed was tried and abandoned. It has to crop a wide photograph to a wide band,
+        which means guessing where in the frame the subject is — and every guess is wrong
+        for somebody. A centred headshot came out zoomed into the face with the scrim across
+        it, because the crop assumed the subject sat on the right, as it does in the design
+        this was modelled on. Those photographs are composed for the layout; an uploaded
+        headshot is not, and the page has to be right for whatever arrives.
+
+        Contained, the picture is shown whole at a portrait ratio, `object-top` so a face —
+        which is nearly always in the upper half — survives the crop rather than a chin
+        filling the frame.
       */}
       <section className="relative overflow-hidden border-b border-line">
-        {author.photoUrl ? (
-          /* eslint-disable-next-line @next/next/no-img-element -- an arbitrary host, which
-             next/image would need configuring for one URL at a time. */
-          <img
-            src={author.photoUrl}
-            alt=""
-            className="absolute inset-0 h-full w-full object-cover object-[75%_20%]"
-          />
-        ) : (
-          <div className="absolute inset-0 grid-backdrop opacity-25" aria-hidden />
-        )}
+        <div className="grid-backdrop absolute inset-0 opacity-20" aria-hidden />
         <div
-          className="absolute inset-0 bg-gradient-to-r from-bg via-bg/92 to-bg/25"
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/50 to-transparent"
           aria-hidden
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-bg to-transparent" aria-hidden />
 
-        <div className="relative mx-auto max-w-6xl px-5 py-16 sm:py-24">
+        <div className="relative mx-auto max-w-6xl px-5 py-14 sm:py-20">
           <Link
             href="/experts"
             className="font-mono text-[12px] text-ink-dim transition-colors hover:text-ink"
@@ -152,52 +156,68 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
             ← All contributors
           </Link>
 
-          <div className="mt-8 max-w-2xl">
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
-                The desk
-              </span>
-              {[...new Set(author.sections.map((section) => section.topic.name))]
-                .slice(0, 3)
-                .map((topic) => (
-                  <span
-                    key={topic}
-                    className="rounded-full border border-line bg-black/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim backdrop-blur-sm"
-                  >
-                    {topic}
-                  </span>
-                ))}
+          <div className="mt-8 grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
+            <div className="order-2 lg:order-1">
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                  The desk
+                </span>
+                {[...new Set(author.sections.map((section) => section.topic.name))]
+                  .slice(0, 3)
+                  .map((topic) => (
+                    <span
+                      key={topic}
+                      className="rounded-full border border-line bg-panel px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim"
+                    >
+                      {topic}
+                    </span>
+                  ))}
+              </div>
+
+              <h1 className="mt-6 text-balance font-display text-4xl leading-[1.04] text-ink sm:text-[56px]">
+                {author.name}
+              </h1>
+              {author.headline && (
+                <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-imprint sm:text-[19px]">
+                  {author.headline}
+                </p>
+              )}
+
+              {/*
+                Two counts, and only ones that are true of this person: how many editions of
+                theirs are published, and how many subjects they cover. A figure that counted
+                the whole desk's output under one contributor's name would be the sort of
+                claim this product cannot afford to get wrong.
+              */}
+              <dl className="mt-9 flex flex-wrap gap-x-14 gap-y-6">
+                <div>
+                  <dt className="font-display text-3xl text-ink">{recentCount}</dt>
+                  <dd className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                    {recentCount === 1 ? 'report' : 'reports'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="font-display text-3xl text-ink">{author.sections.length}</dt>
+                  <dd className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                    {author.sections.length === 1 ? 'subject' : 'subjects'}
+                  </dd>
+                </div>
+              </dl>
             </div>
 
-            <h1 className="mt-6 text-balance font-display text-4xl leading-[1.04] text-ink sm:text-6xl">
-              {author.name}
-            </h1>
-            {author.headline && (
-              <p className="mt-4 text-[17px] leading-relaxed text-imprint sm:text-[19px]">
-                {author.headline}
-              </p>
+            {author.photoUrl && (
+              <div className="order-1 w-full max-w-[280px] lg:order-2 lg:max-w-none">
+                <div className="aspect-[4/5] overflow-hidden rounded-xl border border-line bg-panel-2">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- an arbitrary
+                      host, which next/image would need configuring for one URL at a time. */}
+                  <img
+                    src={author.photoUrl}
+                    alt={author.name}
+                    className="h-full w-full object-cover object-top"
+                  />
+                </div>
+              </div>
             )}
-
-            {/*
-              Two counts, and only ones that are true of this person: how many editions of
-              theirs are published, and how many subjects they cover. A figure that counted
-              the whole desk's output under one contributor's name would be the sort of
-              claim this product cannot afford to get wrong.
-            */}
-            <dl className="mt-10 flex flex-wrap gap-x-14 gap-y-6">
-              <div>
-                <dt className="font-display text-3xl text-ink">{recentCount}</dt>
-                <dd className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
-                  {recentCount === 1 ? 'report' : 'reports'}
-                </dd>
-              </div>
-              <div>
-                <dt className="font-display text-3xl text-ink">{author.sections.length}</dt>
-                <dd className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
-                  {author.sections.length === 1 ? 'subject' : 'subjects'}
-                </dd>
-              </div>
-            </dl>
           </div>
         </div>
       </section>
@@ -338,6 +358,34 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
           </section>
         )}
 
+        {/*
+          A forthcoming contributor, in place of the commerce.
+
+          Shown only while they genuinely have nothing on sale — `comingSoonVisible` is the
+          same rule the listing uses, so the page and the card it was reached from cannot
+          disagree about whether this person is available. The moment their first subject
+          goes live this disappears and the sections below take over, with nothing for an
+          operator to switch off.
+        */}
+        {soon && (
+          <section className="mt-14">
+            <div className="rounded-xl border border-accent/30 bg-accent/[0.06] p-7 sm:p-9">
+              <span className="eyebrow">Coming soon</span>
+              <h2 className="mt-3 font-display text-2xl text-ink">
+                {author.name.split(' ')[0]} has not published here yet.
+              </h2>
+              <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-dim">
+                Their first reports are being prepared. There is nothing to subscribe to on
+                this page yet — when there is, it will appear here and on the coverage page.
+              </p>
+              <ButtonLink href="/coverage" size="lg" variant="secondary" className="mt-6">
+                See what is published today
+              </ButtonLink>
+            </div>
+          </section>
+        )}
+
+        {author.sections.length > 0 && (
         <section className="mt-14">
           <h2 className="font-display text-2xl text-ink">
             {packages.length > 0 ? 'Or just one subject' : 'Subscribe to their coverage'}
@@ -387,6 +435,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
             ))}
           </div>
         </section>
+        )}
 
         {recent.length > 0 && (
           <section className="mt-14">

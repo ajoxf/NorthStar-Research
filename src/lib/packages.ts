@@ -58,7 +58,15 @@ export function toShape(row: Package): PackageShape {
  * contributor yet" is a better answer than a page that looks broken.
  */
 export type AuthorPackages = {
-  author: { id: string; name: string; slug: string; headline: string | null; photoUrl: string | null }
+  author: {
+    id: string
+    name: string
+    slug: string
+    headline: string | null
+    photoUrl: string | null
+    /** Announced but not yet publishing — see comingSoonVisible. */
+    comingSoon: boolean
+  }
   packages: PackageShape[]
 }
 
@@ -71,7 +79,14 @@ export async function packagesByAuthor(): Promise<{
     db.author.findMany({
       where: { archivedAt: null },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      select: { id: true, name: true, slug: true, headline: true, photoUrl: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        headline: true,
+        photoUrl: true,
+        comingSoon: true,
+      },
     }),
   ])
 

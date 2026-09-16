@@ -7,6 +7,7 @@ import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { defaultPackage, packagesByAuthor } from '@/lib/packages'
 import { packageSlugFromTrial, packageTrialSlug } from '@/lib/package-trial'
+import { authorListable, comingSoonVisible } from '@/lib/section-shape'
 import { db } from '@/lib/db'
 import { trialOffers } from '@/lib/trial'
 import { sectionsPublic } from '@/lib/sections-mode'
@@ -77,12 +78,27 @@ export default async function LandingPage() {
    * a visitor is concerned — naming them promises work that cannot be read.
    */
   const contributors = sold.authors
+    .map((entry) => {
+      const liveSectionCount = allSections.filter(
+        (section) => section.author.id === entry.author.id,
+      ).length
+      return {
+        ...entry.author,
+        hasPackages: entry.packages.length > 0,
+        liveSectionCount,
+        soon: comingSoonVisible({
+          comingSoon: entry.author.comingSoon,
+          liveSectionCount,
+        }),
+      }
+    })
     .filter(
       (entry) =>
-        entry.packages.length > 0 ||
-        allSections.some((section) => section.author.id === entry.author.id),
+        entry.hasPackages ||
+        authorListable({ comingSoon: entry.comingSoon, liveSectionCount: entry.liveSectionCount }),
     )
-    .map((entry) => entry.author)
+    // Somebody you can read today leads; somebody announced follows.
+    .sort((a, b) => Number(a.soon) - Number(b.soon))
 
   /*
    * Everything on sale, each package carrying the contributor it belongs to.
@@ -170,7 +186,15 @@ export default async function LandingPage() {
 function ContributorStrip({
   contributors,
 }: {
-  contributors: { id: string; slug: string; name: string; headline: string | null; photoUrl: string | null }[]
+  contributors: {
+    id: string
+    slug: string
+    name: string
+    headline: string | null
+    photoUrl: string | null
+    /** Announced but not yet publishing. Labelled rather than quietly listed. */
+    soon: boolean
+  }[]
 }) {
   return (
     <section className="border-b border-line">
@@ -200,8 +224,15 @@ function ContributorStrip({
               >
                 <AuthorAvatar name={contributor.name} photoUrl={contributor.photoUrl} size={72} />
                 <span className="min-w-0">
-                  <span className="block text-[15px] text-ink transition-colors group-hover:text-accent">
-                    {contributor.name}
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="text-[15px] text-ink transition-colors group-hover:text-accent">
+                      {contributor.name}
+                    </span>
+                    {contributor.soon && (
+                      <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-accent">
+                        Coming soon
+                      </span>
+                    )}
                   </span>
                   {contributor.headline && (
                     <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">

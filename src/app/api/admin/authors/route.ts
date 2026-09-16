@@ -31,6 +31,7 @@ export async function POST(request: Request) {
       xUrl: input.data.xUrl ?? null,
       credentials: input.data.credentials,
       sortOrder: input.data.sortOrder,
+      comingSoon: input.data.comingSoon,
     },
   })
   return NextResponse.json({ ok: true, author })

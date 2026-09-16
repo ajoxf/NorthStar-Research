@@ -43,6 +43,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       ...(f.xUrl !== undefined ? { xUrl: f.xUrl ?? null } : {}),
       ...(f.credentials !== undefined ? { credentials: f.credentials } : {}),
       ...(f.sortOrder !== undefined ? { sortOrder: f.sortOrder } : {}),
+      ...(f.comingSoon !== undefined ? { comingSoon: f.comingSoon } : {}),
       ...(archived === undefined ? {} : { archivedAt: archived ? new Date() : null }),
     },
   })

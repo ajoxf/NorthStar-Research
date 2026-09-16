@@ -823,6 +823,19 @@ model Author {
   linkedinUrl String?
   xUrl        String?
 
+  /// Announce this person before their work is ready.
+  ///
+  /// Without it a contributor with no live section is not listed at all — a profile you
+  /// cannot subscribe to is a dead end from a marketing page. This says "list them anyway,
+  /// and say plainly that there is nothing to read yet", which is how a desk builds
+  /// anticipation for somebody it has signed but not published.
+  ///
+  /// **It only shows while they genuinely have nothing on sale.** See comingSoonVisible:
+  /// the announcement retires itself the moment their first subject goes live, so nobody
+  /// has to remember to switch it off, and the site can never advertise a person as
+  /// forthcoming on the same page it sells their work.
+  comingSoon Boolean @default(false)
+
   /// Where this contributor sits on the homepage and in the contributors list.
   ///
   /// Alphabetical order is arbitrary as soon as there is a house desk among the names —
