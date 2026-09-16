@@ -191,14 +191,14 @@ function ContributorStrip({
           </Link>
         </div>
 
-        <ul className="mt-8 flex flex-wrap gap-x-10 gap-y-5">
+        <ul className="mt-8 flex flex-wrap gap-x-12 gap-y-7">
           {contributors.map((contributor) => (
             <li key={contributor.id}>
               <Link
                 href={`/experts/${contributor.slug}`}
                 className="group flex items-center gap-3"
               >
-                <AuthorAvatar name={contributor.name} photoUrl={contributor.photoUrl} size={40} />
+                <AuthorAvatar name={contributor.name} photoUrl={contributor.photoUrl} size={72} />
                 <span className="min-w-0">
                   <span className="block text-[15px] text-ink transition-colors group-hover:text-accent">
                     {contributor.name}
@@ -521,7 +521,7 @@ function PackagePricing({
                   <AuthorAvatar
                     name={pkg.author?.name ?? 'NordStar Pro'}
                     photoUrl={pkg.author?.photoUrl ?? null}
-                    size={44}
+                    size={64}
                   />
                   <div className="min-w-0">
                     <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">

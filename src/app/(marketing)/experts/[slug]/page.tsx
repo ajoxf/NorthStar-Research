@@ -51,7 +51,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
       sections: {
         where: { archivedAt: null },
         orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
-        include: { topic: true, author: true },
+        include: { topic: true, author: true, item: { select: { slug: true } } },
       },
     },
   })
@@ -76,10 +76,15 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
    * has the switch on and nothing to open, and `trialOffers` is the one place that knows
    * the difference. Keyed by package slug, the offer slug being the prefixed form.
    */
+  const openOffers = await trialOffers()
   const trialOpen = new Map(
-    (await trialOffers())
+    openOffers
       .filter((offer) => offer.isPackage)
       .map((offer) => [packageSlugFromTrial(offer.slug) ?? '', offer.days] as const),
+  )
+  /** The same question for individual subjects, keyed by item slug. */
+  const sectionTrials = new Map(
+    openOffers.filter((offer) => offer.isSection).map((offer) => [offer.slug, offer.days] as const),
   )
   const featured = packages.reduce<PackageShape | null>(
     (low, pkg) => (low === null || pkg.priceCents > low.priceCents ? pkg : low),
@@ -113,14 +118,27 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
           ← All contributors
         </Link>
 
-        <div className="mt-8 flex flex-wrap items-center gap-5">
-          <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={84} />
+        {/*
+          The portrait is the page's opening image, not a bullet next to the name.
+
+          It was 84px, which on a page whose whole argument is "a named person with a
+          record stands behind this research" made the person the smallest thing on it.
+          Two sizes rather than one: 128 on a phone, where a 176px circle would push the
+          name off the first screen, and 176 from `sm` up.
+        */}
+        <div className="mt-8 flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
+          <div className="sm:hidden">
+            <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={128} />
+          </div>
+          <div className="hidden sm:block">
+            <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={176} />
+          </div>
           <div className="min-w-0">
             <h1 className="text-balance text-3xl leading-tight text-ink sm:text-4xl">
               {author.name}
             </h1>
             {author.headline && (
-              <p className="mt-2 text-[16px] leading-relaxed text-ink-dim">{author.headline}</p>
+              <p className="mt-2.5 text-[17px] leading-relaxed text-imprint">{author.headline}</p>
             )}
           </div>
         </div>
@@ -253,11 +271,29 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
           </h2>
           <div className="mt-5 grid gap-4">
             {author.sections.map((section) => (
-              <div key={section.id} className="panel p-6">
+              <div key={section.id} className="panel overflow-hidden">
+                {/* The subject's own picture, matching the coverage page. */}
+                {section.imageUrl && (
+                  <div className="aspect-[21/9] w-full overflow-hidden border-b border-line bg-panel-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={section.imageUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <div className="p-6">
                 <div className="flex flex-wrap items-baseline justify-between gap-3">
                   <h3 className="font-display text-xl text-ink">{sectionName(section)}</h3>
-                  <span className="font-mono text-[13px] text-ink-dim">
-                    {formatPrice(section.priceCents, section.currency)} / {section.interval}
+                  <span className="shrink-0 text-right">
+                    <span className="block font-display text-2xl leading-none text-ink">
+                      {formatPrice(section.priceCents, section.currency)}
+                    </span>
+                    <span className="mt-1 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                      per {section.interval}
+                    </span>
                   </span>
                 </div>
                 {section.description && (
@@ -266,7 +302,13 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                   </p>
                 )}
                 <div className="mt-5">
-                  <SectionBuy sectionId={section.id} name={sectionName(section)} />
+                  <SectionBuy
+                    sectionId={section.id}
+                    name={sectionName(section)}
+                    trialDays={section.item ? (sectionTrials.get(section.item.slug) ?? null) : null}
+                    trialSlug={section.item?.slug ?? null}
+                  />
+                </div>
                 </div>
               </div>
             ))}

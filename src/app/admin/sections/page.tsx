@@ -38,6 +38,8 @@ export default async function AdminSectionsPage() {
       include: {
         topic: true,
         author: true,
+        // The trial lives on the item, so the switch on this screen needs it.
+        item: { select: { slug: true, trialEnabled: true, trialDays: true } },
         _count: { select: { reports: true, entitlements: true } },
       },
     }),
@@ -108,6 +110,10 @@ export default async function AdminSectionsPage() {
             currency: section.currency,
             interval: section.interval,
             sortOrder: section.sortOrder,
+            imageUrl: section.imageUrl,
+            itemSlug: section.item?.slug ?? null,
+            trialEnabled: section.item?.trialEnabled ?? false,
+            trialDays: section.item?.trialDays ?? null,
             archived: section.archivedAt !== null,
             reportCount: section._count.reports,
             subscriberCount: section._count.entitlements,

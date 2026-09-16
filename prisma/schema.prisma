@@ -865,6 +865,15 @@ model Section {
   authorId String
   author   Author @relation(fields: [authorId], references: [id])
 
+  /// The title image for this subject — the picture on its card and at the head of its
+  /// page. Optional: a section without one falls back to a typographic panel rather than
+  /// to a broken frame, so adding sections never waits on artwork.
+  ///
+  /// A Vercel Blob URL when uploaded here, but any https URL is accepted — a deployment
+  /// with no Blob store configured can still set one, and an operator who already hosts
+  /// their artwork should not have to re-upload it.
+  imageUrl String?
+
   priceCents Int
   currency   String          @default("USD")
   interval   BillingInterval @default(month)

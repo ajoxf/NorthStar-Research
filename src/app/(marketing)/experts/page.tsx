@@ -66,8 +66,8 @@ export default async function ExpertsPage() {
             href={`/experts/${author.slug}`}
             className="panel group flex flex-col p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/45"
           >
-            <div className="flex items-center gap-4">
-              <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={52} />
+            <div className="flex items-center gap-5">
+              <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={88} />
               <div className="min-w-0">
                 <h2 className="font-display text-xl leading-snug text-ink">{author.name}</h2>
                 {author.headline && (

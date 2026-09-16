@@ -3,14 +3,19 @@
 import * as React from 'react'
 import { ArrowRight } from 'lucide-react'
 
-import { Button, Spinner } from '@/components/ui/button'
-import { Input, Label } from '@/components/ui/field'
+import { Button, ButtonLink, Spinner } from '@/components/ui/button'
+import { Input } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 
 /**
- * Buy one section.
+ * Buy one section, or start its free trial.
  *
- * Email first, then card or crypto, mirroring the all-access join form — the address is
+ * The trial leads where one is open, because reading the research for a fortnight is a
+ * better first step than paying for it sight unseen, and it is the step most people would
+ * take if offered. The payment form stays underneath either way, for somebody who has
+ * already decided — the price is on the card above both, so neither is hiding a figure.
+ *
+ * Email first, then card or crypto, mirroring the all-access join form: the address is
  * where the access code goes, so asking for it before the payment method is the honest
  * order rather than a form that surprises somebody after they have chosen how to pay.
  *
@@ -18,10 +23,30 @@ import { useToast } from '@/components/ui/toast'
  * follows are what actually give somebody access, which is why reaching the success page
  * proves nothing.
  */
-export function SectionBuy({ sectionId, name }: { sectionId: string; name: string }) {
+export function SectionBuy({
+  sectionId,
+  name,
+  trialDays,
+  trialSlug,
+}: {
+  sectionId: string
+  name: string
+  /**
+   * How many days this subject's trial runs, when one is open.
+   *
+   * Asked of the trial system by the page above rather than read off a switch here: a
+   * section whose item is archived has the switch on and nothing to open, and a button to
+   * a page that refuses everybody is worse than no button.
+   */
+  trialDays?: number | null
+  /** The item slug /trial addresses. Absent when no trial is open. */
+  trialSlug?: string | null
+}) {
   const toast = useToast()
   const [email, setEmail] = React.useState('')
   const [pending, setPending] = React.useState<'card' | 'crypto' | null>(null)
+
+  const hasTrial = Boolean(trialDays && trialSlug)
 
   async function start(method: 'card' | 'crypto') {
     if (!email.trim()) {
@@ -51,27 +76,55 @@ export function SectionBuy({ sectionId, name }: { sectionId: string; name: strin
 
   return (
     <div>
-      <Label htmlFor={`buy-${sectionId}`}>Your email</Label>
-      <Input
-        id={`buy-${sectionId}`}
-        type="email"
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-        placeholder="you@example.com"
-        autoComplete="email"
-        aria-label={`Email address for ${name}`}
-      />
-      <div className="mt-3 flex flex-wrap gap-3">
-        <Button onClick={() => start('card')} disabled={pending !== null}>
-          {pending === 'card' ? <Spinner /> : null}
-          Pay by card
-          <ArrowRight className="h-4 w-4" aria-hidden />
-        </Button>
-        <Button variant="secondary" onClick={() => start('crypto')} disabled={pending !== null}>
-          {pending === 'crypto' ? <Spinner /> : null}
-          Pay in crypto
-        </Button>
+      {hasTrial && (
+        <div className="mb-5 border-b border-line pb-5">
+          <ButtonLink
+            href={`/trial?item=${encodeURIComponent(trialSlug!)}`}
+            size="lg"
+            className="w-full sm:w-auto"
+          >
+            Start a {trialDays}-day free trial
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </ButtonLink>
+          <p className="mt-2.5 text-[13px] leading-relaxed text-ink-dim">
+            No card. It stops on its own — there is nothing to cancel.
+          </p>
+        </div>
+      )}
+
+      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+        {hasTrial ? 'Or subscribe now' : 'Subscribe'}
+      </p>
+
+      {/*
+        The address and the two buttons on one row from `sm` up.
+
+        They are one action — "send my code here, by this method" — and stacking the label,
+        the field and two buttons made a short form look like a long one.
+      */}
+      <div className="mt-2.5 flex flex-col gap-2.5 sm:flex-row">
+        <Input
+          id={`buy-${sectionId}`}
+          type="email"
+          value={email}
+          onChange={(event) => setEmail(event.target.value)}
+          placeholder="you@example.com"
+          autoComplete="email"
+          aria-label={`Email address for ${name}`}
+          className="sm:flex-1"
+        />
+        <div className="flex shrink-0 gap-2.5">
+          <Button onClick={() => start('card')} disabled={pending !== null}>
+            {pending === 'card' ? <Spinner /> : null}
+            Pay by card
+          </Button>
+          <Button variant="secondary" onClick={() => start('crypto')} disabled={pending !== null}>
+            {pending === 'crypto' ? <Spinner /> : null}
+            Crypto
+          </Button>
+        </div>
       </div>
+
       <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
         We email your access code once the payment confirms. Card renews automatically and can be
         cancelled any time; crypto you renew yourself.
