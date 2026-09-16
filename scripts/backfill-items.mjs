@@ -47,17 +47,55 @@ async function main() {
   let itemsCreated = 0
   let sectionsLinked = 0
   let entitlementsLinked = 0
+  let itemsRenamed = 0
 
   // ---- 1. one item per section ------------------------------------------------
+  //
+  // The item's NAME is what an operator reads in the admin — it is the label beside every
+  // checkbox in a package's contents. So it has to be the section's name as the rest of
+  // the site writes it ("Energy by Dean Rogers"), not its URL handle.
+  //
+  // This used to fall back to the slug whenever a section had no displayName override,
+  // which is most of them, so a backfilled site showed a list of hyphenated handles where
+  // it should have shown people's names.
   const sections = await db.section.findMany({
-    select: { id: true, slug: true, displayName: true, itemId: true },
+    select: {
+      id: true,
+      slug: true,
+      displayName: true,
+      itemId: true,
+      topic: { select: { name: true } },
+      author: { select: { name: true } },
+    },
   })
 
-  for (const section of sections) {
-    if (section.itemId) continue
+  /** The same rule as src/lib/section-shape.ts — kept in step by hand, being a script. */
+  const displayNameFor = (section) =>
+    section.displayName?.trim() || `${section.topic.name} by ${section.author.name}`
 
+  for (const section of sections) {
     const slug = sectionSlug(section.slug)
-    const name = section.displayName ?? section.slug
+    const name = displayNameFor(section)
+
+    /*
+     * A section that already has an item still gets its item's name checked.
+     *
+     * Only when that name is the bare slug, which is what the earlier version of this
+     * script wrote — so this repairs its own past output and leaves any name an operator
+     * chose alone. That is the one exception to "never overwrites", and a narrow one: it
+     * changes a label nobody would have typed on purpose.
+     */
+    if (section.itemId) {
+      const current = await db.item.findUnique({
+        where: { id: section.itemId },
+        select: { name: true },
+      })
+      if (current && current.name === section.slug && current.name !== name) {
+        itemsRenamed++
+        if (!dryRun) await db.item.update({ where: { id: section.itemId }, data: { name } })
+      }
+      continue
+    }
 
     const existing = await db.item.findUnique({ where: { slug } })
     if (!existing) {
@@ -112,6 +150,7 @@ async function main() {
 
   // ---- what happened -----------------------------------------------------------
   console.log(`  items created        ${itemsCreated}`)
+  console.log(`  items renamed        ${itemsRenamed}`)
   console.log(`  sections linked      ${sectionsLinked}`)
   console.log(`  entitlements linked  ${entitlementsLinked}`)
 
