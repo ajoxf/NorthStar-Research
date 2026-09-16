@@ -4,6 +4,7 @@ import { AuthorManager } from '@/app/admin/sections/author-manager'
 import { SectionManager } from '@/app/admin/sections/section-manager'
 import { TopicManager } from '@/app/admin/sections/topic-manager'
 import { VisibilityToggle } from '@/app/admin/sections/visibility-toggle'
+import { RepairPanel } from '@/app/admin/sections/repair-panel'
 import { ToastProvider } from '@/components/ui/toast'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -23,7 +24,7 @@ export const dynamic = 'force-dynamic'
 export default async function AdminSectionsPage() {
   await requireAdmin()
 
-  const [visible, topics, authors, sections] = await Promise.all([
+  const [visible, topics, authors, sections, unlinked] = await Promise.all([
     sectionsPublic(),
     db.topic.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -43,6 +44,9 @@ export default async function AdminSectionsPage() {
         _count: { select: { reports: true, entitlements: true } },
       },
     }),
+    // Sections that cannot be put in a package. Counted here so the repair panel appears
+    // exactly when there is something to repair, rather than sitting on a healthy screen.
+    db.section.count({ where: { itemId: null } }),
   ])
 
   const live = sections.filter((section) => section.archivedAt === null).length
@@ -61,6 +65,8 @@ export default async function AdminSectionsPage() {
           </p>
           <VisibilityToggle visible={visible} ready={live > 0} />
         </div>
+
+        <RepairPanel unlinked={unlinked} />
 
         <TopicManager
           topics={topics.map((topic) => ({
