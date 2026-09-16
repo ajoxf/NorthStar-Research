@@ -92,6 +92,26 @@ const optionalText = (max: number) =>
     .optional()
     .transform((value) => (value ? value : undefined))
 
+/**
+ * A URL, nothing, or an explicit instruction to clear it.
+ *
+ * Distinct from {@link optionalUrl}, which folds an empty string into `undefined` — fine
+ * for a create form, wrong for a partial update, where `undefined` has to mean "leave this
+ * alone" or any PATCH would wipe every field it did not mention. So removing a picture is
+ * said out loud as `null` rather than implied by a blank string.
+ */
+export const clearableUrl = z
+  .string()
+  .trim()
+  .max(300)
+  .nullable()
+  .optional()
+  .transform((value) => (value ? value : value === null ? null : undefined))
+  .refine(
+    (value) => value === undefined || value === null || /^https?:\/\//.test(value),
+    'Links must start with http:// or https://',
+  )
+
 /** A URL, or nothing. Rejects anything that is not http(s) so a link cannot be javascript:. */
 const optionalUrl = z
   .string()
@@ -129,6 +149,8 @@ export const sectionInputSchema = z.object({
   authorId: z.string().min(1, 'Choose an author.'),
   displayName: optionalText(80),
   description: optionalText(600),
+  /** The title image. Optional — a section without one renders a typographic panel. */
+  imageUrl: optionalUrl,
   priceCents: z
     .number()
     .int()

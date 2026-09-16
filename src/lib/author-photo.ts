@@ -23,6 +23,20 @@ export const MAX_PHOTO_BYTES = 15 * 1024 * 1024
 export const AUTHOR_BLOB_PREFIX = 'authors/'
 
 /**
+ * Where a section's title image lives.
+ *
+ * A separate prefix from the author area rather than one shared "images" folder, because
+ * the prefix is what an upload token is scoped to: a token minted for a section picture
+ * cannot be used to overwrite somebody's portrait, and the reverse.
+ */
+export const SECTION_BLOB_PREFIX = 'sections/'
+
+/** Every area this app will mint an upload token for. Nothing else is permitted. */
+export const IMAGE_BLOB_PREFIXES = [AUTHOR_BLOB_PREFIX, SECTION_BLOB_PREFIX] as const
+
+export type ImageBlobPrefix = (typeof IMAGE_BLOB_PREFIXES)[number]
+
+/**
  * What may be uploaded.
  *
  * **SVG is deliberately absent.** These render in an `<img>` on a public page, and an SVG
@@ -41,14 +55,14 @@ export const ALLOWED_PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as 
 const BLOB_HOST_SUFFIX = '.public.blob.vercel-storage.com'
 
 /**
- * Is this a URL we just uploaded an author photograph to?
+ * Is this a URL we just uploaded an image to, in the given area?
  *
- * Host is a Vercel Blob store and the path is inside the authors area. It cannot verify
- * the blob belongs to *this* store — the store id is not known to the app — so this is a
- * sanity check rather than an authorisation one. The authorisation is that only an admin
- * can mint an upload token at all.
+ * Host is a Vercel Blob store and the path is inside that area. It cannot verify the blob
+ * belongs to *this* store — the store id is not known to the app — so this is a sanity
+ * check rather than an authorisation one. The authorisation is that only an admin can
+ * mint an upload token at all.
  */
-export function isAuthorPhotoUrl(value: string): boolean {
+export function isBlobImageUrl(value: string, prefix: string): boolean {
   let url: URL
   try {
     url = new URL(value)
@@ -57,7 +71,16 @@ export function isAuthorPhotoUrl(value: string): boolean {
   }
   if (url.protocol !== 'https:') return false
   if (!url.hostname.endsWith(BLOB_HOST_SUFFIX)) return false
-  return url.pathname.replace(/^\//, '').startsWith(AUTHOR_BLOB_PREFIX)
+  return url.pathname.replace(/^\//, '').startsWith(prefix)
+}
+
+export function isAuthorPhotoUrl(value: string): boolean {
+  return isBlobImageUrl(value, AUTHOR_BLOB_PREFIX)
+}
+
+/** The same question for a section's title image. */
+export function isSectionImageUrl(value: string): boolean {
+  return isBlobImageUrl(value, SECTION_BLOB_PREFIX)
 }
 
 /** Human-readable size, for the error an operator actually reads. */
@@ -73,9 +96,13 @@ export function describeBytes(bytes: number): string {
  * Checked in the browser before the upload starts, so somebody who picked a 40 MB TIFF is
  * told immediately rather than after waiting for it to transfer and fail.
  */
-export function photoRejectionReason(file: { type: string; size: number }): string | null {
+export function photoRejectionReason(
+  file: { type: string; size: number },
+  /** What to call the file in the message — "Photographs", "Title images". */
+  noun = 'Photographs',
+): string | null {
   if (!(ALLOWED_PHOTO_TYPES as readonly string[]).includes(file.type)) {
-    return 'Photographs must be a JPEG, PNG or WebP.'
+    return `${noun} must be a JPEG, PNG or WebP.`
   }
   if (file.size > MAX_PHOTO_BYTES) {
     return `That file is ${describeBytes(file.size)}. The limit is ${describeBytes(MAX_PHOTO_BYTES)}.`

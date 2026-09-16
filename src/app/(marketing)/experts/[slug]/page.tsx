@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation'
 import { Check, ExternalLink, Lock } from 'lucide-react'
 
 import { SectionBuy } from '@/app/(marketing)/coverage/section-buy'
-import { AuthorAvatar } from '@/components/author-avatar'
 import { ButtonLink } from '@/components/ui/button'
 import { PreviewBanner } from '@/components/preview-banner'
 import { ToastProvider } from '@/components/ui/toast'
@@ -51,7 +50,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
       sections: {
         where: { archivedAt: null },
         orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
-        include: { topic: true, author: true },
+        include: { topic: true, author: true, item: { select: { slug: true } } },
       },
     },
   })
@@ -76,25 +75,37 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
    * has the switch on and nothing to open, and `trialOffers` is the one place that knows
    * the difference. Keyed by package slug, the offer slug being the prefixed form.
    */
+  const openOffers = await trialOffers()
   const trialOpen = new Map(
-    (await trialOffers())
+    openOffers
       .filter((offer) => offer.isPackage)
       .map((offer) => [packageSlugFromTrial(offer.slug) ?? '', offer.days] as const),
+  )
+  /** The same question for individual subjects, keyed by item slug. */
+  const sectionTrials = new Map(
+    openOffers.filter((offer) => offer.isSection).map((offer) => [offer.slug, offer.days] as const),
   )
   const featured = packages.reduce<PackageShape | null>(
     (low, pkg) => (low === null || pkg.priceCents > low.priceCents ? pkg : low),
     null,
   )
 
-  const recent = await db.report.findMany({
-    where: {
-      published: true,
-      section: { authorId: author.id },
-    },
-    orderBy: { publishDate: 'desc' },
-    take: 8,
-    select: { id: true, title: true, publishDate: true },
-  })
+  /*
+   * The recent list is capped at eight; the counter is not.
+   *
+   * Two queries rather than `recent.length`, which would have quietly read "8 reports"
+   * for somebody with eighty — a figure on a marketing page understating the work by an
+   * order of magnitude is still a wrong figure.
+   */
+  const [recent, recentCount] = await Promise.all([
+    db.report.findMany({
+      where: { published: true, section: { authorId: author.id } },
+      orderBy: { publishDate: 'desc' },
+      take: 8,
+      select: { id: true, title: true, publishDate: true },
+    }),
+    db.report.count({ where: { published: true, section: { authorId: author.id } } }),
+  ])
 
   const links = [
     { href: author.websiteUrl, label: 'Website' },
@@ -105,32 +116,112 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
   return (
     <ToastProvider>
       {preview && <PreviewBanner />}
-      <div className="mx-auto max-w-3xl px-5 py-16 sm:py-20">
-        <Link
-          href="/experts"
-          className="font-mono text-[12px] text-ink-dim hover:text-ink"
-        >
-          ← All contributors
-        </Link>
 
-        <div className="mt-8 flex flex-wrap items-center gap-5">
-          <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={84} />
-          <div className="min-w-0">
-            <h1 className="text-balance text-3xl leading-tight text-ink sm:text-4xl">
+      {/*
+        A photograph-led hero, because the person is the product here.
+
+        The portrait fills the band and the copy sits over it, rather than the photograph
+        being an avatar beside a heading. The scrim is two gradients, not one: horizontal
+        so the text side stays dark whatever was uploaded, and vertical so the foot of the
+        band meets the page below it without a seam. Both are needed — a portrait cropped
+        light on the left would otherwise put white text on a white shirt.
+      */}
+      <section className="relative overflow-hidden border-b border-line">
+        {author.photoUrl ? (
+          /* eslint-disable-next-line @next/next/no-img-element -- an arbitrary host, which
+             next/image would need configuring for one URL at a time. */
+          <img
+            src={author.photoUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover object-[75%_20%]"
+          />
+        ) : (
+          <div className="absolute inset-0 grid-backdrop opacity-25" aria-hidden />
+        )}
+        <div
+          className="absolute inset-0 bg-gradient-to-r from-bg via-bg/92 to-bg/25"
+          aria-hidden
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-bg to-transparent" aria-hidden />
+
+        <div className="relative mx-auto max-w-6xl px-5 py-16 sm:py-24">
+          <Link
+            href="/experts"
+            className="font-mono text-[12px] text-ink-dim transition-colors hover:text-ink"
+          >
+            ← All contributors
+          </Link>
+
+          <div className="mt-8 max-w-2xl">
+            <div className="flex flex-wrap gap-2">
+              <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                The desk
+              </span>
+              {[...new Set(author.sections.map((section) => section.topic.name))]
+                .slice(0, 3)
+                .map((topic) => (
+                  <span
+                    key={topic}
+                    className="rounded-full border border-line bg-black/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim backdrop-blur-sm"
+                  >
+                    {topic}
+                  </span>
+                ))}
+            </div>
+
+            <h1 className="mt-6 text-balance font-display text-4xl leading-[1.04] text-ink sm:text-6xl">
               {author.name}
             </h1>
             {author.headline && (
-              <p className="mt-2 text-[16px] leading-relaxed text-ink-dim">{author.headline}</p>
+              <p className="mt-4 text-[17px] leading-relaxed text-imprint sm:text-[19px]">
+                {author.headline}
+              </p>
             )}
+
+            {/*
+              Two counts, and only ones that are true of this person: how many editions of
+              theirs are published, and how many subjects they cover. A figure that counted
+              the whole desk's output under one contributor's name would be the sort of
+              claim this product cannot afford to get wrong.
+            */}
+            <dl className="mt-10 flex flex-wrap gap-x-14 gap-y-6">
+              <div>
+                <dt className="font-display text-3xl text-ink">{recentCount}</dt>
+                <dd className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                  {recentCount === 1 ? 'report' : 'reports'}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-display text-3xl text-ink">{author.sections.length}</dt>
+                <dd className="mt-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                  {author.sections.length === 1 ? 'subject' : 'subjects'}
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
+      </section>
 
+      <div className="mx-auto max-w-5xl px-5 py-16 sm:py-20">
+        {/*
+          Label left, prose right — the reference's shape, and a useful one: the biography
+          is the longest text on the page and a heading above it would leave the eye with
+          no idea how far it runs.
+        */}
         {author.bio && (
-          <div className="mt-8 space-y-4 text-[16px] leading-relaxed text-ink-dim">
-            {author.bio.split('\n').filter(Boolean).map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </div>
+          <section className="grid gap-6 border-b border-line pb-14 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)] sm:gap-12">
+            <h2 className="font-display text-2xl leading-tight text-ink">
+              About {author.name.split(' ')[0]}
+            </h2>
+            <div className="space-y-4 text-[16px] leading-relaxed text-ink-dim">
+              {author.bio
+                .split('\n')
+                .filter(Boolean)
+                .map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+            </div>
+          </section>
         )}
 
         {author.credentials.length > 0 && (
@@ -253,11 +344,29 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
           </h2>
           <div className="mt-5 grid gap-4">
             {author.sections.map((section) => (
-              <div key={section.id} className="panel p-6">
+              <div key={section.id} className="panel overflow-hidden">
+                {/* The subject's own picture, matching the coverage page. */}
+                {section.imageUrl && (
+                  <div className="aspect-[21/9] w-full overflow-hidden border-b border-line bg-panel-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={section.imageUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <div className="p-6">
                 <div className="flex flex-wrap items-baseline justify-between gap-3">
                   <h3 className="font-display text-xl text-ink">{sectionName(section)}</h3>
-                  <span className="font-mono text-[13px] text-ink-dim">
-                    {formatPrice(section.priceCents, section.currency)} / {section.interval}
+                  <span className="shrink-0 text-right">
+                    <span className="block font-display text-2xl leading-none text-ink">
+                      {formatPrice(section.priceCents, section.currency)}
+                    </span>
+                    <span className="mt-1 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                      per {section.interval}
+                    </span>
                   </span>
                 </div>
                 {section.description && (
@@ -266,7 +375,13 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                   </p>
                 )}
                 <div className="mt-5">
-                  <SectionBuy sectionId={section.id} name={sectionName(section)} />
+                  <SectionBuy
+                    sectionId={section.id}
+                    name={sectionName(section)}
+                    trialDays={section.item ? (sectionTrials.get(section.item.slug) ?? null) : null}
+                    trialSlug={section.item?.slug ?? null}
+                  />
+                </div>
                 </div>
               </div>
             ))}

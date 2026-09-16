@@ -11,6 +11,7 @@ import { db } from '@/lib/db'
 import { formatPrice } from '@/lib/package-shape'
 import { sectionName } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
+import { trialOffers } from '@/lib/trial'
 
 export const metadata: Metadata = { title: 'Coverage' }
 export const dynamic = 'force-dynamic'
@@ -34,13 +35,26 @@ export default async function CoveragePage() {
       sections: {
         where: { archivedAt: null },
         orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
-        include: { topic: true, author: true },
+        include: { topic: true, author: true, item: { select: { slug: true } } },
       },
     },
   })
 
   // A topic nobody writes in yet is not a gap to explain, it is a thing to leave out.
   const covered = topics.filter((topic) => topic.sections.length > 0)
+
+  /*
+   * Which subjects have a live trial, by item slug.
+   *
+   * Asked of the trial system rather than read off the item's own switch, because the two
+   * are not the same: an archived item has the switch on and nothing to open, and only
+   * `trialOffers` knows the difference.
+   */
+  const sectionTrials = new Map(
+    (await trialOffers())
+      .filter((offer) => offer.isSection)
+      .map((offer) => [offer.slug, offer.days] as const),
+  )
   // Empty means "not for you" to a visitor and "not yet" to the person building it.
   if (covered.length === 0) {
     if (preview) return <EmptyPreview what="coverage" />
@@ -72,13 +86,33 @@ export default async function CoveragePage() {
 
               <div className="mt-5 grid gap-4">
                 {topic.sections.map((section) => (
-                  <div key={section.id} className="panel p-6">
+                  <div key={section.id} className="panel overflow-hidden">
+                    {/*
+                      The title image, when the subject has one. A banner rather than a
+                      thumbnail, because it is the first thing on the card and a small one
+                      would read as decoration next to the name instead of leading it.
+                      Absent, the card is exactly as it was — the name on a plain panel.
+                    */}
+                    {section.imageUrl && (
+                      <div className="aspect-[21/9] w-full overflow-hidden border-b border-line bg-panel-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element -- an
+                            arbitrary host, which next/image would need configuring for. */}
+                        <img
+                          src={section.imageUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
+
+                    <div className="p-6">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex items-center gap-4">
                         <AuthorAvatar
                           name={section.author.name}
                           photoUrl={section.author.photoUrl}
-                          size={44}
+                          size={64}
                         />
                         <div className="min-w-0">
                           <h3 className="font-display text-lg leading-snug text-ink">
@@ -92,8 +126,13 @@ export default async function CoveragePage() {
                           </Link>
                         </div>
                       </div>
-                      <span className="shrink-0 font-mono text-[13px] text-ink-dim">
-                        {formatPrice(section.priceCents, section.currency)} / {section.interval}
+                      <span className="shrink-0 text-right">
+                        <span className="block font-display text-2xl leading-none text-ink">
+                          {formatPrice(section.priceCents, section.currency)}
+                        </span>
+                        <span className="mt-1 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                          per {section.interval}
+                        </span>
                       </span>
                     </div>
 
@@ -104,7 +143,13 @@ export default async function CoveragePage() {
                     )}
 
                     <div className="mt-5 border-t border-line pt-5">
-                      <SectionBuy sectionId={section.id} name={sectionName(section)} />
+                      <SectionBuy
+                        sectionId={section.id}
+                        name={sectionName(section)}
+                        trialDays={section.item ? (sectionTrials.get(section.item.slug) ?? null) : null}
+                        trialSlug={section.item?.slug ?? null}
+                      />
+                    </div>
                     </div>
                   </div>
                 ))}

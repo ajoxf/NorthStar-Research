@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { adminInput } from '@/app/api/admin/_admin-route'
 import { db } from '@/lib/db'
-import { sectionInputSchema } from '@/lib/section-shape'
+import { clearableUrl, sectionInputSchema } from '@/lib/section-shape'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -24,7 +24,12 @@ export const dynamic = 'force-dynamic'
 const schema = sectionInputSchema
   .omit({ topicId: true, authorId: true })
   .partial()
-  .extend({ archived: z.boolean().optional() })
+  .extend({
+    archived: z.boolean().optional(),
+    // Overrides the create form's version so the picture can actually be taken off: there
+    // `''` means "none given", here it has to mean "remove the one that is there".
+    imageUrl: clearableUrl,
+  })
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   const input = await adminInput(request, schema)
@@ -47,6 +52,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     data: {
       ...(f.displayName !== undefined ? { displayName: f.displayName ?? null } : {}),
       ...(f.description !== undefined ? { description: f.description ?? null } : {}),
+      /*
+       * `null` clears it, `undefined` leaves it alone. The editor sends null when an
+       * operator removes the picture; a partial PATCH from anywhere else must not wipe
+       * artwork it never mentioned.
+       */
+      ...(f.imageUrl !== undefined ? { imageUrl: f.imageUrl } : {}),
       ...(f.priceCents !== undefined ? { priceCents: f.priceCents } : {}),
       ...(f.currency !== undefined ? { currency: f.currency } : {}),
       ...(f.interval !== undefined ? { interval: f.interval } : {}),

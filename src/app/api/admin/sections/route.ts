@@ -46,6 +46,7 @@ export async function POST(request: Request) {
       authorId: author.id,
       displayName: input.data.displayName ?? null,
       description: input.data.description ?? null,
+      imageUrl: input.data.imageUrl ?? null,
       priceCents: input.data.priceCents,
       currency: input.data.currency,
       interval: input.data.interval,

@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 
+import { SectionImageField } from '@/app/admin/sections/image-field'
 import { Badge } from '@/components/ui/badge'
 import { Button, Spinner } from '@/components/ui/button'
 import { Hint, Input, Label, Select, Textarea } from '@/components/ui/field'
@@ -16,6 +17,11 @@ export type SectionRow = {
   slug: string
   displayName: string | null
   description: string | null
+  imageUrl: string | null
+  /** The grantable item behind this section. Null only for a section created before items. */
+  itemSlug: string | null
+  trialEnabled: boolean
+  trialDays: number | null
   topic: { name: string }
   author: { name: string }
   priceCents: number
@@ -56,6 +62,7 @@ export function SectionManager({
     price: '49.00',
     interval: 'month',
     description: '',
+    imageUrl: '',
   })
 
   const topic = topics.find((t) => t.id === form.topicId)
@@ -105,11 +112,19 @@ export function SectionManager({
         priceCents,
         interval: form.interval,
         description: form.description,
+        imageUrl: form.imageUrl,
       },
       `${preview ?? 'Section'} created`,
     )
     if (ok) {
-      setForm({ topicId: '', authorId: '', price: '49.00', interval: 'month', description: '' })
+      setForm({
+        topicId: '',
+        authorId: '',
+        price: '49.00',
+        interval: 'month',
+        description: '',
+        imageUrl: '',
+      })
       setOpen(false)
     }
   }
@@ -221,6 +236,14 @@ export function SectionManager({
             />
           </div>
 
+          <div className="mt-4">
+            <SectionImageField
+              id="s-new"
+              value={form.imageUrl}
+              onChange={(imageUrl) => setForm({ ...form, imageUrl })}
+            />
+          </div>
+
           <div className="mt-5 flex flex-wrap gap-3">
             <Button type="submit" disabled={busy || !form.topicId || !form.authorId}>
               {busy && <Spinner />}
@@ -237,6 +260,14 @@ export function SectionManager({
         <ul className="mt-6 divide-y divide-line border-t border-line">
           {sections.map((section) => (
             <li key={section.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+              {/* The picture, at the size a card shows it, so a wrong one is obvious in
+                  the list rather than only on the public page. */}
+              <div className="h-10 w-[72px] shrink-0 overflow-hidden rounded border border-line bg-panel-2">
+                {section.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={section.imageUrl} alt="" className="h-full w-full object-cover" />
+                ) : null}
+              </div>
               <div className="min-w-0 flex-1">
                 <span className="text-[15px] text-ink">
                   {sectionName({
@@ -281,12 +312,196 @@ export function SectionManager({
                 >
                   {section.archived ? 'Put back' : 'Take off sale'}
                 </Button>
+                <TrialEditor section={section} />
+                <ImageEditor
+                  section={section}
+                  busy={busy}
+                  onSave={(imageUrl) =>
+                    send(
+                      `/api/admin/sections/${section.id}`,
+                      'PATCH',
+                      // null, not '': the API reads null as "remove it" and an empty
+                      // string as "nothing was said".
+                      { imageUrl: imageUrl || null },
+                      imageUrl ? 'Title image updated' : 'Title image removed',
+                    )
+                  }
+                />
               </div>
             </li>
           ))}
         </ul>
       )}
     </section>
+  )
+}
+
+/**
+ * Opening or closing this subject's free trial, from the screen the subject lives on.
+ *
+ * The switch itself is on the section's *item* — that is where every trial is stored, so
+ * the one on a package and the one here cannot disagree about what is on offer. This is a
+ * second door onto the same setting, put where an operator is already looking rather than
+ * on a payments screen two clicks away.
+ *
+ * A section with no item cannot be trialled and says so, rather than offering a control
+ * that would fail: that only happens to a section created before items existed.
+ */
+function TrialEditor({ section }: { section: SectionRow }) {
+  const router = useRouter()
+  const toast = useToast()
+  const [open, setOpen] = React.useState(false)
+  const [enabled, setEnabled] = React.useState(section.trialEnabled)
+  const [days, setDays] = React.useState(section.trialDays === null ? '' : String(section.trialDays))
+  const [busy, setBusy] = React.useState(false)
+
+  if (!section.itemSlug) return null
+
+  async function save() {
+    setBusy(true)
+    try {
+      const response = await fetch('/api/admin/trial', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemSlug: section.itemSlug,
+          enabled,
+          // Blank means "use the house default", which is a real answer rather than a
+          // missing one — so it is sent as null rather than omitted.
+          days: days.trim() === '' ? null : Number(days),
+        }),
+      })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) {
+        toast(data?.error ?? `Could not save (HTTP ${response.status}).`, 'error')
+        return
+      }
+      toast(enabled ? 'Trial open for this subject' : 'Trial closed', 'success')
+      setOpen(false)
+      router.refresh()
+    } catch {
+      toast('Could not reach the server.', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)}>
+        {section.trialEnabled
+          ? `Trial: ${section.trialDays ?? 'default'} days`
+          : 'Start a trial'}
+      </Button>
+    )
+  }
+
+  return (
+    <div className="mt-2 w-full basis-full rounded-lg border border-line bg-panel-2 p-4">
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+          checked={enabled}
+          onChange={(event) => setEnabled(event.target.checked)}
+        />
+        <span>
+          <span className="block text-[14px] text-ink">Offer a free trial of this subject</span>
+          <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
+            No card. It grants this one section and stops on its own. Somebody who has ever
+            held this subject cannot trial it again.
+          </span>
+        </span>
+      </label>
+
+      {enabled && (
+        <div className="mt-3 max-w-[12rem]">
+          <Label htmlFor={`trial-${section.id}`}>Length (days)</Label>
+          <Input
+            id={`trial-${section.id}`}
+            value={days}
+            onChange={(event) => setDays(event.target.value)}
+            placeholder="e.g. 21"
+            inputMode="numeric"
+          />
+          <Hint>Blank uses the house default.</Hint>
+        </div>
+      )}
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" disabled={busy} onClick={save}>
+          {busy && <Spinner />}
+          Save
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy}
+          onClick={() => {
+            setEnabled(section.trialEnabled)
+            setDays(section.trialDays === null ? '' : String(section.trialDays))
+            setOpen(false)
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Setting a section's title image after it exists.
+ *
+ * Collapsed until asked for, because most visits to this screen are about price or
+ * availability, and an upload widget open on every row would bury them.
+ */
+function ImageEditor({
+  section,
+  busy,
+  onSave,
+}: {
+  section: SectionRow
+  busy: boolean
+  onSave: (imageUrl: string) => void
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [value, setValue] = React.useState(section.imageUrl ?? '')
+
+  if (!open) {
+    return (
+      <Button size="sm" variant="secondary" disabled={busy} onClick={() => setOpen(true)}>
+        {section.imageUrl ? 'Change image' : 'Add image'}
+      </Button>
+    )
+  }
+
+  return (
+    <div className="mt-2 w-full basis-full rounded-lg border border-line bg-panel-2 p-4">
+      <SectionImageField id={`s-${section.id}`} value={value} onChange={setValue} />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          disabled={busy || value === (section.imageUrl ?? '')}
+          onClick={() => {
+            onSave(value)
+            setOpen(false)
+          }}
+        >
+          Save image
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            setValue(section.imageUrl ?? '')
+            setOpen(false)
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
   )
 }
 
