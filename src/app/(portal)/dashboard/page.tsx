@@ -153,10 +153,12 @@ export default async function DashboardPage({
         "show me everything from Dean" — and it is the one the archive could not answer
         without knowing which names a member holds.
 
-        Hidden entirely for a member whose experts are not yet set up: a single card
-        saying nothing is worse than the band not being there.
+        Shown only to somebody who holds more than one. With a single expert the band is
+        one card restating what the whole dashboard already is — every report on the page
+        is theirs, and "everything of theirs" is what the Archive link already opens. A
+        band that tells a member something they can see without it is furniture.
       */}
-      {experts.length > 0 && (
+      {experts.length > 1 && (
         <section className="mt-16">
           <div className="mb-5">
             <span className="eyebrow">Your experts</span>
