@@ -10,7 +10,7 @@
  * — a hex value here would silently break every `/nn` class on the site.
  *
  * The channels below are exactly the hexes they replaced, so nothing changed colour:
- * #000000 is 0 0 0, #0B0B0B is 11 11 11, #D0F53C is 208 245 60, and so on.
+ * #000000 is 0 0 0, #0B0B0B is 11 11 11, #D6FD3A is 214 253 58, and so on.
  */
 :root {
   --bg: 0 0 0;
@@ -19,11 +19,12 @@
   --line: 31 31 31;
   --ink: 255 255 255;
   --ink-dim: 163 163 163;
-  --accent: 208 245 60;
+  /* #D6FD3A — the accent as the design file defines it, replacing #D6FD3A. */
+  --accent: 214 253 58;
   /* The lift on a primary button's hover. A token like any other: it was the last
      hard-coded colour in the system, and it was lime on every brand — including the
      blue one, where it turned the button acid green under the cursor. */
-  --accent-hover: 221 255 99;   /* #DDFF63 */
+  --accent-hover: 226 255 110;  /* a shade up from #D6FD3A, for the same lift on hover */
   --imprint: 216 207 192;
   --up: 0 224 138;
   --down: 255 77 94;
@@ -48,7 +49,7 @@
   --line-on-light: 229 231 235;
 
   --font-plex-mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-inter: 'Satoshi', 'Inter', system-ui, sans-serif;
 
   color-scheme: dark;
 }
@@ -67,7 +68,7 @@
   }
 
   ::selection {
-    background: rgba(208, 245, 60, 0.25);
+    background: rgba(214, 253, 58, 0.25);
   }
 
   :focus-visible {

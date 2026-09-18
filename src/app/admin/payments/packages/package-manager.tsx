@@ -595,7 +595,7 @@ function PackageForm({
                   <label key={item.id} className="flex items-start gap-2.5">
                     <input
                       type="checkbox"
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
                       checked={itemIds.includes(item.id)}
                       onChange={(event) =>
                         setItemIds((current) =>
@@ -642,7 +642,7 @@ function PackageForm({
           <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
               checked={trialEnabled}
               onChange={(event) => setTrialEnabled(event.target.checked)}
             />
@@ -684,7 +684,7 @@ function PackageForm({
           <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
               checked={sellByCard}
               disabled={!stripeReady}
               onChange={(event) => setSellByCard(event.target.checked)}

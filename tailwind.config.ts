@@ -42,9 +42,9 @@ const config: Config = {
       fontFamily: {
         // Headings are a tightly-tracked grotesque, not a serif — the reference design
         // is sans throughout. `display` replaces the old `serif` token.
-        display: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Satoshi', 'var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['var(--font-plex-mono)', 'IBM Plex Mono', 'ui-monospace', 'monospace'],
-        sans: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
+        sans: ['Satoshi', 'var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
         // A system serif, deliberately: the only genuinely different letterform available
         // without adding a webfont request to every page for two words.
         serif: ['Georgia', "'Times New Roman'", 'serif'],

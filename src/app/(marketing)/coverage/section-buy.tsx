@@ -28,9 +28,18 @@ export function SectionBuy({
   name,
   trialDays,
   trialSlug,
+  tone = 'dark',
 }: {
   sectionId: string
   name: string
+  /**
+   * The ground this card sits on.
+   *
+   * The inputs and the secondary button draw themselves in `ink`, which is white — right
+   * on black and invisible on the near-white cards these now sit in. Passed rather than
+   * guessed, because the component cannot see its own background.
+   */
+  tone?: 'dark' | 'light'
   /**
    * How many days this subject's trial runs, when one is open.
    *
@@ -47,6 +56,7 @@ export function SectionBuy({
   const [pending, setPending] = React.useState<'card' | 'crypto' | null>(null)
 
   const hasTrial = Boolean(trialDays && trialSlug)
+  const light = tone === 'light'
 
   async function start(method: 'card' | 'crypto') {
     if (!email.trim()) {
@@ -77,7 +87,7 @@ export function SectionBuy({
   return (
     <div>
       {hasTrial && (
-        <div className="mb-5 border-b border-line pb-5">
+        <div className={`mb-5 border-b pb-5 ${light ? 'border-line-on-light' : 'border-line'}`}>
           <ButtonLink
             href={`/trial?item=${encodeURIComponent(trialSlug!)}`}
             size="lg"
@@ -86,13 +96,17 @@ export function SectionBuy({
             Start a {trialDays}-day free trial
             <ArrowRight className="h-4 w-4" aria-hidden />
           </ButtonLink>
-          <p className="mt-2.5 text-[13px] leading-relaxed text-ink-dim">
+          <p
+            className={`mt-2.5 text-[13px] leading-relaxed ${light ? 'text-ink-on-light-dim' : 'text-ink-dim'}`}
+          >
             No card. It stops on its own — there is nothing to cancel.
           </p>
         </div>
       )}
 
-      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+      <p
+        className={`font-mono text-[11px] uppercase tracking-[0.14em] ${light ? 'text-ink-on-light-dim' : 'text-ink-dim'}`}
+      >
         {hasTrial ? 'Or subscribe now' : 'Subscribe'}
       </p>
 
@@ -111,21 +125,31 @@ export function SectionBuy({
           placeholder="you@example.com"
           autoComplete="email"
           aria-label={`Email address for ${name}`}
-          className="sm:flex-1"
+          className={
+            light
+              ? 'border-ink-on-light/20 bg-white text-ink-on-light placeholder:text-ink-on-light-dim/70 sm:flex-1'
+              : 'sm:flex-1'
+          }
         />
         <div className="flex shrink-0 gap-2.5">
           <Button onClick={() => start('card')} disabled={pending !== null}>
             {pending === 'card' ? <Spinner /> : null}
             Pay by card
           </Button>
-          <Button variant="secondary" onClick={() => start('crypto')} disabled={pending !== null}>
+          <Button
+            variant={light ? 'on-light' : 'secondary'}
+            onClick={() => start('crypto')}
+            disabled={pending !== null}
+          >
             {pending === 'crypto' ? <Spinner /> : null}
             Crypto
           </Button>
         </div>
       </div>
 
-      <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+      <p
+        className={`mt-3 text-[13px] leading-relaxed ${light ? 'text-ink-on-light-dim' : 'text-ink-dim'}`}
+      >
         We email your access code once the payment confirms. Card renews automatically and can be
         cancelled any time; crypto you renew yourself.
       </p>

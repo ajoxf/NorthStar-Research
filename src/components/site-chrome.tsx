@@ -137,7 +137,7 @@ export async function SiteFooter() {
                     Coverage
                   </Link>
                   <Link href="/experts" className="text-ink-dim hover:text-ink">
-                    Contributors
+                    Subject matter experts
                   </Link>
                 </>
               )}

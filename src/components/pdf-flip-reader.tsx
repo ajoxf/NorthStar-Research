@@ -326,7 +326,7 @@ export function PdfFlipReader({
           value={leaf + 1}
           onChange={(event) => goToLeaf(Number(event.target.value) - 1)}
           aria-label="Jump to page"
-          className="mx-2 h-1 flex-1 cursor-pointer appearance-none rounded-full bg-line accent-[#D0F53C]"
+          className="mx-2 h-1 flex-1 cursor-pointer appearance-none rounded-full bg-line accent-[#D6FD3A]"
         />
 
         <PagerButton

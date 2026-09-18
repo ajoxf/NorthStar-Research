@@ -24,7 +24,7 @@
 
 export const CHART = {
   /** Ordinal ramp, brightest = most engaged. */
-  strong: '#D0F53C',
+  strong: '#D6FD3A',
   mid: '#9BBE2E',
   weak: '#6B8420',
   /** Reserved status. Never a series colour. */

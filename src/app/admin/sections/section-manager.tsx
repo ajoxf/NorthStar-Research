@@ -401,7 +401,7 @@ function TrialEditor({ section }: { section: SectionRow }) {
       <label className="flex items-start gap-3">
         <input
           type="checkbox"
-          className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+          className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
           checked={enabled}
           onChange={(event) => setEnabled(event.target.checked)}
         />

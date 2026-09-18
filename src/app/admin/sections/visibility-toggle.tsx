@@ -25,7 +25,7 @@ export function VisibilityToggle({ visible, ready }: { visible: boolean; ready: 
       next &&
       !window.confirm(
         'Show sections to the public?\n\n' +
-          'The contributors and coverage pages go live, and the homepage starts showing your ' +
+          'The experts and coverage pages go live, and the homepage starts showing your ' +
           'topics and experts. Visitors will be able to buy a section.\n\n' +
           'Members see no change either way — this does not alter who can read anything.',
       )
@@ -97,7 +97,7 @@ export function VisibilityToggle({ visible, ready }: { visible: boolean; ready: 
           target="_blank"
           className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
         >
-          Preview contributors
+          Preview experts
           <ExternalLink className="h-3 w-3" aria-hidden />
         </Link>
         <Button

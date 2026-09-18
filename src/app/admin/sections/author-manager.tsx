@@ -195,7 +195,7 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
             <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
               <input
                 type="checkbox"
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
                 checked={form.comingSoon}
                 onChange={(e) => setForm({ ...form, comingSoon: e.target.checked })}
               />

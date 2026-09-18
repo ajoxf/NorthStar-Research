@@ -55,7 +55,7 @@ export default async function AdminSectionsPage() {
     <ToastProvider>
       <div className="mx-auto max-w-5xl px-5 py-12">
         <div className="mb-8">
-          <span className="eyebrow">Contributors &amp; coverage</span>
+          <span className="eyebrow">Experts &amp; coverage</span>
           <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Sections</h1>
           <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
             A section is one topic by one author — &ldquo;Energy by Sarah Chen&rdquo; — and it is

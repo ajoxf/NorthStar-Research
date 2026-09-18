@@ -5,11 +5,12 @@ import { notFound } from 'next/navigation'
 
 import { EmptyPreview } from '@/components/empty-preview'
 import { PreviewBanner } from '@/components/preview-banner'
+import { Band, BandHeading, Eyebrow } from '@/components/band'
 import { db } from '@/lib/db'
 import { authorListable, authorInitials, comingSoonVisible } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
 
-export const metadata: Metadata = { title: 'Contributors' }
+export const metadata: Metadata = { title: 'Subject matter experts' }
 export const dynamic = 'force-dynamic'
 
 /**
@@ -73,29 +74,29 @@ export default async function ExpertsPage() {
     <>
       {preview && <PreviewBanner />}
 
-      <section className="border-b border-line bg-panel-2/60">
-        <div className="mx-auto max-w-6xl px-5 py-20 sm:py-24">
-          <span className="eyebrow">The desk</span>
-          <h1 className="mt-4 text-balance font-display text-4xl leading-[1.05] text-ink sm:text-6xl">
-            Research from practitioners.
-          </h1>
-          <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-ink-dim">
-            Every report is written by a named analyst who has traded the market they cover, and
-            carries their reasoning in full. Subscribe to the people and the subjects you
-            actually follow, rather than to everything at once.
-          </p>
-        </div>
-      </section>
+      {/* Dark hero, light grid — the reference's own rhythm, and the reason the faces
+          below read as a gallery rather than as more of the same band. */}
+      <Band tone="dark">
+        <Eyebrow tone="dark">The desk</Eyebrow>
+        <h1 className="mt-4 text-balance font-display text-4xl font-medium leading-[1.04] tracking-[-0.04em] text-ink sm:text-6xl">
+          Research from practitioners.
+        </h1>
+        <p className="mt-5 max-w-2xl text-[17px] leading-[1.7] text-ink-dim">
+          Every report is written by a named expert who has traded the market they cover, and
+          carries their reasoning in full. Subscribe to the people and the subjects you
+          actually follow, rather than to everything at once.
+        </p>
+      </Band>
 
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
-        <h2 className="text-center font-display text-3xl text-ink">Our contributors</h2>
+      <Band tone="light">
+        <BandHeading className="text-center">Our subject matter experts</BandHeading>
 
         <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {listed.map((author) => (
             <Link
               key={author.id}
               href={`/experts/${author.slug}`}
-              className="group relative block aspect-[3/4] overflow-hidden rounded-xl border border-line bg-panel-2 transition-colors hover:border-accent/45"
+              className="group relative block aspect-[3/4] overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)] transition-shadow hover:shadow-[0_8px_24px_rgba(17,24,39,0.12)]"
             >
               {author.photoUrl ? (
                 /* eslint-disable-next-line @next/next/no-img-element -- an arbitrary host,
@@ -114,7 +115,7 @@ export default async function ExpertsPage() {
                    of equal cards rather than one with a hole in it. */
                 <span
                   aria-hidden
-                  className="absolute inset-0 flex items-center justify-center font-mono text-5xl text-ink-dim"
+                  className="absolute inset-0 flex items-center justify-center font-mono text-5xl text-ink-on-light-dim"
                 >
                   {authorInitials(author.name)}
                 </span>
@@ -159,7 +160,7 @@ export default async function ExpertsPage() {
             </Link>
           ))}
         </div>
-      </div>
+      </Band>
     </>
   )
 }

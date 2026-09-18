@@ -173,7 +173,7 @@ export function CodeGenerator() {
           type="checkbox"
           checked={neverExpires}
           onChange={(event) => setNeverExpires(event.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+          className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
         />
         <span className="text-[14px] leading-relaxed text-ink-dim">
           <span className="text-ink">Never expires.</span> The code works until it is used. Worth

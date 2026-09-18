@@ -24,7 +24,7 @@ export async function generateMetadata({
   params: { slug: string }
 }): Promise<Metadata> {
   const author = await db.author.findUnique({ where: { slug: params.slug } })
-  if (!author) return { title: 'Contributor' }
+  if (!author) return { title: 'Subject matter expert' }
   return {
     title: author.name,
     description: author.headline ?? undefined,
@@ -153,7 +153,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
             href="/experts"
             className="font-mono text-[12px] text-ink-dim transition-colors hover:text-ink"
           >
-            ← All contributors
+            ← All experts
           </Link>
 
           <div className="mt-8 grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
@@ -222,18 +222,19 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
         </div>
       </section>
 
-      <div className="mx-auto max-w-5xl px-5 py-16 sm:py-20">
+      <div className="bg-paper text-ink-on-light">
+      <div className="mx-auto max-w-5xl px-5 py-16 sm:py-24">
         {/*
           Label left, prose right — the reference's shape, and a useful one: the biography
           is the longest text on the page and a heading above it would leave the eye with
           no idea how far it runs.
         */}
         {author.bio && (
-          <section className="grid gap-6 border-b border-line pb-14 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)] sm:gap-12">
-            <h2 className="font-display text-2xl leading-tight text-ink">
+          <section className="grid gap-6 border-b border-line-on-light pb-14 sm:grid-cols-[minmax(0,180px)_minmax(0,1fr)] sm:gap-12">
+            <h2 className="font-display text-2xl font-medium leading-[1.1] tracking-[-0.03em] text-ink-on-light">
               About {author.name.split(' ')[0]}
             </h2>
-            <div className="space-y-4 text-[16px] leading-relaxed text-ink-dim">
+            <div className="space-y-4 text-[16px] leading-[1.7] text-ink-on-light-dim">
               {author.bio
                 .split('\n')
                 .filter(Boolean)
@@ -249,7 +250,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
             {author.credentials.map((credential) => (
               <li
                 key={credential}
-                className="rounded-full border border-line px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-dim"
+                className="rounded-full border border-ink-on-light/25 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-on-light-dim"
               >
                 {credential}
               </li>
@@ -266,7 +267,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                 target="_blank"
                 // noopener/noreferrer on a link whose href was typed into an admin form.
                 rel="noopener noreferrer nofollow"
-                className="inline-flex items-center gap-1.5 text-[14px] text-accent underline underline-offset-4"
+                className="inline-flex items-center gap-1.5 text-[14px] text-ink-on-light underline underline-offset-4"
               >
                 {link.label}
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden />
@@ -285,28 +286,33 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
         */}
         {packages.length > 0 && (
           <section className="mt-14">
-            <h2 className="font-display text-2xl text-ink">
+            <h2 className="font-display text-[28px] font-medium leading-[1.1] tracking-[-0.03em] text-ink-on-light">
               Packages by {author.name}
             </h2>
-            <p className="mt-2 text-[15px] leading-relaxed text-ink-dim">
+            <p className="mt-2 text-[15px] leading-[1.7] text-ink-on-light-dim">
               {author.name} sets these prices. Card renews itself; crypto you renew when you
               choose.
             </p>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               {packages.map((pkg) => (
-                <div key={pkg.id} className="panel flex flex-col p-6">
-                  <h3 className="font-display text-xl text-ink">{pkg.name}</h3>
+                <div
+                  key={pkg.id}
+                  className="flex flex-col rounded-2xl bg-paper-card p-6 shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
+                >
+                  <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
+                    {pkg.name}
+                  </h3>
                   {pkg.description && (
-                    <p className="mt-2 text-[14px] leading-relaxed text-ink-dim">
+                    <p className="mt-2 text-[14px] leading-[1.6] text-ink-on-light-dim">
                       {pkg.description}
                     </p>
                   )}
 
-                  <div className="mt-5 flex flex-wrap items-baseline gap-x-2.5 border-t border-line pt-5">
-                    <span className="font-display text-3xl text-ink">
+                  <div className="mt-5 flex flex-wrap items-baseline gap-x-2.5 border-t border-line-on-light pt-5">
+                    <span className="font-display text-[34px] font-medium leading-none tracking-[-0.03em] text-ink-on-light">
                       {formatPrice(pkg.priceCents, pkg.currency)}
                     </span>
-                    <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                    <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-light-dim">
                       per {pkg.interval}
                     </span>
                   </div>
@@ -314,8 +320,11 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                   {pkg.features.length > 0 && (
                     <ul className="mt-4 flex-1 space-y-2">
                       {pkg.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2 text-[14px] text-ink">
-                          <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-up" aria-hidden />
+                        <li
+                          key={feature}
+                          className="flex items-start gap-2 text-[14px] leading-[1.6] text-ink-on-light"
+                        >
+                          <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-ink-on-light" aria-hidden />
                           {feature}
                         </li>
                       ))}
@@ -347,7 +356,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                     size="lg"
                     className={trialOpen.has(pkg.slug) ? 'mt-3 w-full' : 'mt-6 w-full'}
                     variant={
-                      pkg.id === featured?.id && !trialOpen.has(pkg.slug) ? 'primary' : 'secondary'
+                      pkg.id === featured?.id && !trialOpen.has(pkg.slug) ? 'primary' : 'on-light'
                     }
                   >
                     Subscribe
@@ -369,16 +378,18 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
         */}
         {soon && (
           <section className="mt-14">
-            <div className="rounded-xl border border-accent/30 bg-accent/[0.06] p-7 sm:p-9">
-              <span className="eyebrow">Coming soon</span>
-              <h2 className="mt-3 font-display text-2xl text-ink">
+            <div className="rounded-2xl bg-paper-card p-7 shadow-[0_1px_2px_rgba(17,24,39,0.06)] sm:p-9">
+              <span className="inline-flex items-center rounded-full border border-ink-on-light/35 px-4 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-ink-on-light">
+                Coming soon
+              </span>
+              <h2 className="mt-3 font-display text-[28px] font-medium leading-[1.1] tracking-[-0.03em] text-ink-on-light">
                 {author.name.split(' ')[0]} has not published here yet.
               </h2>
-              <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-ink-dim">
+              <p className="mt-3 max-w-xl text-[15px] leading-[1.7] text-ink-on-light-dim">
                 Their first reports are being prepared. There is nothing to subscribe to on
                 this page yet — when there is, it will appear here and on the coverage page.
               </p>
-              <ButtonLink href="/coverage" size="lg" variant="secondary" className="mt-6">
+              <ButtonLink href="/coverage" size="lg" variant="on-light" className="mt-6">
                 See what is published today
               </ButtonLink>
             </div>
@@ -387,12 +398,15 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
 
         {author.sections.length > 0 && (
         <section className="mt-14">
-          <h2 className="font-display text-2xl text-ink">
+          <h2 className="font-display text-[28px] font-medium leading-[1.1] tracking-[-0.03em] text-ink-on-light">
             {packages.length > 0 ? 'Or just one subject' : 'Subscribe to their coverage'}
           </h2>
           <div className="mt-5 grid gap-4">
             {author.sections.map((section) => (
-              <div key={section.id} className="panel overflow-hidden">
+              <div
+                key={section.id}
+                className="overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
+              >
                 {/* The subject's own picture, matching the coverage page. */}
                 {section.imageUrl && (
                   <div className="aspect-[21/9] w-full overflow-hidden border-b border-line bg-panel-2">
@@ -407,23 +421,26 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                 )}
                 <div className="p-6">
                 <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <h3 className="font-display text-xl text-ink">{sectionName(section)}</h3>
+                  <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
+                    {sectionName(section)}
+                  </h3>
                   <span className="shrink-0 text-right">
-                    <span className="block font-display text-2xl leading-none text-ink">
+                    <span className="block font-display text-[26px] font-medium leading-none tracking-[-0.03em] text-ink-on-light">
                       {formatPrice(section.priceCents, section.currency)}
                     </span>
-                    <span className="mt-1 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                    <span className="mt-1 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-light-dim">
                       per {section.interval}
                     </span>
                   </span>
                 </div>
                 {section.description && (
-                  <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
+                  <p className="mt-3 text-[15px] leading-[1.6] text-ink-on-light-dim">
                     {section.description}
                   </p>
                 )}
                 <div className="mt-5">
                   <SectionBuy
+                    tone="light"
                     sectionId={section.id}
                     name={sectionName(section)}
                     trialDays={section.item ? (sectionTrials.get(section.item.slug) ?? null) : null}
@@ -439,21 +456,23 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
 
         {recent.length > 0 && (
           <section className="mt-14">
-            <h2 className="font-display text-2xl text-ink">Recently published</h2>
-            <p className="mt-2 text-[14px] leading-relaxed text-ink-dim">
+            <h2 className="font-display text-[28px] font-medium leading-[1.1] tracking-[-0.03em] text-ink-on-light">
+              Recently published
+            </h2>
+            <p className="mt-2 text-[14px] leading-[1.6] text-ink-on-light-dim">
               Titles only. The research itself opens inside the member portal.
             </p>
-            <ul className="mt-5 divide-y divide-line border-y border-line">
+            <ul className="mt-5 divide-y divide-line-on-light border-y border-line-on-light">
               {recent.map((report) => (
                 <li
                   key={report.id}
                   className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3"
                 >
-                  <span className="flex items-center gap-2 text-[15px] text-ink">
-                    <Lock className="h-3.5 w-3.5 shrink-0 text-ink-dim" aria-hidden />
+                  <span className="flex items-center gap-2 text-[15px] text-ink-on-light">
+                    <Lock className="h-3.5 w-3.5 shrink-0 text-ink-on-light-dim" aria-hidden />
                     {report.title}
                   </span>
-                  <span className="font-mono text-[12px] text-ink-dim">
+                  <span className="font-mono text-[12px] text-ink-on-light-dim">
                     {formatDate(report.publishDate)}
                   </span>
                 </li>
@@ -461,6 +480,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
             </ul>
           </section>
         )}
+      </div>
       </div>
     </ToastProvider>
   )

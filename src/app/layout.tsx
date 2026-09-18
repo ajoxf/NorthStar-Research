@@ -33,6 +33,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             depend on reaching Google's font CDN at build time. */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
+        {/*
+          Satoshi is the design's typeface. Inter stays loaded as its fallback rather than
+          being removed: Fontshare is a third party, and a page that loses its only webfont
+          should fall back to something chosen rather than to whatever the device calls
+          sans-serif. `display=swap` on both, so text paints immediately either way.
+        */}
+        <link
+          href="https://api.fontshare.com/v2/css?f%5B%5D=satoshi@400,500,700&display=swap"
+          rel="stylesheet"
+        />
         <link
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap"
           rel="stylesheet"

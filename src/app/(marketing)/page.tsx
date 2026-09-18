@@ -396,7 +396,7 @@ function ContributorStrip({
 
       <div className="mt-10 text-center">
         <ButtonLink href="/experts" size="lg" variant="secondary">
-          View all contributors
+          View all experts
         </ButtonLink>
       </div>
     </Band>
