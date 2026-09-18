@@ -3,7 +3,7 @@
 import * as React from 'react'
 import { Search, SearchX } from 'lucide-react'
 
-import { ReportRow } from '@/components/report-card'
+import { ReportCard } from '@/components/report-card'
 import { Input, Select } from '@/components/ui/field'
 import { REPORT_TYPES } from '@/lib/report-content'
 import { cn } from '@/lib/utils'
@@ -111,10 +111,14 @@ export function ArchiveBrowser({ reports }: { reports: ArchiveReport[] }) {
           }}
         />
       ) : (
-        <div className="border-t border-line">
-          {filtered.map((report) => (
-            <ReportRow
+        /* Cards rather than the rows this used to be. A row is efficient for scanning a
+           list you already know; a card is what somebody browsing an archive of a hundred
+           editions actually reads, and it is the shape the rest of the site now uses. */
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((report, index) => (
+            <ReportCard
               key={report.id}
+              index={index}
               report={{ ...report, publishDate: new Date(report.publishDate) }}
             />
           ))}
