@@ -248,10 +248,15 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
  * subscription does. An id matching an Entitlement is a section; anything else is the
  * member's own all-access membership, which is what every subscription was before
  * sections existed.
+ *
+ * **Several rows, not one.** A package with contents grants an entitlement per item, and
+ * all of them carry the same subscription id, because one payment renews the whole bundle.
+ * This used to take the first row it found — which renewed one item of a package and let
+ * the rest lapse on their original date, quietly shrinking what somebody kept paying for.
  */
-async function entitlementForSubscription(subscriptionId: string | null | undefined) {
-  if (!subscriptionId) return null
-  return db.entitlement.findFirst({
+async function entitlementsForSubscription(subscriptionId: string | null | undefined) {
+  if (!subscriptionId) return []
+  return db.entitlement.findMany({
     where: { stripeSubscriptionId: subscriptionId },
     select: { id: true, memberId: true, renewsAt: true, startedAt: true },
   })
@@ -287,18 +292,24 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
    */
   const subscriptionId =
     typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id
-  const entitlement = await entitlementForSubscription(subscriptionId)
+  const entitlements = await entitlementsForSubscription(subscriptionId)
 
-  if (entitlement) {
-    await db.entitlement.update({
-      where: { id: entitlement.id },
-      data: {
-        status: 'active',
-        renewsAt,
-        startedAt: entitlement.startedAt ?? new Date(),
-        cancelAtPeriodEnd: false,
-      },
-    })
+  if (entitlements.length > 0) {
+    // Every item on this subscription moves to the same date. One payment, one period —
+    // a bundle whose parts expired separately would be a bundle in name only.
+    await Promise.all(
+      entitlements.map((entitlement) =>
+        db.entitlement.update({
+          where: { id: entitlement.id },
+          data: {
+            status: 'active',
+            renewsAt,
+            startedAt: entitlement.startedAt ?? new Date(),
+            cancelAtPeriodEnd: false,
+          },
+        }),
+      ),
+    )
   } else {
     await db.member.update({
       where: { id: member.id },
@@ -352,18 +363,24 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const member = await db.member.findFirst({ where: { stripeCustomerId: customerId } })
   if (!member) return
 
-  const entitlement = await entitlementForSubscription(subscription.id)
-  if (entitlement) {
-    await db.entitlement.update({
-      where: { id: entitlement.id },
-      data: {
-        cancelAtPeriodEnd: subscription.cancel_at_period_end,
-        renewsAt: subscription.current_period_end
-          ? new Date(subscription.current_period_end * 1000)
-          : entitlement.renewsAt,
-        ...(subscription.status === 'canceled' ? { status: 'cancelled' as const } : {}),
-      },
-    })
+  // Every row on this subscription, because a package's items share one — see
+  // entitlementsForSubscription.
+  const entitlements = await entitlementsForSubscription(subscription.id)
+  if (entitlements.length > 0) {
+    await Promise.all(
+      entitlements.map((entitlement) =>
+        db.entitlement.update({
+          where: { id: entitlement.id },
+          data: {
+            cancelAtPeriodEnd: subscription.cancel_at_period_end,
+            renewsAt: subscription.current_period_end
+              ? new Date(subscription.current_period_end * 1000)
+              : entitlement.renewsAt,
+            ...(subscription.status === 'canceled' ? { status: 'cancelled' as const } : {}),
+          },
+        }),
+      ),
+    )
     return
   }
 
@@ -391,11 +408,16 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   const member = await db.member.findFirst({ where: { stripeCustomerId: customerId } })
   if (!member) return
 
-  // Cancelling one section must not cancel the member, nor their other sections.
-  const entitlement = await entitlementForSubscription(subscription.id)
-  if (entitlement) {
-    await db.entitlement.update({
-      where: { id: entitlement.id },
+  /*
+   * Cancelling one section must not cancel the member, nor their other sections — and
+   * cancelling a package must cancel all of it. Taking only the first row here would have
+   * left the rest of a cancelled bundle live and renewing against a subscription Stripe
+   * has already ended.
+   */
+  const entitlements = await entitlementsForSubscription(subscription.id)
+  if (entitlements.length > 0) {
+    await db.entitlement.updateMany({
+      where: { id: { in: entitlements.map((entitlement) => entitlement.id) } },
       data: { status: 'cancelled', cancelAtPeriodEnd: true },
     })
     return
