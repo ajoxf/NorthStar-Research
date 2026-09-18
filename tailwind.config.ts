@@ -32,6 +32,12 @@ const config: Config = {
         down: 'rgb(var(--down) / <alpha-value>)',
         'series-1': 'rgb(var(--series-1) / <alpha-value>)',
         'series-2': 'rgb(var(--series-2) / <alpha-value>)',
+        // The light ground the reference alternates onto. See globals.css.
+        paper: 'rgb(var(--paper) / <alpha-value>)',
+        'paper-card': 'rgb(var(--paper-card) / <alpha-value>)',
+        'ink-on-light': 'rgb(var(--ink-on-light) / <alpha-value>)',
+        'ink-on-light-dim': 'rgb(var(--ink-on-light-dim) / <alpha-value>)',
+        'line-on-light': 'rgb(var(--line-on-light) / <alpha-value>)',
       },
       fontFamily: {
         // Headings are a tightly-tracked grotesque, not a serif — the reference design

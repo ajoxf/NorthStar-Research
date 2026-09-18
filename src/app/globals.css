@@ -30,6 +30,23 @@
   --series-1: 63 168 47;
   --series-2: 139 111 232;
 
+  /*
+   * The light ground.
+   *
+   * The reference design alternates black bands with light ones, and that rhythm is most
+   * of what makes it read as it does. These are its exact values: #F3F4F6 for a light
+   * band, white for a card sitting on one, #111827 for text on either, and #E5E7EB for a
+   * hairline that has to show on a near-white surface where --line (near-black) cannot.
+   *
+   * Channels, not hex, for the same reason as everything above: Tailwind writes the alpha
+   * into them, so `text-ink-on-light/70` has to resolve to `rgb(17 24 39 / 0.7)`.
+   */
+  --paper: 243 244 246;
+  --paper-card: 255 255 255;
+  --ink-on-light: 17 24 39;
+  --ink-on-light-dim: 75 85 99;
+  --line-on-light: 229 231 235;
+
   --font-plex-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --font-inter: 'Inter', system-ui, sans-serif;
 
