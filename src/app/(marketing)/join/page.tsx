@@ -2,22 +2,30 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { JoinForm } from '@/app/(marketing)/join/join-form'
+import { Band, Eyebrow } from '@/components/band'
 import { ButtonLink } from '@/components/ui/button'
 import { ToastProvider } from '@/components/ui/toast'
+import { db } from '@/lib/db'
 import { isConfigured } from '@/lib/env'
-import { FALLBACK_PACKAGE, formatPrice } from '@/lib/package-shape'
+import { FALLBACK_PACKAGE } from '@/lib/package-shape'
+import { packageContents } from '@/lib/package-items'
 import { sellablePackages } from '@/lib/packages'
 import { trialOffers } from '@/lib/trial'
 
-export const metadata: Metadata = { title: 'Join' }
+export const metadata: Metadata = { title: 'Checkout' }
 export const dynamic = 'force-dynamic'
 
 /**
- * Everything on sale, with the buyer's choice carried into checkout.
+ * Checkout, on the light ground.
+ *
+ * Two columns from `lg`: the order summary and the three steps. On a phone the steps come
+ * first and the summary follows — a buyer on a small screen wants to start, not to read a
+ * receipt for something they have not bought — which is why the form carries `order-first`
+ * and gives it up at the breakpoint.
  *
  * `?package=` accepts a slug so a package can be shared as a link of its own. An unknown
  * slug falls through to the default rather than erroring — a stale link should still sell
- * something — and the form shows what is selected before anyone pays, so nobody is
+ * something — and the summary restates what is selected before anyone pays, so nobody is
  * quietly sold a different thing from the one they clicked.
  */
 export default async function JoinPage({
@@ -62,70 +70,71 @@ export default async function JoinPage({
     packages.find((pkg) => pkg.isDefault) ??
     packages[0]
 
+  /*
+   * Whose each package is, and what it actually grants.
+   *
+   * Both are read here rather than in the client component: the summary must show the
+   * items a redemption will write entitlements from, and those are a database fact, not
+   * something a form can be trusted to restate.
+   */
+  const authorIds = [...new Set(packages.map((pkg) => pkg.authorId).filter((id): id is string => id !== null))]
+  const [authors, contents] = await Promise.all([
+    authorIds.length
+      ? db.author.findMany({
+          where: { id: { in: authorIds } },
+          select: { id: true, name: true, photoUrl: true },
+        })
+      : Promise.resolve([]),
+    packageContents(packages.map((pkg) => pkg.id)),
+  ])
+  const authorById = new Map(authors.map((author) => [author.id, author]))
+
   const multiple = packages.length > 1
 
   return (
     <ToastProvider>
-      <div className="mx-auto grid max-w-5xl gap-12 px-5 py-16 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] lg:py-24">
-        <div>
-          <span className="eyebrow">Membership</span>
-          <h1 className="mt-3 text-balance text-4xl leading-tight text-ink sm:text-[42px]">
-            {multiple ? 'Choose your membership.' : 'One plan. Three reports a week.'}
+      <Band tone="light">
+        <div className="mb-10 max-w-xl">
+          <Eyebrow tone="light">Checkout</Eyebrow>
+          <h1 className="mt-4 text-balance font-display text-[32px] font-medium leading-[1.05] tracking-[-0.04em] sm:text-[44px]">
+            {multiple ? 'Subscribe to the work you follow.' : 'Two steps and you are in.'}
           </h1>
-          <p className="mt-5 max-w-md text-[16px] leading-relaxed text-ink-dim">
+          <p className="mt-4 text-[16px] leading-relaxed text-ink-on-light-dim">
             {/* The interval comes from the selected package. Hard-coding "month" here is how a
                 yearly plan ends up described as monthly two lines above its own price. */}
-            Pay by card and your membership renews itself every {selected.interval}. Prefer crypto?
-            You can pay that way too — it just needs renewing by hand each period. Either way we
-            email you an access code to set up your account.
+            Pay by card and it renews itself every {selected.interval}. Prefer crypto? You can pay
+            that way too — it just needs renewing by hand each period. Either way we email an
+            access code, and you set up your account with it.
           </p>
 
-          <ol className="mt-10 space-y-5 border-t border-line pt-8">
-            {[
-              {
-                step: '01',
-                title: 'Choose card or crypto',
-                body: `${formatPrice(selected.priceCents, selected.currency)} per ${selected.interval}. Card renews automatically; crypto you renew yourself.`,
-              },
-              { step: '02', title: 'Receive your code', body: 'We email your access code as soon as the payment confirms.' },
-              { step: '03', title: 'Create your account', body: 'Redeem the code, then sign in with Google, a password, or an email link.' },
-            ].map((item) => (
-              <li key={item.step} className="flex gap-4">
-                <span className="font-mono text-[12px] tracking-[0.14em] text-accent">{item.step}</span>
-                <div>
-                  <h2 className="font-display text-[17px] text-ink">{item.title}</h2>
-                  <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">{item.body}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </div>
-
-        <div className="panel h-fit p-7">
           {/*
-            The trial goes above the payment form, not instead of it.
+            The trial goes above the form, not instead of it.
 
             Reading the research for a fortnight is a better first step than paying for it
             sight unseen, and it is the step most people would take if offered. But it is
-            only shown when a trial is actually open — a button to a page that 404s is
-            worse than no button — and the payment form stays underneath either way, for
-            somebody who has already decided.
+            only shown when a trial is actually open — a button to a page that refuses
+            everybody is worse than no button — and the form stays underneath either way,
+            for somebody who has already decided.
           */}
           {trial && (
-            <div className="mb-6 border-b border-line pb-6">
-              <ButtonLink href="/trial" size="lg" className="w-full">
-                Start your {trial.days}-day free trial
-              </ButtonLink>
-              <p className="mt-3 text-center text-[13px] leading-relaxed text-ink-dim">
-                No card. It stops on its own — there is nothing to cancel.
+            <div className="mt-7 flex flex-col gap-3 rounded-2xl border border-ink-on-light/12 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-[14px] leading-relaxed text-ink-on-light">
+                <strong className="font-medium">Not ready to pay?</strong> Read it free for{' '}
+                {trial.days} days. No card, and it stops on its own.
               </p>
+              <ButtonLink href="/trial" variant="on-light" className="shrink-0">
+                Start the free trial
+              </ButtonLink>
             </div>
           )}
+        </div>
 
-          <JoinForm
-            cardReady={cardReady}
-            cryptoReady={cryptoReady}
-            packages={packages.map((pkg) => ({
+        <JoinForm
+          cardReady={cardReady}
+          cryptoReady={cryptoReady}
+          packages={packages.map((pkg) => {
+            const author = pkg.authorId ? authorById.get(pkg.authorId) : undefined
+            return {
               id: pkg.id,
               name: pkg.name,
               description: pkg.description,
@@ -134,18 +143,24 @@ export default async function JoinPage({
               interval: pkg.interval,
               features: pkg.features,
               cardAvailable: pkg.stripePriceId !== null || pkg.id === FALLBACK_PACKAGE.id,
-            }))}
-            selectedId={selected.id}
-          />
+              authorName: author?.name ?? null,
+              authorPhotoUrl: author?.photoUrl ?? null,
+              includes: contents[pkg.id] ?? [],
+            }
+          })}
+          selectedId={selected.id}
+        />
 
-          <p className="mt-5 text-center text-[13px] text-ink-dim">
-            Already have a code?{' '}
-            <Link href="/redeem" className="text-accent underline underline-offset-4">
-              Redeem it here
-            </Link>
-          </p>
-        </div>
-      </div>
+        <p className="mt-10 text-center text-[14px] text-ink-on-light-dim">
+          Already have a code?{' '}
+          <Link
+            href="/redeem"
+            className="font-medium text-ink-on-light underline underline-offset-4"
+          >
+            Redeem it here
+          </Link>
+        </p>
+      </Band>
     </ToastProvider>
   )
 }

@@ -45,6 +45,35 @@ export async function setPackageItems(packageId: string, itemIds: string[]): Pro
   return known.length
 }
 
+/**
+ * What each of these packages actually grants, named for a buyer.
+ *
+ * Read for the checkout summary, where the question is not "what does this cost" but
+ * "what am I getting" — and the honest answer is the items themselves, not the marketing
+ * bullets, because the items are what the redemption writes entitlements from.
+ *
+ * Archived items are included. An archived item is one that is no longer sold separately,
+ * not one that has been taken out of the packages containing it, and a summary that
+ * quietly dropped it would understate what the buyer is about to pay for.
+ *
+ * Keyed by package id, one query for the whole page rather than one per card.
+ */
+export async function packageContents(packageIds: string[]): Promise<Record<string, string[]>> {
+  if (packageIds.length === 0) return {}
+
+  const rows = await db.packageItem.findMany({
+    where: { packageId: { in: packageIds } },
+    select: { packageId: true, item: { select: { name: true } } },
+  })
+
+  const contents: Record<string, string[]> = {}
+  for (const row of rows) {
+    ;(contents[row.packageId] ??= []).push(row.item.name)
+  }
+  for (const names of Object.values(contents)) names.sort((a, b) => a.localeCompare(b))
+  return contents
+}
+
 /** Every item a package could contain, for the admin's checkbox list. */
 export async function grantableItemOptions(): Promise<
   { id: string; name: string; kind: 'section' | 'product'; archived: boolean }[]

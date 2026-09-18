@@ -38,6 +38,7 @@ const config: Config = {
         'ink-on-light': 'rgb(var(--ink-on-light) / <alpha-value>)',
         'ink-on-light-dim': 'rgb(var(--ink-on-light-dim) / <alpha-value>)',
         'line-on-light': 'rgb(var(--line-on-light) / <alpha-value>)',
+        'down-on-light': 'rgb(var(--down-on-light) / <alpha-value>)',
       },
       fontFamily: {
         // Headings are a tightly-tracked grotesque, not a serif — the reference design

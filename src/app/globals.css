@@ -47,6 +47,14 @@
   --ink-on-light: 17 24 39;
   --ink-on-light-dim: 75 85 99;
   --line-on-light: 229 231 235;
+  /*
+   * Error text on a light card.
+   *
+   * --down is #FF4D5E, which is built to glow on black and sits at about 3.3:1 on white —
+   * under the 4.5:1 a 13px message needs. A form that tells somebody their email is wrong
+   * in a colour they have to squint at has not told them anything.
+   */
+  --down-on-light: 190 18 60;
 
   --font-plex-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --font-inter: 'Satoshi', 'Inter', system-ui, sans-serif;

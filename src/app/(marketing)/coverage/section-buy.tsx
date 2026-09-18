@@ -125,11 +125,8 @@ export function SectionBuy({
           placeholder="you@example.com"
           autoComplete="email"
           aria-label={`Email address for ${name}`}
-          className={
-            light
-              ? 'border-ink-on-light/20 bg-white text-ink-on-light placeholder:text-ink-on-light-dim/70 sm:flex-1'
-              : 'sm:flex-1'
-          }
+          tone={light ? 'light' : 'dark'}
+          className="sm:flex-1"
         />
         <div className="flex shrink-0 gap-2.5">
           <Button onClick={() => start('card')} disabled={pending !== null}>
