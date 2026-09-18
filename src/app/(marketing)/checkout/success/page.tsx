@@ -44,9 +44,17 @@ export default function CheckoutSuccessPage({
             'to the address you gave at checkout. Confirmation usually takes a few minutes, ' +
             'occasionally longer during network congestion.'}
       </p>
+      {/*
+        What was bought, not "the full archive".
+        
+        This page is reached by anybody who has paid — including somebody who bought one
+        subject from one expert. Promising them the whole archive here is a claim the
+        portal then refuses the moment they sign in, which is the worst possible order in
+        which to find that out.
+      */}
       <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
-        When it arrives, redeem it to create your account and unlock the latest reports and the
-        full archive.
+        When it arrives, redeem it to create your account. You will have everything included
+        in what you bought, back to its first edition.
       </p>
 
       <div className="mt-9 flex flex-wrap justify-center gap-3">

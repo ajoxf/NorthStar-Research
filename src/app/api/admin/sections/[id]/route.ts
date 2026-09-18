@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { adminInput } from '@/app/api/admin/_admin-route'
 import { db } from '@/lib/db'
+import { syncItemNames } from '@/lib/section-repair'
 import { clearableUrl, sectionInputSchema } from '@/lib/section-shape'
 
 export const runtime = 'nodejs'
@@ -66,5 +67,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     },
     include: { topic: true, author: true },
   })
+  // A new display name renames the section everywhere it is shown; the stored item name
+  // follows so the package contents picker does not keep offering the old one.
+  if (f.displayName !== undefined) await syncItemNames([existing.id])
+
   return NextResponse.json({ ok: true, section })
 }

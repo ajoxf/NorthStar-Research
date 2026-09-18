@@ -274,20 +274,42 @@ export async function POST(request: Request) {
        * ticked, and redeeming its code writes an entitlement for each, sharing this one
        * period so they begin and lapse together.
        *
-       * Only for an all-access grant — a section code's single item is already on the row
-       * above, and running this as well would write the same access twice.
+       * Not for a section code — its single item is already on the row above, and running
+       * this as well would write the same access twice.
        *
-       * Inert until the backfill has run, because until there are items nothing can be
-       * ticked onto a package and this list is empty.
+       * ## Every row carries its section
        *
-       * Found by (memberId, itemId) rather than upserted on it: that uniqueness is added
-       * by hand after the backfill, so the key Prisma would need does not exist yet. Inside
-       * this transaction the read and the write cannot be raced by another redemption.
+       * A package grant is now the *only* thing a package buyer gets: the subscription
+       * columns are no longer written for them, so these rows are their entire access.
+       * That makes `sectionId` load-bearing rather than legacy. `hasAnyAccess` counts an
+       * entitlement only when it names a section, and `canReadReport` and
+       * `reportVisibilityWhere` both resolve a report through one — so an item row with a
+       * null section grants nothing anybody can read. Writing it here is what turns "this
+       * package includes Dean's energy research" into a report the buyer can open.
+       *
+       * Found by either key rather than upserted on one: a member who bought a section
+       * outright and later buys a package containing it already has a row, reachable by
+       * section but not yet by item, and creating a second would violate the unique on
+       * (memberId, sectionId). Inside this transaction the read and the write cannot be
+       * raced by another redemption.
        */
-      if (grant.kind === 'all_access') {
+      if (grant.kind !== 'section') {
+        const sectionByItem = new Map(
+          (
+            await tx.item.findMany({
+              where: { id: { in: grant.itemIds } },
+              select: { id: true, section: { select: { id: true } } },
+            })
+          ).map((item) => [item.id, item.section?.id ?? null]),
+        )
+
         for (const itemId of grant.itemIds) {
+          const sectionId = sectionByItem.get(itemId) ?? null
           const heldItem = await tx.entitlement.findFirst({
-            where: { memberId: created.id, itemId },
+            where: {
+              memberId: created.id,
+              OR: [{ itemId }, ...(sectionId ? [{ sectionId }] : [])],
+            },
             select: { id: true, renewsAt: true },
           })
           const itemUntil = extendedRenewal(heldItem, months, now)
@@ -295,13 +317,22 @@ export async function POST(request: Request) {
           if (heldItem) {
             await tx.entitlement.update({
               where: { id: heldItem.id },
-              data: { status: 'active', renewsAt: itemUntil, cancelAtPeriodEnd: false },
+              data: {
+                status: 'active',
+                renewsAt: itemUntil,
+                cancelAtPeriodEnd: false,
+                // Fills in whichever half the existing row is missing. Never clears one:
+                // a row found by section keeps its section, and gains the item.
+                itemId,
+                ...(sectionId ? { sectionId } : {}),
+              },
             })
           } else {
             await tx.entitlement.create({
               data: {
                 memberId: created.id,
                 itemId,
+                sectionId,
                 status: 'active',
                 startedAt: now,
                 renewsAt: itemUntil,

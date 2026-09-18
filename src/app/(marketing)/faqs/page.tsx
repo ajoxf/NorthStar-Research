@@ -18,13 +18,23 @@ const faqs = (
   interval: 'month' | 'year',
 ): { q: string; a: React.ReactNode }[] => [
   {
-    q: 'What do I get for the membership fee?',
+    q: 'What do I get when I subscribe?',
     a: (
       <>
-        {price ?? 'Membership'} gives you every report we publish — three a week, covering
-        commodities, international markets and indices, options, crypto and spreads, and FX — plus
-        access to the complete archive of everything published previously, including editions from
-        before you joined.
+        You choose a package from a named expert, and it gives you everything in that package:
+        every report in each subject it covers, including editions published before you joined.
+        Subjects are bought separately, so somebody following energy pays for energy rather than
+        for the whole desk.
+      </>
+    ),
+  },
+  {
+    q: 'Can I read everything the site publishes?',
+    a: (
+      <>
+        Only what your packages include. Each expert prices their own work and you hold what you
+        paid for — so adding a second subject means adding a second subscription, and they bill
+        and cancel independently of each other.
       </>
     ),
   },
@@ -33,7 +43,7 @@ const faqs = (
     a: (
       <>
         You can pay by card or in crypto. Card subscriptions renew automatically every {interval}{' '}
-        and can be cancelled any time from your account. Crypto cannot renew automatically — there
+        and can be cancelled any time from your account, each one independently of the others. Crypto cannot renew automatically — there
         is no card on file for us to charge — so you pay again whenever you want another {interval},
         and we email you a few days before your access ends. Either way, NordStar Pro never handles
         your payment details, and you receive an access code once payment confirms.

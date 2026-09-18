@@ -10,7 +10,7 @@
  * — a hex value here would silently break every `/nn` class on the site.
  *
  * The channels below are exactly the hexes they replaced, so nothing changed colour:
- * #000000 is 0 0 0, #0B0B0B is 11 11 11, #D0F53C is 208 245 60, and so on.
+ * #000000 is 0 0 0, #0B0B0B is 11 11 11, #D6FD3A is 214 253 58, and so on.
  */
 :root {
   --bg: 0 0 0;
@@ -19,19 +19,45 @@
   --line: 31 31 31;
   --ink: 255 255 255;
   --ink-dim: 163 163 163;
-  --accent: 208 245 60;
+  /* #D6FD3A — the accent as the design file defines it, replacing #D6FD3A. */
+  --accent: 214 253 58;
   /* The lift on a primary button's hover. A token like any other: it was the last
      hard-coded colour in the system, and it was lime on every brand — including the
      blue one, where it turned the button acid green under the cursor. */
-  --accent-hover: 221 255 99;   /* #DDFF63 */
+  --accent-hover: 226 255 110;  /* a shade up from #D6FD3A, for the same lift on hover */
   --imprint: 216 207 192;
   --up: 0 224 138;
   --down: 255 77 94;
   --series-1: 63 168 47;
   --series-2: 139 111 232;
 
+  /*
+   * The light ground.
+   *
+   * The reference design alternates black bands with light ones, and that rhythm is most
+   * of what makes it read as it does. These are its exact values: #F3F4F6 for a light
+   * band, white for a card sitting on one, #111827 for text on either, and #E5E7EB for a
+   * hairline that has to show on a near-white surface where --line (near-black) cannot.
+   *
+   * Channels, not hex, for the same reason as everything above: Tailwind writes the alpha
+   * into them, so `text-ink-on-light/70` has to resolve to `rgb(17 24 39 / 0.7)`.
+   */
+  --paper: 243 244 246;
+  --paper-card: 255 255 255;
+  --ink-on-light: 17 24 39;
+  --ink-on-light-dim: 75 85 99;
+  --line-on-light: 229 231 235;
+  /*
+   * Error text on a light card.
+   *
+   * --down is #FF4D5E, which is built to glow on black and sits at about 3.3:1 on white —
+   * under the 4.5:1 a 13px message needs. A form that tells somebody their email is wrong
+   * in a colour they have to squint at has not told them anything.
+   */
+  --down-on-light: 190 18 60;
+
   --font-plex-mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --font-inter: 'Inter', system-ui, sans-serif;
+  --font-inter: 'Satoshi', 'Inter', system-ui, sans-serif;
 
   color-scheme: dark;
 }
@@ -50,7 +76,7 @@
   }
 
   ::selection {
-    background: rgba(208, 245, 60, 0.25);
+    background: rgba(214, 253, 58, 0.25);
   }
 
   :focus-visible {

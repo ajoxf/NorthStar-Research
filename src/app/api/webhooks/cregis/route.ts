@@ -185,8 +185,45 @@ export async function POST(request: Request) {
         })
       : null
 
-    // Stack onto unused time rather than truncating it, whichever is being renewed.
-    const current = renewingSection ? (held?.renewsAt ?? null) : existingMember.subscriptionRenewsAt
+    /*
+     * What this package contains, when the order names one.
+     *
+     * Read here so both the date below and the write inside the transaction agree about
+     * whether this is a package renewal or a legacy all-access one. Archived items are
+     * excluded, the same as at redemption — an item withdrawn from sale is not renewed
+     * into a fresh period by somebody else's payment.
+     */
+    const renewalPackageId = renewingSection ? null : (order.packageId ?? existingMember.packageId)
+    const renewalPackageItemIds = renewalPackageId
+      ? (
+          await db.packageItem.findMany({
+            where: { packageId: renewalPackageId, item: { archivedAt: null } },
+            select: { itemId: true },
+          })
+        ).map((row) => row.itemId)
+      : []
+
+    /*
+     * Stack onto unused time rather than truncating it, whichever is being renewed.
+     *
+     * For a package that is the latest date across its items, so renewing a bundle early
+     * keeps the time left on every part of it — taking the earliest would shorten the rest
+     * to match whichever item happened to lapse first.
+     */
+    const heldPackageRenewal = renewalPackageItemIds.length
+      ? (
+          await db.entitlement.aggregate({
+            where: { memberId: existingMember.id, itemId: { in: renewalPackageItemIds } },
+            _max: { renewsAt: true },
+          })
+        )._max.renewsAt
+      : null
+
+    const current = renewingSection
+      ? (held?.renewsAt ?? null)
+      : renewalPackageItemIds.length
+        ? heldPackageRenewal
+        : existingMember.subscriptionRenewsAt
     const from = current && current > new Date() ? current : new Date()
 
     await db.$transaction(async (tx) => {
@@ -217,16 +254,41 @@ export async function POST(request: Request) {
         return
       }
 
-      await tx.member.update({
-        where: { id: existingMember.id },
-        data: {
-          subscriptionStatus: 'active',
-          subscriptionRenewsAt: addPeriod(interval, from),
-          billingProvider: 'cregis',
-          packageId: order.packageId ?? existingMember.packageId,
-          renewalReminderSentAt: null,
-        },
-      })
+      /*
+       * A package renewal extends the package's items, not the member's own period.
+       *
+       * The same trap as the section branch above, one level out. `subscriptionStatus`
+       * and `subscriptionRenewsAt` *are* the all-access membership — writing them for
+       * somebody who bought one contributor's package would hand them the whole site on
+       * their second payment, having correctly sold them a slice on the first.
+       *
+       * Empty contents fall through to the member columns, matching `grantFor`: a package
+       * nobody has ticked anything onto still grants what it granted before, because the
+       * alternative is a paying member whose renewal quietly gives them nothing.
+       */
+      const renewingItemIds = renewalPackageItemIds.length > 0 ? renewalPackageItemIds : null
+
+      if (renewingItemIds) {
+        await tx.entitlement.updateMany({
+          where: { memberId: existingMember.id, itemId: { in: renewingItemIds } },
+          data: {
+            status: 'active',
+            renewsAt: addPeriod(interval, from),
+            cancelAtPeriodEnd: false,
+          },
+        })
+      } else {
+        await tx.member.update({
+          where: { id: existingMember.id },
+          data: {
+            subscriptionStatus: 'active',
+            subscriptionRenewsAt: addPeriod(interval, from),
+            billingProvider: 'cregis',
+            packageId: order.packageId ?? existingMember.packageId,
+            renewalReminderSentAt: null,
+          },
+        })
+      }
     })
 
     /*

@@ -595,7 +595,7 @@ function PackageForm({
                   <label key={item.id} className="flex items-start gap-2.5">
                     <input
                       type="checkbox"
-                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+                      className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
                       checked={itemIds.includes(item.id)}
                       onChange={(event) =>
                         setItemIds((current) =>
@@ -615,9 +615,17 @@ function PackageForm({
                 ))}
               </div>
               {itemIds.length === 0 ? (
+                /*
+                  This said "would grant no access at all", which was the opposite of the
+                  truth and the more dangerous way round to be wrong. An empty package
+                  falls back to the legacy all-access membership — see grantFor — so
+                  leaving it empty sells the whole site at this package's price.
+                */
                 <p className="mt-2 text-[13px] leading-relaxed text-down">
-                  Nothing ticked, so this package would grant no access at all. Tick at least
-                  one before putting it on sale.
+                  Nothing ticked, so this package still grants <strong>the whole site</strong> —
+                  every contributor, every section. That is the old all-access membership.
+                  Tick what it should actually include and it will grant only that from the
+                  next sale onwards.
                 </p>
               ) : (
                 <Hint>
@@ -642,7 +650,7 @@ function PackageForm({
           <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
               checked={trialEnabled}
               onChange={(event) => setTrialEnabled(event.target.checked)}
             />
@@ -684,7 +692,7 @@ function PackageForm({
           <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
             <input
               type="checkbox"
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[#D0F53C]"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
               checked={sellByCard}
               disabled={!stripeReady}
               onChange={(event) => setSellByCard(event.target.checked)}

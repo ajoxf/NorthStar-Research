@@ -31,6 +31,40 @@ describe('grantFor', () => {
     const grant = grantFor({ sectionId: 'sec_gone' }, fallback, null)
     assert.equal(grant.kind, 'all_access')
   })
+
+  it('grants a package its contents, and not the whole site', () => {
+    /*
+     * The end of all-access, in one assertion.
+     *
+     * A package used to take the all_access branch whatever was in it, so buying one
+     * contributor's $89 package wrote the subscription columns and opened the desk's work
+     * too. With contents ticked it is now its own kind of grant.
+     */
+    const grant = grantFor(
+      { sectionId: null },
+      { ...fallback, itemIds: ['item_energy', 'item_commodities'] },
+      null,
+    )
+    assert.deepEqual(grant, {
+      kind: 'package',
+      interval: 'month',
+      packageId: 'pkg_1',
+      itemIds: ['item_energy', 'item_commodities'],
+    })
+  })
+
+  it('still grants all-access for a package with no contents', () => {
+    /*
+     * The transitional rule, asserted so it cannot be "tidied up" into a lock-out.
+     *
+     * A package nobody has ticked contents onto has nothing to hand over. Granting
+     * "exactly its items" would mean a buyer paying and receiving an empty portal, so the
+     * empty case keeps the access it has today. Over-granting is recoverable; taking away
+     * what somebody just paid for is not.
+     */
+    const grant = grantFor({ sectionId: null }, { ...fallback, itemIds: [] }, null)
+    assert.equal(grant.kind, 'all_access')
+  })
 })
 
 describe('memberSubscriptionFields', () => {
@@ -50,6 +84,18 @@ describe('memberSubscriptionFields', () => {
       subscriptionRenewsAt: renewsAt,
       packageId: 'pkg_1',
     })
+  })
+
+  it('does not activate the membership for a package with contents', () => {
+    /*
+     * The same safety property as the section case, and the reason "no all-access" is a
+     * code change rather than an admin one. A package buyer's access is now entirely the
+     * entitlements written beside this; the two columns that would open the whole site are
+     * left alone. `packageId` is recorded because the renewal length and the account page
+     * need to know what they are on — nothing in `isAllAccess` reads it.
+     */
+    const grant = grantFor({ sectionId: null }, { ...fallback, itemIds: ['item_energy'] }, null)
+    assert.deepEqual(memberSubscriptionFields(grant, now, renewsAt), { packageId: 'pkg_1' })
   })
 
   it('never carries a section id into a member column', () => {
@@ -129,13 +175,19 @@ describe('monthsGranted', () => {
 })
 
 describe('grantFor — what a package hands over', () => {
-  it('an all-access code grants the package items: this is the bundle', () => {
+  it('a package code grants the package items: this is the bundle', () => {
+    /*
+     * This asserted `all_access` until packages stopped being all-access. The bundle part
+     * is unchanged — "Research + RAMP" is still a package with two items ticked — but the
+     * kind is now `package`, which is what stops the subscription columns being written
+     * and the whole site being handed over alongside the two items.
+     */
     const grant = grantFor(
       { sectionId: null },
       { interval: 'month', packageId: 'pkg_bundle', itemIds: ['item_research', 'item_ramp'] },
       null,
     )
-    assert.equal(grant.kind, 'all_access')
+    assert.equal(grant.kind, 'package')
     assert.deepEqual(grant.itemIds, ['item_research', 'item_ramp'])
   })
 

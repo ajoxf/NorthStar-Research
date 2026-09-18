@@ -6,6 +6,7 @@ import { del } from '@vercel/blob'
 import { adminInput } from '@/app/api/admin/_admin-route'
 import { isAuthorPhotoUrl } from '@/lib/author-photo'
 import { db } from '@/lib/db'
+import { syncItemNames } from '@/lib/section-repair'
 import { authorInputSchema } from '@/lib/section-shape'
 
 export const runtime = 'nodejs'
@@ -62,6 +63,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     } catch (error) {
       console.error('[admin:authors] could not remove the replaced photograph', error)
     }
+  }
+
+  /*
+   * A rename changes what every section of theirs is called — "Energy by Dean Rogers" is
+   * computed from this name — so the stored item names follow it. See syncItemNames.
+   */
+  if (author.name !== existing.name) {
+    const sections = await db.section.findMany({
+      where: { authorId: params.id },
+      select: { id: true },
+    })
+    await syncItemNames(sections.map((section) => section.id))
   }
 
   return NextResponse.json({ ok: true, author })

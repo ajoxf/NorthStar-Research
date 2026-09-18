@@ -4,7 +4,9 @@ import { redirect } from 'next/navigation'
 import { Check, FileQuestion, Lock } from 'lucide-react'
 
 import { TrialOffer } from '@/app/(portal)/trial-offer'
+import { ExpertCard } from '@/components/expert-card'
 import { ReportCard, ReportRow } from '@/components/report-card'
+import { memberExperts } from '@/lib/member-experts'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember, memberHasAnyAccess, memberReportWhere } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -83,6 +85,12 @@ export default async function DashboardPage({
     select: { id: true, type: true, title: true, summary: true, publishDate: true },
   })
 
+  /*
+   * Whose work this member can open. Derived from the reports themselves rather than from
+   * a second reading of their subscription — see lib/member-experts.
+   */
+  const experts = await memberExperts(member)
+
   const name = fullName(member).split(' ')[0]
 
   return (
@@ -135,6 +143,45 @@ export default async function DashboardPage({
             />
           ))}
         </div>
+      )}
+
+      {/*
+        Who the member actually subscribes to, as a way in.
+
+        Placed under the latest editions rather than above them, because somebody opening
+        the portal is usually here for what just landed. This is the second question —
+        "show me everything from Dean" — and it is the one the archive could not answer
+        without knowing which names a member holds.
+
+        Shown only to somebody who holds more than one. With a single expert the band is
+        one card restating what the whole dashboard already is — every report on the page
+        is theirs, and "everything of theirs" is what the Archive link already opens. A
+        band that tells a member something they can see without it is furniture.
+      */}
+      {experts.length > 1 && (
+        <section className="mt-16">
+          <div className="mb-5">
+            <span className="eyebrow">Your experts</span>
+            <h2 className="mt-3 text-2xl text-ink">Everyone you subscribe to.</h2>
+            <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-ink-dim">
+              Open one to read everything of theirs you have access to.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {experts.map((expert) => (
+              <ExpertCard
+                key={expert.id}
+                href={`/archive?expert=${encodeURIComponent(expert.slug)}`}
+                name={expert.name}
+                headline={expert.headline}
+                photoUrl={expert.photoUrl}
+                topics={expert.topics}
+                meta={`${expert.reportCount} ${expert.reportCount === 1 ? 'report' : 'reports'}`}
+              />
+            ))}
+          </div>
+        </section>
       )}
 
       {recent.length > 0 && (

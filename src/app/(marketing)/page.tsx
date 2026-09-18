@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Archive, ArrowRight, Check, FileText, Smartphone } from 'lucide-react'
 
 import { AuthorAvatar } from '@/components/author-avatar'
+import { Band, BandHeading, Eyebrow } from '@/components/band'
 import { HeroMedia } from '@/components/hero-media'
 import { ButtonLink } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -79,16 +80,20 @@ export default async function LandingPage() {
    */
   const contributors = sold.authors
     .map((entry) => {
-      const liveSectionCount = allSections.filter(
-        (section) => section.author.id === entry.author.id,
-      ).length
+      const mine = allSections.filter((section) => section.author.id === entry.author.id)
+      const prices = [
+        ...entry.packages.map((pkg) => pkg.priceCents),
+        ...mine.map((section) => section.priceCents),
+      ]
       return {
         ...entry.author,
         hasPackages: entry.packages.length > 0,
-        liveSectionCount,
+        liveSectionCount: mine.length,
+        // The cheapest way in, across packages and single subjects alike.
+        fromCents: prices.length > 0 ? Math.min(...prices) : null,
         soon: comingSoonVisible({
           comingSoon: entry.author.comingSoon,
-          liveSectionCount,
+          liveSectionCount: mine.length,
         }),
       }
     })
@@ -147,10 +152,16 @@ export default async function LandingPage() {
         hasSections={contributors.length > 0}
         packagesOnSale={onSale.length}
       />
+      {/*
+        The bands alternate, and the order is what makes them do so: dark hero, light
+        subjects, dark contributors, light prices, lime close. Two light bands in a row
+        would flatten the whole page, which is the one thing this rhythm exists to avoid —
+        so the order here is load-bearing, not arrangement.
+      */}
       {contributors.length > 0 ? (
         <>
-          <ContributorStrip contributors={contributors} />
           <CoverageTable sections={allSections} currency={plan.currency} />
+          <ContributorStrip contributors={contributors} currency={plan.currency} />
         </>
       ) : (
         <CoverageSection />
@@ -169,161 +180,8 @@ export default async function LandingPage() {
       ) : (
         <PricingSection plan={plan} trial={trial} cheapestSectionCents={cheapest} />
       )}
+      <LimeStrip trial={trial} />
     </>
-  )
-}
-
-/**
- * The people, in one line each.
- *
- * Deliberately thin. This band used to carry prices and a call to action per contributor,
- * which made it a second storefront sitting above the real one — a visitor met the same
- * names, the same faces and two different prices before reaching the packages. Selling is
- * the grid's job now, so what is left here is the claim the grid rests on: real people,
- * named, each covering what they know. The link goes to their page for anybody who wants
- * to read about them before deciding.
- */
-function ContributorStrip({
-  contributors,
-}: {
-  contributors: {
-    id: string
-    slug: string
-    name: string
-    headline: string | null
-    photoUrl: string | null
-    /** Announced but not yet publishing. Labelled rather than quietly listed. */
-    soon: boolean
-  }[]
-}) {
-  return (
-    <section className="border-b border-line">
-      <div className="mx-auto max-w-6xl px-5 py-14">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-          <div>
-            <span className="eyebrow">Written by</span>
-            <h2 className="mt-2 text-balance font-display text-2xl tracking-[-0.02em] text-ink sm:text-[28px]">
-              Independent experts, each covering what they know.
-            </h2>
-          </div>
-          <Link
-            href="/experts"
-            className="inline-flex items-center gap-1.5 text-[14px] text-accent underline underline-offset-4"
-          >
-            All contributors
-            <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-          </Link>
-        </div>
-
-        <ul className="mt-8 flex flex-wrap gap-x-12 gap-y-7">
-          {contributors.map((contributor) => (
-            <li key={contributor.id}>
-              <Link
-                href={`/experts/${contributor.slug}`}
-                className="group flex items-center gap-3"
-              >
-                <AuthorAvatar name={contributor.name} photoUrl={contributor.photoUrl} size={72} />
-                <span className="min-w-0">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="text-[15px] text-ink transition-colors group-hover:text-accent">
-                      {contributor.name}
-                    </span>
-                    {contributor.soon && (
-                      <span className="rounded-full border border-accent/40 bg-accent/10 px-2 py-0.5 text-[10px] uppercase tracking-[0.12em] text-accent">
-                        Coming soon
-                      </span>
-                    )}
-                  </span>
-                  {contributor.headline && (
-                    <span className="mt-0.5 block text-[13px] leading-snug text-ink-dim">
-                      {contributor.headline}
-                    </span>
-                  )}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
-  )
-}
-
-/**
- * Every subject, who writes it and what it costs, in one table.
- *
- * The card grid above is how somebody browses when they are choosing a person. This is how
- * they look when they already know the subject they want — and it is the shape that keeps
- * working at thirty sections, where thirty cards would not.
- */
-function CoverageTable({
-  sections,
-  currency,
-}: {
-  sections: {
-    id: string
-    priceCents: number
-    topic: { name: string }
-    author: { name: string; slug: string }
-  }[]
-  currency: string
-}) {
-  // One row per subject, naming everybody who covers it and the cheapest way in.
-  const byTopic = [...new Set(sections.map((section) => section.topic.name))].map((name) => {
-    const rows = sections.filter((section) => section.topic.name === name)
-    return {
-      name,
-      authors: [...new Set(rows.map((row) => row.author.name))],
-      fromCents: Math.min(...rows.map((row) => row.priceCents)),
-      href: rows.length === 1 ? `/experts/${rows[0].author.slug}` : '/coverage',
-    }
-  })
-
-  return (
-    <section className="border-b border-line bg-panel-2/40">
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
-        <div className="max-w-2xl">
-          <span className="eyebrow">Coverage</span>
-          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
-            Every subject, and who writes it.
-          </h2>
-          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
-            Buy a single subject from a single contributor, if that is all you follow.
-          </p>
-        </div>
-
-        <ul className="mt-10 divide-y divide-line border-y border-line">
-          {byTopic.map((topic) => (
-            <li key={topic.name}>
-              <Link
-                href={topic.href}
-                className="group flex flex-wrap items-baseline gap-x-5 gap-y-1 py-5 transition-colors hover:bg-panel/60"
-              >
-                <span className="min-w-[8rem] text-[17px] text-ink">{topic.name}</span>
-                <span className="flex-1 text-[14px] text-ink-dim">
-                  {topic.authors.join(' · ')}
-                </span>
-                <span className="font-mono text-[14px] text-ink">
-                  from {formatPrice(topic.fromCents, currency)}/mo
-                </span>
-                <ArrowRight
-                  className="h-4 w-4 shrink-0 text-ink-dim transition-colors group-hover:text-accent"
-                  aria-hidden
-                />
-              </Link>
-            </li>
-          ))}
-        </ul>
-
-        <Link
-          href="/coverage"
-          className="mt-8 inline-flex items-center gap-1.5 text-[15px] text-accent underline underline-offset-4"
-        >
-          See every subject and who covers it
-          <ArrowRight className="h-4 w-4" aria-hidden />
-        </Link>
-      </div>
-    </section>
   )
 }
 
@@ -389,7 +247,7 @@ function Hero({
             technical structure and the macro context behind it, with the reasoning shown. No
             noise and no upsells.{' '}
             {hasSections
-              ? 'Take the whole desk, or just the expert you follow.'
+              ? 'Subscribe to the experts whose subjects you actually follow.'
               : 'One price.'}
           </p>
 
@@ -397,7 +255,9 @@ function Hero({
           <ul className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3">
             {[
               { icon: FileText, label: '3 reports / week' },
-              { icon: Archive, label: 'Full archive' },
+              // "Full archive" read as the whole site's. What a subscriber gets is every
+              // past edition of what they bought, which is what this now says.
+              { icon: Archive, label: 'Archive included' },
               { icon: Smartphone, label: 'Mobile friendly' },
             ].map((item) => (
               <li key={item.label} className="flex items-center gap-2">
@@ -454,6 +314,214 @@ function Hero({
   )
 }
 
+/**
+ * The people, in one line each.
+ *
+ * Faces, names and the price of getting in — one figure each, not a card of options.
+ *
+ * This band once carried a full price block and a call to action per person, which made
+ * it a second storefront above the real one: the same names met twice, with two different
+ * prices, before reaching anything buyable. It was cut back to names only, and that went
+ * too far the other way — somebody comparing four experts is comparing cost as much as
+ * coverage, and making them open four profiles to find out is friction this grid exists to
+ * remove. So: one "from" figure, and the packages themselves still live further down.
+ */
+function ContributorStrip({
+  contributors,
+  currency,
+}: {
+  contributors: {
+    id: string
+    slug: string
+    name: string
+    headline: string | null
+    photoUrl: string | null
+    /** The lowest price at which this person can be read. Null while nothing is on sale. */
+    fromCents: number | null
+    /** Announced but not yet publishing. Labelled rather than quietly listed. */
+    soon: boolean
+  }[]
+  currency: string
+}) {
+  return (
+    <Band tone="dark">
+      <div className="text-center">
+        <Eyebrow tone="dark">The desk</Eyebrow>
+        <BandHeading className="mx-auto mt-4 max-w-2xl">
+          Research from practitioners.
+        </BandHeading>
+        <p className="mx-auto mt-4 max-w-xl text-[16px] leading-relaxed text-ink-dim">
+          Every report carries a name and the reasoning behind it. Subscribe to the people
+          you follow rather than to everything at once.
+        </p>
+      </div>
+
+      {/*
+        Portrait cards, matching the contributors page — the same people should not be a
+        grid of faces in one place and a list of names in another.
+      */}
+      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {contributors.slice(0, 4).map((contributor) => (
+          <Link
+            key={contributor.id}
+            href={`/experts/${contributor.slug}`}
+            className="group relative block aspect-[3/4] overflow-hidden rounded-2xl border border-line bg-panel-2 transition-colors hover:border-accent/45"
+          >
+            {contributor.photoUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- an arbitrary host,
+                 which next/image would need configuring for one URL at a time. */
+              <img
+                src={contributor.photoUrl}
+                alt=""
+                className="absolute inset-0 h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
+                loading="lazy"
+              />
+            ) : (
+              <span className="absolute inset-0 flex items-center justify-center">
+                <AuthorAvatar name={contributor.name} photoUrl={null} size={96} />
+              </span>
+            )}
+
+            <div
+              className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black via-black/75 to-transparent"
+              aria-hidden
+            />
+
+            <div className="absolute inset-x-0 bottom-0 p-5">
+              {contributor.soon && (
+                <span className="mb-2 inline-block rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-accent backdrop-blur-sm">
+                  Coming soon
+                </span>
+              )}
+              <h3 className="font-display text-[17px] leading-snug text-white">
+                {contributor.name}
+              </h3>
+              {contributor.headline && (
+                <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-white/70">
+                  {contributor.headline}
+                </p>
+              )}
+              {/* The price belongs on the card — see the note on the experts listing. */}
+              {!contributor.soon && contributor.fromCents !== null && (
+                <p className="mt-2 text-[14px] text-white">
+                  from{' '}
+                  <span className="font-medium">
+                    {formatPrice(contributor.fromCents, currency)}
+                  </span>
+                  <span className="text-white/70">/mo</span>
+                </p>
+              )}
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="mt-10 text-center">
+        <ButtonLink href="/experts" size="lg" variant="secondary">
+          View all experts
+        </ButtonLink>
+      </div>
+    </Band>
+  )
+}
+
+/**
+ * Every subject, who writes it and what it costs.
+ *
+ * On the light ground, as the reference puts its catalogue: white cards on grey, which is
+ * what separates "here is the shelf" from the dark bands either side of it. Cards rather
+ * than the table this used to be — a table of three rows reads as a spreadsheet, and this
+ * is the first thing on the page that a buyer is meant to want.
+ */
+function CoverageTable({
+  sections,
+  currency,
+}: {
+  sections: {
+    id: string
+    priceCents: number
+    imageUrl: string | null
+    topic: { name: string }
+    author: { name: string; slug: string }
+  }[]
+  currency: string
+}) {
+  // One card per subject, naming everybody who covers it and the cheapest way in.
+  const byTopic = [...new Set(sections.map((section) => section.topic.name))].map((name) => {
+    const rows = sections.filter((section) => section.topic.name === name)
+    return {
+      name,
+      authors: [...new Set(rows.map((row) => row.author.name))],
+      fromCents: Math.min(...rows.map((row) => row.priceCents)),
+      image: rows.find((row) => row.imageUrl)?.imageUrl ?? null,
+      href: rows.length === 1 ? `/experts/${rows[0].author.slug}` : '/coverage',
+    }
+  })
+
+  return (
+    <Band tone="light">
+      <div className="text-center">
+        <Eyebrow tone="light">Coverage</Eyebrow>
+        <BandHeading className="mx-auto mt-4 max-w-2xl">
+          Every subject, and who writes it.
+        </BandHeading>
+        <p className="mx-auto mt-4 max-w-xl text-[16px] leading-[1.7] text-ink-on-light-dim">
+          Buy a single subject from a single contributor, if that is all you follow.
+        </p>
+      </div>
+
+      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {byTopic.map((topic) => (
+          <Link
+            key={topic.name}
+            href={topic.href}
+            className="group flex flex-col overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)] transition-shadow hover:shadow-[0_8px_24px_rgba(17,24,39,0.10)]"
+          >
+            {topic.image && (
+              <div className="aspect-[16/9] w-full overflow-hidden bg-paper">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={topic.image}
+                  alt=""
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  loading="lazy"
+                />
+              </div>
+            )}
+
+            <div className="flex flex-1 flex-col p-6">
+              <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
+                {topic.name}
+              </h3>
+              <p className="mt-2 flex-1 text-[14px] leading-[1.6] text-ink-on-light-dim">
+                {topic.authors.join(' · ')}
+              </p>
+
+              <div className="mt-5 flex items-center justify-between border-t border-line-on-light pt-4">
+                <span className="text-[15px] text-ink-on-light">
+                  from{' '}
+                  <span className="font-medium">{formatPrice(topic.fromCents, currency)}</span>
+                  <span className="text-ink-on-light-dim">/mo</span>
+                </span>
+                <ArrowRight
+                  className="h-4 w-4 text-ink-on-light-dim transition-transform group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="mt-10 text-center">
+        <ButtonLink href="/coverage" size="lg" variant="on-light">
+          See every subject
+        </ButtonLink>
+      </div>
+    </Band>
+  )
+}
+
 const COVERAGE = [
   {
     title: 'Commodities & Energy',
@@ -474,35 +542,33 @@ const COVERAGE = [
 
 function CoverageSection() {
   return (
-    <section className="border-b border-line">
-      <div className="mx-auto max-w-6xl px-5 py-16 sm:py-20">
-        <div className="max-w-2xl">
-          <span className="eyebrow">Coverage</span>
-          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
-            Every edition works the same way.
-          </h2>
-          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
-            Charts first. Technical structure read against the macro backdrop, with the
-            reasoning shown — so you can weigh it against your own view rather than take it
-            on trust.
-          </p>
-        </div>
-
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
-          {COVERAGE.map((card) => (
-            <div
-              key={card.title}
-              className="flex flex-col rounded-lg border border-line bg-panel p-6 transition-colors hover:border-accent/40"
-            >
-              <h3 className="text-[18px] text-ink">{card.title}</h3>
-              <p className="mt-2 flex-1 text-[14px] leading-relaxed text-ink-dim">
-                {card.analysis}
-              </p>
-            </div>
-          ))}
-        </div>
+    <Band tone="light">
+      <div className="max-w-2xl">
+        <Eyebrow tone="light">Coverage</Eyebrow>
+        <BandHeading className="mt-4">Every edition works the same way.</BandHeading>
+        <p className="mt-4 text-[16px] leading-relaxed text-ink-on-light-dim">
+          Charts first. Technical structure read against the macro backdrop, with the
+          reasoning shown — so you can weigh it against your own view rather than take it
+          on trust.
+        </p>
       </div>
-    </section>
+
+      <div className="mt-12 grid gap-5 md:grid-cols-3">
+        {COVERAGE.map((card) => (
+          <div
+            key={card.title}
+            className="flex flex-col rounded-2xl bg-paper-card p-6 shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
+          >
+            <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
+              {card.title}
+            </h3>
+            <p className="mt-2.5 flex-1 text-[15px] leading-[1.6] text-ink-on-light-dim">
+              {card.analysis}
+            </p>
+          </div>
+        ))}
+      </div>
+    </Band>
   )
 }
 
@@ -528,14 +594,12 @@ function PackagePricing({
   trialDaysBySlug: Map<string, number>
 }) {
   return (
-    <section id="pricing" className="border-t border-line">
-      <div className="mx-auto max-w-6xl px-5 py-20">
+    <Band tone="light" id="pricing">
+      <div>
         <div className="mx-auto max-w-2xl text-center">
-          <span className="eyebrow">Pricing</span>
-          <h2 className="mt-3 text-balance font-display text-3xl tracking-[-0.02em] text-ink sm:text-4xl">
-            Choose your package.
-          </h2>
-          <p className="mt-3 text-[16px] leading-relaxed text-ink-dim">
+          <Eyebrow tone="light">Pricing</Eyebrow>
+          <BandHeading className="mt-4">Choose your package.</BandHeading>
+          <p className="mt-4 text-[16px] leading-[1.7] text-ink-on-light-dim">
             Each one is written by the contributor whose name is on it, and priced by them.
             Pay by card and it renews itself — cancel any time — or pay in crypto and renew
             whenever you choose.
@@ -546,7 +610,10 @@ function PackagePricing({
           {packages.map((pkg) => {
             const trialDays = trialDaysBySlug.get(pkg.slug)
             return (
-              <div key={pkg.id} className="panel flex flex-col p-6">
+              <div
+                key={pkg.id}
+                className="flex flex-col rounded-2xl bg-paper-card p-6 shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
+              >
                 {/* The face first. Whose work this is comes before what it costs. */}
                 <div className="flex items-center gap-3">
                   <AuthorAvatar
@@ -555,25 +622,29 @@ function PackagePricing({
                     size={64}
                   />
                   <div className="min-w-0">
-                    <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
+                    <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-on-light-dim">
                       {pkg.author ? 'Written by' : 'The desk'}
                     </p>
-                    <p className="mt-0.5 truncate text-[14px] text-ink">
+                    <p className="mt-0.5 truncate text-[14px] text-ink-on-light">
                       {pkg.author?.name ?? 'NordStar Pro'}
                     </p>
                   </div>
                 </div>
 
-                <h3 className="mt-5 font-display text-xl text-ink">{pkg.name}</h3>
+                <h3 className="mt-5 text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
+                  {pkg.name}
+                </h3>
                 {pkg.description && (
-                  <p className="mt-2 text-[14px] leading-relaxed text-ink-dim">{pkg.description}</p>
+                  <p className="mt-2 text-[14px] leading-[1.6] text-ink-on-light-dim">
+                    {pkg.description}
+                  </p>
                 )}
 
-                <div className="mt-5 flex flex-wrap items-baseline gap-x-2.5 border-t border-line pt-5">
-                  <span className="font-display text-3xl text-ink">
+                <div className="mt-5 flex flex-wrap items-baseline gap-x-2.5 border-t border-line-on-light pt-5">
+                  <span className="font-display text-[34px] font-medium leading-none tracking-[-0.03em] text-ink-on-light">
                     {formatPrice(pkg.priceCents, pkg.currency)}
                   </span>
-                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                  <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-light-dim">
                     per {pkg.interval}
                   </span>
                 </div>
@@ -581,8 +652,11 @@ function PackagePricing({
                 {pkg.features.length > 0 && (
                   <ul className="mt-4 flex-1 space-y-2">
                     {pkg.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-[14px] text-ink">
-                        <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-up" aria-hidden />
+                      <li
+                        key={feature}
+                        className="flex items-start gap-2 text-[14px] leading-[1.6] text-ink-on-light"
+                      >
+                        <Check className="mt-1 h-3.5 w-3.5 shrink-0 text-ink-on-light" aria-hidden />
                         {feature}
                       </li>
                     ))}
@@ -604,7 +678,9 @@ function PackagePricing({
                 <ButtonLink
                   href={`/join?package=${pkg.slug}`}
                   size="lg"
-                  variant={trialDays !== undefined ? 'secondary' : 'primary'}
+                  // On a white card, `secondary` would draw white on white. The light-ground
+                  // pair is the whole reason those variants exist.
+                  variant={trialDays !== undefined ? 'on-light' : 'primary'}
                   className={trialDays !== undefined ? 'mt-3 w-full' : 'mt-6 w-full'}
                 >
                   Subscribe
@@ -613,7 +689,7 @@ function PackagePricing({
                 {pkg.author && (
                   <Link
                     href={`/experts/${pkg.author.slug}`}
-                    className="mt-3 text-center text-[13px] text-ink-dim underline underline-offset-4 hover:text-ink"
+                    className="mt-3 text-center text-[13px] text-ink-on-light-dim underline underline-offset-4 hover:text-ink-on-light"
                   >
                     About {pkg.author.name}
                   </Link>
@@ -623,14 +699,40 @@ function PackagePricing({
           })}
         </div>
 
-        <p className="mt-8 text-center text-[13px] text-ink-dim">
+        <p className="mt-8 text-center text-[13px] text-ink-on-light-dim">
           Already paid?{' '}
-          <Link href="/redeem" className="text-accent underline underline-offset-4">
+          <Link
+            href="/redeem"
+            className="text-ink-on-light underline underline-offset-4"
+          >
             Redeem your code
           </Link>
         </p>
       </div>
-    </section>
+    </Band>
+  )
+}
+
+/**
+ * The closing strip, in the accent.
+ *
+ * The loudest thing on the page, and the last: one sentence about what arrives and one
+ * button. It works because there is exactly one of it — a second lime band anywhere would
+ * cost this one everything it has.
+ */
+function LimeStrip({ trial }: { trial: { days: number } | null }) {
+  return (
+    <Band tone="lime" innerClassName="py-14 sm:py-16">
+      <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+        <p className="max-w-xl text-balance font-display text-[26px] font-medium leading-[1.15] tracking-[-0.03em] text-ink-on-light sm:text-[32px]">
+          Independent technical and macro trends, three reports a week.
+        </p>
+        <ButtonLink href={trial ? '/trial' : '/join'} size="lg" variant="on-light-solid" className="shrink-0">
+          {trial ? `Start a free ${trial.days}-day trial` : 'Become a member'}
+          <ArrowRight className="h-4 w-4" aria-hidden />
+        </ButtonLink>
+      </div>
+    </Band>
   )
 }
 

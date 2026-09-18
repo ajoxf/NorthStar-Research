@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 
 import { SectionBuy } from '@/app/(marketing)/coverage/section-buy'
 import { AuthorAvatar } from '@/components/author-avatar'
+import { Band, BandHeading, Eyebrow } from '@/components/band'
 import { EmptyPreview } from '@/components/empty-preview'
 import { PreviewBanner } from '@/components/preview-banner'
 import { ToastProvider } from '@/components/ui/toast'
@@ -64,29 +65,36 @@ export default async function CoveragePage() {
   return (
     <ToastProvider>
       {preview && <PreviewBanner />}
-      <div className="mx-auto max-w-4xl px-5 py-20">
-        <span className="eyebrow">Coverage</span>
-        <h1 className="mt-3 text-balance text-4xl leading-tight text-ink sm:text-5xl">
+      {/* Dark hero, light catalogue — the same rhythm the homepage and the experts
+          listing use, so the three marketing pages read as one site. */}
+      <Band tone="dark">
+        <Eyebrow tone="dark">Coverage</Eyebrow>
+        <h1 className="mt-4 text-balance font-display text-4xl font-medium leading-[1.04] tracking-[-0.04em] text-ink sm:text-6xl">
           Subscribe to the subjects you follow.
         </h1>
-        <p className="mt-5 max-w-2xl text-[17px] leading-relaxed text-ink-dim">
+        <p className="mt-5 max-w-2xl text-[17px] leading-[1.7] text-ink-dim">
           Each subject is covered by a named expert, and each is bought separately. Take one, or
           take several — they bill independently and can be cancelled independently.
         </p>
+      </Band>
 
-        <div className="mt-14 space-y-14">
+      <Band tone="light">
+        <div className="space-y-16">
           {covered.map((topic) => (
             <section key={topic.id}>
-              <h2 className="font-display text-2xl text-ink">{topic.name}</h2>
+              <BandHeading className="text-[28px] sm:text-[32px]">{topic.name}</BandHeading>
               {topic.blurb && (
-                <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-ink-dim">
+                <p className="mt-2.5 max-w-2xl text-[16px] leading-[1.7] text-ink-on-light-dim">
                   {topic.blurb}
                 </p>
               )}
 
               <div className="mt-5 grid gap-4">
                 {topic.sections.map((section) => (
-                  <div key={section.id} className="panel overflow-hidden">
+                  <div
+                    key={section.id}
+                    className="overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
+                  >
                     {/*
                       The title image, when the subject has one. A banner rather than a
                       thumbnail, because it is the first thing on the card and a small one
@@ -94,7 +102,7 @@ export default async function CoveragePage() {
                       Absent, the card is exactly as it was — the name on a plain panel.
                     */}
                     {section.imageUrl && (
-                      <div className="aspect-[21/9] w-full overflow-hidden border-b border-line bg-panel-2">
+                      <div className="aspect-[21/9] w-full overflow-hidden border-b border-line-on-light bg-paper">
                         {/* eslint-disable-next-line @next/next/no-img-element -- an
                             arbitrary host, which next/image would need configuring for. */}
                         <img
@@ -115,35 +123,36 @@ export default async function CoveragePage() {
                           size={64}
                         />
                         <div className="min-w-0">
-                          <h3 className="font-display text-lg leading-snug text-ink">
+                          <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
                             {sectionName(section)}
                           </h3>
                           <Link
                             href={`/experts/${section.author.slug}`}
-                            className="text-[13px] text-accent underline underline-offset-4"
+                            className="text-[13px] text-ink-on-light-dim underline underline-offset-4 hover:text-ink-on-light"
                           >
                             About {section.author.name}
                           </Link>
                         </div>
                       </div>
                       <span className="shrink-0 text-right">
-                        <span className="block font-display text-2xl leading-none text-ink">
+                        <span className="block font-display text-[26px] font-medium leading-none tracking-[-0.03em] text-ink-on-light">
                           {formatPrice(section.priceCents, section.currency)}
                         </span>
-                        <span className="mt-1 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+                        <span className="mt-1 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-light-dim">
                           per {section.interval}
                         </span>
                       </span>
                     </div>
 
                     {section.description && (
-                      <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
+                      <p className="mt-4 text-[15px] leading-[1.6] text-ink-on-light-dim">
                         {section.description}
                       </p>
                     )}
 
-                    <div className="mt-5 border-t border-line pt-5">
+                    <div className="mt-5 border-t border-line-on-light pt-5">
                       <SectionBuy
+                        tone="light"
                         sectionId={section.id}
                         name={sectionName(section)}
                         trialDays={section.item ? (sectionTrials.get(section.item.slug) ?? null) : null}
@@ -157,7 +166,7 @@ export default async function CoveragePage() {
             </section>
           ))}
         </div>
-      </div>
+      </Band>
     </ToastProvider>
   )
 }

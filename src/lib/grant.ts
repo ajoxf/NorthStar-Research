@@ -23,7 +23,15 @@
 export type BillingIntervalValue = 'month' | 'year'
 
 export type Grant =
+  /**
+   * The legacy membership: the subscription columns on Member, which open everything.
+   *
+   * Reached now only by a package with nothing ticked onto it, and by a code whose section
+   * has vanished. See {@link grantFor} for why that fallback is the safe direction.
+   */
   | { kind: 'all_access'; interval: BillingIntervalValue; packageId: string | null; itemIds: string[] }
+  /** A package with contents: exactly those items, and not one thing more. */
+  | { kind: 'package'; interval: BillingIntervalValue; packageId: string | null; itemIds: string[] }
   | { kind: 'section'; interval: BillingIntervalValue; sectionId: string; itemIds: string[] }
 
 /**
@@ -73,24 +81,49 @@ export function grantFor(
       itemIds: section.itemId ? [section.itemId] : [],
     }
   }
-  // A code naming a section that has since been deleted would otherwise grant nothing at
-  // all. Sections are never deleted, only archived, so this is defensive — but the safe
-  // direction for a defensive branch is the one the buyer already had before sections.
+  /*
+   * A package, which grants its contents — or everything, when it has no contents.
+   *
+   * **This is the line that decides whether all-access exists.** A package used to take
+   * the `all_access` branch unconditionally, which meant the subscription columns were
+   * written for every package buyer and `isAllAccess` opened the whole site to them. An
+   * $89 subscription to one contributor read the desk's work, and the per-package model
+   * was a price list in front of a single product.
+   *
+   * With contents ticked, the grant is those items and nothing else.
+   *
+   * **The empty case deliberately still grants everything**, and the direction matters. A
+   * package nobody has ticked contents onto has no items to hand over; granting "exactly
+   * its items" would mean granting nothing, so the moment this shipped every buyer of an
+   * un-migrated package would pay and receive an empty portal. Failing towards the access
+   * they have today cannot lock out somebody who has paid — it can only over-grant, which
+   * is what happens now anyway — and the admin says loudly which packages are in that
+   * state. Tick contents onto a package and its all-access days end with the next sale.
+   *
+   * A code naming a section that has since been deleted lands here too. Sections are never
+   * deleted, only archived, so that is defensive — but the safe direction for a defensive
+   * branch is the one the buyer already had.
+   */
+  const itemIds = fallback.itemIds ?? []
   return {
-    kind: 'all_access',
+    kind: itemIds.length > 0 ? 'package' : 'all_access',
     interval: fallback.interval,
     packageId: fallback.packageId,
-    // Whatever the package has ticked. This is the bundle: "Research + RAMP" is a package
-    // with more items on it, not a different kind of grant.
-    itemIds: fallback.itemIds ?? [],
+    itemIds,
   }
 }
 
 /**
  * The Member columns a grant may write.
  *
- * Empty for a section grant. That emptiness is the whole safety property of this module:
- * see the note at the top.
+ * Empty for a section grant, and all but empty for a package with contents. That emptiness
+ * is the whole safety property of this module: see the note at the top.
+ *
+ * A package grant records *which* package was bought and stops there. `packageId` is not
+ * an access column — nothing in `isAllAccess` reads it — it is how the renewal length and
+ * the account page know what somebody is on. The two columns that do grant access,
+ * `subscriptionStatus` and `subscriptionRenewsAt`, are left alone, so what that member can
+ * read is decided entirely by the entitlements written beside this.
  */
 export function memberSubscriptionFields(
   grant: Grant,
@@ -103,6 +136,7 @@ export function memberSubscriptionFields(
   packageId?: string | null
 } {
   if (grant.kind === 'section') return {}
+  if (grant.kind === 'package') return { packageId: grant.packageId }
   return {
     subscriptionStatus: 'active',
     subscriptionStartedAt: now,

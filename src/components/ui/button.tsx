@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 import { cn } from '@/lib/utils'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'on-light' | 'on-light-solid'
 type Size = 'sm' | 'md' | 'lg'
 
 const base =
@@ -17,6 +17,17 @@ const variants: Record<Variant, string> = {
   primary: 'bg-accent text-bg font-semibold hover:bg-accent-hover',
   // Outlined pill on transparent, the reference's secondary action.
   secondary: 'border border-ink/25 bg-transparent text-ink hover:border-ink/60 hover:bg-ink/5',
+  /*
+   * The same two actions, for a light band.
+   *
+   * `secondary` draws itself in `ink`, which is white — correct on black and invisible on
+   * the grey grounds the page now alternates onto. Rather than let each call site hand-roll
+   * a colour and get it wrong once, the two light-ground pairs live here beside the dark
+   * ones, so choosing a button is choosing a ground.
+   */
+  'on-light':
+    'border border-ink-on-light/25 bg-transparent text-ink-on-light hover:border-ink-on-light/60 hover:bg-ink-on-light/5',
+  'on-light-solid': 'bg-ink-on-light text-white font-semibold hover:bg-ink-on-light/90',
   ghost: 'text-ink-dim hover:text-ink hover:bg-panel',
   danger: 'border border-down/40 bg-transparent text-down hover:bg-down/10',
 }
