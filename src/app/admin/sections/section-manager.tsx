@@ -312,6 +312,18 @@ export function SectionManager({
                 >
                   {section.archived ? 'Put back' : 'Take off sale'}
                 </Button>
+                <SectionRename
+                  section={section}
+                  busy={busy}
+                  onSave={(fields) =>
+                    send(
+                      `/api/admin/sections/${section.id}`,
+                      'PATCH',
+                      fields,
+                      'Section title updated',
+                    )
+                  }
+                />
                 <TrialEditor section={section} />
                 <ImageEditor
                   section={section}
@@ -333,6 +345,102 @@ export function SectionManager({
         </ul>
       )}
     </section>
+  )
+}
+
+/**
+ * Rename a section, and edit the line under its name.
+ *
+ * A section is called "<topic> by <expert>" unless a display name overrides it, and that
+ * override could only be set at creation — so a subject the desk wanted to call
+ * "Energy, Metals & Commodities" rather than "Energy by Dean Rogers" had to be rebuilt to
+ * change it, taking its reports and its subscribers with it.
+ *
+ * The slug does not move. It is in URLs and in the item handle that entitlements point at,
+ * so renaming changes what the section is called and not what it is.
+ *
+ * Blank clears the override and the name goes back to being derived — which is why the
+ * field shows the derived name as its placeholder rather than pre-filling it, so an
+ * operator can see what they would get by emptying it.
+ */
+function SectionRename({
+  section,
+  busy,
+  onSave,
+}: {
+  section: SectionRow
+  busy: boolean
+  onSave: (fields: { displayName: string; description: string }) => void
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [displayName, setDisplayName] = React.useState(section.displayName ?? '')
+  const [description, setDescription] = React.useState(section.description ?? '')
+
+  const derived = sectionName({
+    displayName: null,
+    topic: section.topic,
+    author: section.author,
+  })
+
+  if (!open) {
+    return (
+      <Button size="sm" variant="secondary" disabled={busy} onClick={() => setOpen(true)}>
+        Edit title
+      </Button>
+    )
+  }
+
+  return (
+    <div className="mt-2 w-full basis-full rounded-lg border border-line bg-panel-2 p-4">
+      <div>
+        <Label htmlFor={`name-${section.id}`}>Title</Label>
+        <Input
+          id={`name-${section.id}`}
+          value={displayName}
+          onChange={(event) => setDisplayName(event.target.value)}
+          placeholder={derived}
+          maxLength={80}
+        />
+        <Hint>Leave it blank to use &ldquo;{derived}&rdquo;.</Hint>
+      </div>
+
+      <div className="mt-3">
+        <Label htmlFor={`desc-${section.id}`}>Description</Label>
+        <Textarea
+          id={`desc-${section.id}`}
+          rows={3}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="What a subscriber to this section gets, and how often."
+          maxLength={600}
+        />
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Button
+          size="sm"
+          disabled={busy}
+          onClick={() => {
+            onSave({ displayName: displayName.trim(), description: description.trim() })
+            setOpen(false)
+          }}
+        >
+          Save
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={busy}
+          onClick={() => {
+            setDisplayName(section.displayName ?? '')
+            setDescription(section.description ?? '')
+            setOpen(false)
+          }}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
   )
 }
 

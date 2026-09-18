@@ -102,6 +102,13 @@ export function TopicManager({ topics }: { topics: TopicRow[] }) {
                 </p>
               </div>
               {topic.archived && <Badge tone="muted">retired</Badge>}
+              <TopicRename
+                topic={topic}
+                busy={busy}
+                onSave={(name) =>
+                  send(`/api/admin/topics/${topic.id}`, 'PATCH', { name }, `Renamed to ${name}`)
+                }
+              />
               <Button
                 size="sm"
                 variant="secondary"
@@ -122,5 +129,73 @@ export function TopicManager({ topics }: { topics: TopicRow[] }) {
         </ul>
       )}
     </section>
+  )
+}
+
+/**
+ * Rename a topic in place.
+ *
+ * The name is what a visitor reads — every section under it is called "<topic> by
+ * <expert>" — and a typo in it used to be permanent, because the only way out was to
+ * retire the topic and rebuild its sections underneath a new one.
+ *
+ * **The slug does not move with it.** It is in URLs that may already have been shared, so
+ * a rename changes what the topic is called and not where it lives. The server says the
+ * same thing, and keeps the stored item names in step so the package contents picker does
+ * not go on offering the old wording.
+ */
+function TopicRename({
+  topic,
+  busy,
+  onSave,
+}: {
+  topic: { id: string; name: string }
+  busy: boolean
+  onSave: (name: string) => void
+}) {
+  const [open, setOpen] = React.useState(false)
+  const [value, setValue] = React.useState(topic.name)
+
+  if (!open) {
+    return (
+      <Button size="sm" variant="secondary" disabled={busy} onClick={() => setOpen(true)}>
+        Rename
+      </Button>
+    )
+  }
+
+  const trimmed = value.trim()
+
+  return (
+    <div className="flex w-full basis-full flex-wrap items-center gap-2">
+      <Input
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+        className="max-w-xs"
+        maxLength={60}
+        aria-label={`New name for ${topic.name}`}
+      />
+      <Button
+        size="sm"
+        disabled={busy || trimmed.length < 2 || trimmed === topic.name}
+        onClick={() => {
+          onSave(trimmed)
+          setOpen(false)
+        }}
+      >
+        Save
+      </Button>
+      <Button
+        size="sm"
+        variant="secondary"
+        disabled={busy}
+        onClick={() => {
+          setValue(topic.name)
+          setOpen(false)
+        }}
+      >
+        Cancel
+      </Button>
+    </div>
   )
 }

@@ -7,6 +7,7 @@ import { EmptyPreview } from '@/components/empty-preview'
 import { PreviewBanner } from '@/components/preview-banner'
 import { Band, BandHeading, Eyebrow } from '@/components/band'
 import { db } from '@/lib/db'
+import { formatPrice } from '@/lib/package-shape'
 import { authorListable, authorInitials, comingSoonVisible } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
 
@@ -38,6 +39,9 @@ export default async function ExpertsPage() {
         orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
         include: { topic: true },
       },
+      // Their own packages, so the card can quote the cheapest way in rather than the
+      // cheapest single subject — which would understate a bundle priced below its parts.
+      packages: { where: { archivedAt: null }, select: { priceCents: true, currency: true } },
       _count: { select: { sections: true } },
     },
   })
@@ -53,13 +57,26 @@ export default async function ExpertsPage() {
    * read today is a better first card than somebody you cannot.
    */
   const listed = authors
-    .map((author) => ({
-      ...author,
-      soon: comingSoonVisible({
-        comingSoon: author.comingSoon,
-        liveSectionCount: author.sections.length,
-      }),
-    }))
+    .map((author) => {
+      /*
+       * The lowest price at which you can read this person — across their packages and
+       * their individual subjects, because either is a real way in and quoting only one
+       * of the two would name a figure that is not actually the cheapest.
+       */
+      const prices = [
+        ...author.packages.map((pkg) => pkg.priceCents),
+        ...author.sections.map((section) => section.priceCents),
+      ]
+      return {
+        ...author,
+        fromCents: prices.length > 0 ? Math.min(...prices) : null,
+        currency: author.packages[0]?.currency ?? author.sections[0]?.currency ?? 'USD',
+        soon: comingSoonVisible({
+          comingSoon: author.comingSoon,
+          liveSectionCount: author.sections.length,
+        }),
+      }
+    })
     .filter((author) =>
       authorListable({ comingSoon: author.comingSoon, liveSectionCount: author.sections.length }),
     )
@@ -154,6 +171,23 @@ export default async function ExpertsPage() {
                 {author.headline && (
                   <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-white/70">
                     {author.headline}
+                  </p>
+                )}
+                {/*
+                  The price on the card, not a click away. Somebody comparing four experts
+                  is comparing what each costs as much as what each covers, and making them
+                  open every profile to find out is the friction this grid exists to remove.
+
+                  Absent for a forthcoming expert: there is nothing to buy, so a figure
+                  would be quoting a price for something not on sale.
+                */}
+                {!author.soon && author.fromCents !== null && (
+                  <p className="mt-2 text-[14px] text-white">
+                    from{' '}
+                    <span className="font-medium">
+                      {formatPrice(author.fromCents, author.currency)}
+                    </span>
+                    <span className="text-white/70">/mo</span>
                   </p>
                 )}
               </div>

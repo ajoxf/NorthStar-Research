@@ -49,6 +49,43 @@ export type RepairReport = {
   clean: boolean
 }
 
+/**
+ * Put an item's name back in step with the section it belongs to.
+ *
+ * A section's display name is *derived* — "Energy by Dean Rogers" is its topic and its
+ * author, computed at render. The item's name is *stored*, because a package's contents
+ * list has to read as names without joining out to two tables per row. So renaming a topic
+ * or an expert changes what every page calls the section and leaves the item still saying
+ * what it was called the day it was made.
+ *
+ * Called from the topic, author and section edit routes. Cheap: one query per affected
+ * section, and only when a name actually changed.
+ */
+export async function syncItemNames(sectionIds: string[]): Promise<number> {
+  if (sectionIds.length === 0) return 0
+
+  const sections = await db.section.findMany({
+    where: { id: { in: sectionIds }, itemId: { not: null } },
+    select: {
+      itemId: true,
+      displayName: true,
+      topic: { select: { name: true } },
+      author: { select: { name: true } },
+      item: { select: { name: true } },
+    },
+  })
+
+  let renamed = 0
+  for (const section of sections) {
+    const name =
+      section.displayName?.trim() || `${section.topic.name} by ${section.author.name}`
+    if (!section.itemId || section.item?.name === name) continue
+    await db.item.update({ where: { id: section.itemId }, data: { name } })
+    renamed += 1
+  }
+  return renamed
+}
+
 export async function repairSections({ dryRun }: { dryRun: boolean }): Promise<RepairReport> {
   let itemsCreated = 0
   let itemsRenamed = 0

@@ -80,16 +80,20 @@ export default async function LandingPage() {
    */
   const contributors = sold.authors
     .map((entry) => {
-      const liveSectionCount = allSections.filter(
-        (section) => section.author.id === entry.author.id,
-      ).length
+      const mine = allSections.filter((section) => section.author.id === entry.author.id)
+      const prices = [
+        ...entry.packages.map((pkg) => pkg.priceCents),
+        ...mine.map((section) => section.priceCents),
+      ]
       return {
         ...entry.author,
         hasPackages: entry.packages.length > 0,
-        liveSectionCount,
+        liveSectionCount: mine.length,
+        // The cheapest way in, across packages and single subjects alike.
+        fromCents: prices.length > 0 ? Math.min(...prices) : null,
         soon: comingSoonVisible({
           comingSoon: entry.author.comingSoon,
-          liveSectionCount,
+          liveSectionCount: mine.length,
         }),
       }
     })
@@ -157,7 +161,7 @@ export default async function LandingPage() {
       {contributors.length > 0 ? (
         <>
           <CoverageTable sections={allSections} currency={plan.currency} />
-          <ContributorStrip contributors={contributors} />
+          <ContributorStrip contributors={contributors} currency={plan.currency} />
         </>
       ) : (
         <CoverageSection />
@@ -243,7 +247,7 @@ function Hero({
             technical structure and the macro context behind it, with the reasoning shown. No
             noise and no upsells.{' '}
             {hasSections
-              ? 'Take the whole desk, or just the expert you follow.'
+              ? 'Subscribe to the experts whose subjects you actually follow.'
               : 'One price.'}
           </p>
 
@@ -251,7 +255,9 @@ function Hero({
           <ul className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3">
             {[
               { icon: FileText, label: '3 reports / week' },
-              { icon: Archive, label: 'Full archive' },
+              // "Full archive" read as the whole site's. What a subscriber gets is every
+              // past edition of what they bought, which is what this now says.
+              { icon: Archive, label: 'Archive included' },
               { icon: Smartphone, label: 'Mobile friendly' },
             ].map((item) => (
               <li key={item.label} className="flex items-center gap-2">
@@ -311,15 +317,18 @@ function Hero({
 /**
  * The people, in one line each.
  *
- * Deliberately thin. This band used to carry prices and a call to action per contributor,
- * which made it a second storefront sitting above the real one — a visitor met the same
- * names, the same faces and two different prices before reaching the packages. Selling is
- * the grid's job now, so what is left here is the claim the grid rests on: real people,
- * named, each covering what they know. The link goes to their page for anybody who wants
- * to read about them before deciding.
+ * Faces, names and the price of getting in — one figure each, not a card of options.
+ *
+ * This band once carried a full price block and a call to action per person, which made
+ * it a second storefront above the real one: the same names met twice, with two different
+ * prices, before reaching anything buyable. It was cut back to names only, and that went
+ * too far the other way — somebody comparing four experts is comparing cost as much as
+ * coverage, and making them open four profiles to find out is friction this grid exists to
+ * remove. So: one "from" figure, and the packages themselves still live further down.
  */
 function ContributorStrip({
   contributors,
+  currency,
 }: {
   contributors: {
     id: string
@@ -327,9 +336,12 @@ function ContributorStrip({
     name: string
     headline: string | null
     photoUrl: string | null
+    /** The lowest price at which this person can be read. Null while nothing is on sale. */
+    fromCents: number | null
     /** Announced but not yet publishing. Labelled rather than quietly listed. */
     soon: boolean
   }[]
+  currency: string
 }) {
   return (
     <Band tone="dark">
@@ -387,6 +399,16 @@ function ContributorStrip({
               {contributor.headline && (
                 <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-white/70">
                   {contributor.headline}
+                </p>
+              )}
+              {/* The price belongs on the card — see the note on the experts listing. */}
+              {!contributor.soon && contributor.fromCents !== null && (
+                <p className="mt-2 text-[14px] text-white">
+                  from{' '}
+                  <span className="font-medium">
+                    {formatPrice(contributor.fromCents, currency)}
+                  </span>
+                  <span className="text-white/70">/mo</span>
                 </p>
               )}
             </div>

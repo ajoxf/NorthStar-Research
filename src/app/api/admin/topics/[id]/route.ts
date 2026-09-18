@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { adminInput } from '@/app/api/admin/_admin-route'
 import { db } from '@/lib/db'
 import { topicInputSchema } from '@/lib/section-shape'
+import { syncItemNames } from '@/lib/section-repair'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,5 +36,19 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       ...(archived === undefined ? {} : { archivedAt: archived ? new Date() : null }),
     },
   })
+  /*
+   * A rename changes what every section in this topic is called, so the stored item names
+   * follow it. Without this the package contents picker keeps offering the old name, and
+   * an operator ticking boxes there is reading labels the rest of the site has moved on
+   * from.
+   */
+  if (fields.name !== undefined && fields.name !== existing.name) {
+    const sections = await db.section.findMany({
+      where: { topicId: params.id },
+      select: { id: true },
+    })
+    await syncItemNames(sections.map((section) => section.id))
+  }
+
   return NextResponse.json({ ok: true, topic })
 }
