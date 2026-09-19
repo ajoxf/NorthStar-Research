@@ -81,7 +81,16 @@ export default async function DashboardPage({
     where: { published: true, ...visible },
     orderBy: { publishDate: 'desc' },
     take: 4,
-    select: { id: true, type: true, title: true, summary: true, publishDate: true },
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      summary: true,
+      publishDate: true,
+      // Who wrote it, for the label above the title. One join rather than a second query
+      // per card — see the note in components/report-card.
+      section: { select: { author: { select: { name: true } } } },
+    },
   })
 
   const viewedIds = current.length
@@ -100,7 +109,16 @@ export default async function DashboardPage({
     where: { published: true, ...visible, id: { notIn: current.map((r) => r.id) } },
     orderBy: { publishDate: 'desc' },
     take: 8,
-    select: { id: true, type: true, title: true, summary: true, publishDate: true },
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      summary: true,
+      publishDate: true,
+      // Who wrote it, for the label above the title. One join rather than a second query
+      // per card — see the note in components/report-card.
+      section: { select: { author: { select: { name: true } } } },
+    },
   })
 
   /*
@@ -151,7 +169,11 @@ export default async function DashboardPage({
           {current.map((report) => (
             <ReportCard
               key={report.id}
-              report={{ ...report, viewed: viewedIds.has(report.id) }}
+              report={{
+                ...report,
+                viewed: viewedIds.has(report.id),
+                authorName: report.section?.author.name ?? null,
+              }}
               /*
                 No index. It used to number the cards 1–4 by the report's position in the
                 type list, which was only ever a restatement of the category — and with
@@ -250,7 +272,10 @@ export default async function DashboardPage({
 
           <div className="border-t border-line">
             {recent.map((report) => (
-              <ReportRow key={report.id} report={report} />
+              <ReportRow
+                key={report.id}
+                report={{ ...report, authorName: report.section?.author.name ?? null }}
+              />
             ))}
           </div>
         </section>
