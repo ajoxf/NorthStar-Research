@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
-import { formatBytes, isReportBlobUrl, slugify } from '@/lib/report-upload'
+import { formatBytes, isReportBlobUrl, looksLikePdf, slugify } from '@/lib/report-upload'
 
 describe('isReportBlobUrl', () => {
   it('accepts a Vercel Blob URL under the reports prefix', () => {
@@ -58,5 +58,64 @@ describe('formatBytes', () => {
 
   it('falls back to kilobytes for a small file', () => {
     assert.equal(formatBytes(4_096), '4 KB')
+  })
+})
+
+describe('looksLikePdf', () => {
+  const serve = (body: Uint8Array | null, ok = true) =>
+    (globalThis.fetch = (async () =>
+      ok
+        ? { ok: true, arrayBuffer: async () => body!.buffer }
+        : { ok: false }) as unknown as typeof fetch)
+
+  const original = globalThis.fetch
+  const restore = () => {
+    globalThis.fetch = original
+  }
+
+  it('accepts a real PDF header', async () => {
+    serve(new TextEncoder().encode('%PDF-1.7\n'))
+    assert.equal(await looksLikePdf('https://x.public.blob.vercel-storage.com/reports/a.pdf'), 'pdf')
+    restore()
+  })
+
+  it('rejects a Word file renamed to .pdf', async () => {
+    // A .docx is a zip: it starts PK\x03\x04. This is the case every name-based check
+    // upstream lets through, because the browser derives the type from the extension.
+    serve(new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0x14, 0x00, 0x00, 0x00]))
+    assert.equal(
+      await looksLikePdf('https://x.public.blob.vercel-storage.com/reports/a.pdf'),
+      'not-pdf',
+    )
+    restore()
+  })
+
+  it('rejects a file too short to have a header', async () => {
+    serve(new Uint8Array([0x25, 0x50]))
+    assert.equal(
+      await looksLikePdf('https://x.public.blob.vercel-storage.com/reports/a.pdf'),
+      'not-pdf',
+    )
+    restore()
+  })
+
+  it('says unknown when the store cannot be reached, so a good report still publishes', async () => {
+    serve(null, false)
+    assert.equal(
+      await looksLikePdf('https://x.public.blob.vercel-storage.com/reports/a.pdf'),
+      'unknown',
+    )
+    restore()
+  })
+
+  it('says unknown when the fetch throws rather than calling it a bad file', async () => {
+    globalThis.fetch = (async () => {
+      throw new Error('network down')
+    }) as unknown as typeof fetch
+    assert.equal(
+      await looksLikePdf('https://x.public.blob.vercel-storage.com/reports/a.pdf'),
+      'unknown',
+    )
+    restore()
   })
 })
