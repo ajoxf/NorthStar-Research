@@ -297,16 +297,26 @@ function Hero({
                 Start a free {trial.days}-day trial
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </ButtonLink>
-              <ButtonLink href={packagesOnSale > 1 ? '#pricing' : '/join'} size="lg" variant="secondary">
-                {packagesOnSale > 1
+              {/*
+                One package is still a choice to make, not a price to accept.
+
+                This asked for more than one, so a site selling a single package sent
+                people to a button naming a figure — and when there are no packages at
+                all that figure is the built-in membership, which is the all-access plan
+                this site no longer sells. The same off-by-one as the subscriptions band:
+                the threshold was written for a site with several contributors and is
+                wrong for the state every site passes through on its way there.
+              */}
+              <ButtonLink href={packagesOnSale > 0 ? '#pricing' : '/join'} size="lg" variant="secondary">
+                {packagesOnSale > 0
                   ? 'See the packages'
                   : `Join — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)}`}
               </ButtonLink>
             </div>
           ) : (
             <div className="mt-9">
-              <ButtonLink href={packagesOnSale > 1 ? '#pricing' : '/join'} size="lg">
-                {packagesOnSale > 1
+              <ButtonLink href={packagesOnSale > 0 ? '#pricing' : '/join'} size="lg">
+                {packagesOnSale > 0
                   ? 'Choose your package'
                   : `Become a member — ${formatPrice(plan.priceCents, plan.currency)}/${shortInterval(plan)} intro`}
                 <ArrowRight className="h-4 w-4" aria-hidden />

@@ -206,7 +206,11 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
             </div>
 
             {author.photoUrl && (
-              <div className="order-1 w-full max-w-[280px] lg:order-2 lg:max-w-none">
+              /* Capped at both ends. `lg:max-w-none` let this grow to whatever the grid
+                 column was, which on a wide screen meant a phone portrait rendered far
+                 past its own resolution — the same upscaling that made the section
+                 banners look pixelated, in the one place a face is largest. */
+              <div className="order-1 w-full max-w-[280px] lg:order-2 lg:max-w-[340px]">
                 <div className="aspect-[4/5] overflow-hidden rounded-xl border border-line bg-panel-2">
                   {/* eslint-disable-next-line @next/next/no-img-element -- an arbitrary
                       host, which next/image would need configuring for one URL at a time. */}
@@ -407,19 +411,26 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                 key={section.id}
                 className="overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
               >
-                {/* The subject's own picture, matching the coverage page. */}
+                <div className="flex flex-col sm:flex-row">
+                {/*
+                  A thumbnail beside the card, not a banner across it — see the note on
+                  the coverage page. A 21:9 band scaled a phone portrait to several times
+                  its own resolution; at 260px it is shown at or below its natural size.
+                */}
                 {section.imageUrl && (
-                  <div className="aspect-[21/9] w-full overflow-hidden border-b border-line bg-panel-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={section.imageUrl}
-                      alt=""
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                    />
+                  <div className="shrink-0 self-start p-6 pb-0 sm:pr-0">
+                    <div className="aspect-[16/10] w-full overflow-hidden rounded-xl bg-panel-2 sm:w-[260px]">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={section.imageUrl}
+                        alt=""
+                        className="h-full w-full object-cover object-top"
+                        loading="lazy"
+                      />
+                    </div>
                   </div>
                 )}
-                <div className="p-6">
+                <div className="min-w-0 flex-1 p-6">
                 <div className="flex flex-wrap items-baseline justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
@@ -453,6 +464,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                     trialDays={section.item ? (sectionTrials.get(section.item.slug) ?? null) : null}
                     trialSlug={section.item?.slug ?? null}
                   />
+                </div>
                 </div>
                 </div>
               </div>

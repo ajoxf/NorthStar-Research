@@ -87,7 +87,15 @@ export const PLAN = {
   currency: 'USD',
   interval: 'month',
   name: 'NordStar Pro Membership',
-  description: '3 research reports per week',
+  /*
+   * No cadence here either.
+   *
+   * The copy sweep missed this one because it is a constant rather than page text, and it
+   * is the one that shows when a site has no packages at all — so the only card a brand
+   * new deployment displays was still promising three reports a week on behalf of experts
+   * who set their own rate. Each subject states its own cadence on its own card now.
+   */
+  description: 'Independent technical and macro research',
 } as const
 
 /** One billing period. Used to extend `subscriptionRenewsAt` on payment. */

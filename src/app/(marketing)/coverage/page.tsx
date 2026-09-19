@@ -96,25 +96,36 @@ export default async function CoveragePage() {
                     className="overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
                   >
                     {/*
-                      The title image, when the subject has one. A banner rather than a
-                      thumbnail, because it is the first thing on the card and a small one
-                      would read as decoration next to the name instead of leading it.
-                      Absent, the card is exactly as it was — the name on a plain panel.
+                      A thumbnail beside the card, not a banner across it.
+
+                      It was a full-width 21:9 band. Nobody uploads a 21:9 photograph —
+                      they upload a portrait taken on a phone, and `object-cover` then
+                      scales it until the short edge fits, which on a 1080px band means a
+                      face blown up to several times its own resolution. It looked
+                      pixelated because it *was*: the picture was being asked to be four
+                      times the size it was taken at.
+
+                      The reference sizes these as a small landscape tile beside the text,
+                      and that is what makes it forgiving — at 260px a phone photograph is
+                      being shown at or below its natural size whatever shape it is.
+                      `object-top` keeps heads in frame rather than centring on a chest.
                     */}
                     {section.imageUrl && (
-                      <div className="aspect-[21/9] w-full overflow-hidden border-b border-line-on-light bg-paper">
-                        {/* eslint-disable-next-line @next/next/no-img-element -- an
-                            arbitrary host, which next/image would need configuring for. */}
-                        <img
-                          src={section.imageUrl}
-                          alt=""
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
+                      <div className="shrink-0 self-start p-6 pb-0 sm:pr-0">
+                        <div className="aspect-[16/10] w-full overflow-hidden rounded-xl bg-paper sm:w-[260px]">
+                          {/* eslint-disable-next-line @next/next/no-img-element -- an
+                              arbitrary host, which next/image would need configuring for. */}
+                          <img
+                            src={section.imageUrl}
+                            alt=""
+                            className="h-full w-full object-cover object-top"
+                            loading="lazy"
+                          />
+                        </div>
                       </div>
                     )}
 
-                    <div className="p-6">
+                    <div className="min-w-0 flex-1 p-6">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="flex items-center gap-4">
                         <AuthorAvatar
