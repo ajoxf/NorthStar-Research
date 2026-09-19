@@ -49,7 +49,16 @@ export default async function ArchivePage({
       ...(expert ? { section: { author: { slug: expert.slug } } } : {}),
     },
     orderBy: { publishDate: 'desc' },
-    select: { id: true, type: true, title: true, summary: true, publishDate: true },
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      summary: true,
+      publishDate: true,
+      // Who wrote it, for the label above the title. One join rather than a second query
+      // per card — see the note in components/report-card.
+      section: { select: { author: { select: { name: true } } } },
+    },
   })
 
   return (
@@ -86,6 +95,7 @@ export default async function ArchivePage({
         reports={reports.map((report) => ({
           ...report,
           publishDate: report.publishDate.toISOString(),
+          authorName: report.section?.author.name ?? null,
         }))}
       />
     </div>

@@ -15,6 +15,8 @@ type ArchiveReport = {
   title: string
   summary: string | null
   publishDate: string
+  /** Null for the pre-sections archive, which has nobody to name. */
+  authorName: string | null
 }
 
 /**

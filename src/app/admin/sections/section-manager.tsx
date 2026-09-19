@@ -18,6 +18,7 @@ export type SectionRow = {
   displayName: string | null
   description: string | null
   imageUrl: string | null
+  cadence: string | null
   /** The grantable item behind this section. Null only for a section created before items. */
   itemSlug: string | null
   trialEnabled: boolean
@@ -43,6 +44,23 @@ type Option = { id: string; name: string }
  * to a different person, so the fix for the wrong pair is to retire the section and make
  * the right one, which costs nothing while it has no subscribers.
  */
+/**
+ * The answers most sections will want, offered rather than imposed.
+ *
+ * Ordered by how often they are likely to be picked, not alphabetically — the operator is
+ * scanning for theirs, and "Daily" at the top of a list beginning with "Every Friday" is
+ * the one they most often mean.
+ */
+const CADENCE_PRESETS = [
+  'Daily',
+  'Three times a week',
+  'Twice a week',
+  'Weekly',
+  'Every weekday',
+  'Fortnightly',
+  'Monthly',
+] as const
+
 export function SectionManager({
   topics,
   authors,
@@ -63,6 +81,7 @@ export function SectionManager({
     interval: 'month',
     description: '',
     imageUrl: '',
+    cadence: '',
   })
 
   const topic = topics.find((t) => t.id === form.topicId)
@@ -113,6 +132,7 @@ export function SectionManager({
         interval: form.interval,
         description: form.description,
         imageUrl: form.imageUrl,
+        cadence: form.cadence,
       },
       `${preview ?? 'Section'} created`,
     )
@@ -124,6 +144,7 @@ export function SectionManager({
         interval: 'month',
         description: '',
         imageUrl: '',
+        cadence: '',
       })
       setOpen(false)
     }
@@ -222,6 +243,34 @@ export function SectionManager({
                 <option value="year">Yearly</option>
               </Select>
             </div>
+          </div>
+
+          <div className="mt-4">
+            <Label htmlFor="s-cadence">How often it publishes</Label>
+            <Input
+              id="s-cadence"
+              list="cadence-presets"
+              value={form.cadence}
+              onChange={(e) => setForm({ ...form, cadence: e.target.value })}
+              placeholder="Three times a week"
+              maxLength={48}
+            />
+            {/*
+              A list, not a dropdown. The common answers are one click away so five
+              sections do not end up saying "3x/wk", "thrice weekly" and "3 a week" — but
+              an author who publishes "twice a month, plus event notes" can still type it.
+              An enum would force that into the nearest wrong word, and this is a promise
+              to somebody who is paying.
+            */}
+            <datalist id="cadence-presets">
+              {CADENCE_PRESETS.map((preset) => (
+                <option key={preset} value={preset} />
+              ))}
+            </datalist>
+            <Hint>
+              Shown beside the price wherever this subject is sold. Leave it blank to claim
+              nothing — better than a number this author cannot keep.
+            </Hint>
           </div>
 
           <div className="mt-4">
@@ -370,11 +419,12 @@ function SectionRename({
 }: {
   section: SectionRow
   busy: boolean
-  onSave: (fields: { displayName: string; description: string }) => void
+  onSave: (fields: { displayName: string; description: string; cadence: string | null }) => void
 }) {
   const [open, setOpen] = React.useState(false)
   const [displayName, setDisplayName] = React.useState(section.displayName ?? '')
   const [description, setDescription] = React.useState(section.description ?? '')
+  const [cadence, setCadence] = React.useState(section.cadence ?? '')
 
   const derived = sectionName({
     displayName: null,
@@ -405,6 +455,19 @@ function SectionRename({
       </div>
 
       <div className="mt-3">
+        <Label htmlFor={`cadence-${section.id}`}>How often it publishes</Label>
+        <Input
+          id={`cadence-${section.id}`}
+          list="cadence-presets"
+          value={cadence}
+          onChange={(event) => setCadence(event.target.value)}
+          placeholder="Three times a week"
+          maxLength={48}
+        />
+        <Hint>Shown beside the price. Empty it to claim nothing.</Hint>
+      </div>
+
+      <div className="mt-3">
         <Label htmlFor={`desc-${section.id}`}>Description</Label>
         <Textarea
           id={`desc-${section.id}`}
@@ -421,7 +484,13 @@ function SectionRename({
           size="sm"
           disabled={busy}
           onClick={() => {
-            onSave({ displayName: displayName.trim(), description: description.trim() })
+            onSave({
+              displayName: displayName.trim(),
+              description: description.trim(),
+              // Explicit null, not '': the schema folds a blank to "leave alone", so an
+              // emptied box has to say out loud that the cadence is being removed.
+              cadence: cadence.trim() || null,
+            })
             setOpen(false)
           }}
         >
@@ -434,6 +503,7 @@ function SectionRename({
           onClick={() => {
             setDisplayName(section.displayName ?? '')
             setDescription(section.description ?? '')
+            setCadence(section.cadence ?? '')
             setOpen(false)
           }}
         >

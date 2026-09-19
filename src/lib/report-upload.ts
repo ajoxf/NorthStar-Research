@@ -62,3 +62,36 @@ export function formatBytes(bytes: number): string {
   const mb = bytes / (1024 * 1024)
   return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
+
+/**
+ * Does the stored blob actually begin `%PDF-`?
+ *
+ * Reads only the first bytes, with a Range request, so verifying a 30 MB research PDF
+ * costs a few hundred bytes rather than a download.
+ *
+ * Three answers, not two. `unknown` is what a caller gets when the store could not be
+ * reached or refused the range — and it deliberately is not `not-pdf`, because treating a
+ * network hiccup as a bad file would block a perfectly good report from publishing.
+ */
+export async function looksLikePdf(blobUrl: string): Promise<'pdf' | 'not-pdf' | 'unknown'> {
+  try {
+    const response = await fetch(blobUrl, {
+      headers: { Range: 'bytes=0-7' },
+      cache: 'no-store',
+    })
+    if (!response.ok) return 'unknown'
+
+    const bytes = new Uint8Array(await response.arrayBuffer())
+    /*
+     * A store that ignores Range answers 200 with the whole file, which is still fine —
+     * only the first five bytes are read either way. Too short to hold a header at all is
+     * not a PDF: the shortest valid one is a few hundred bytes.
+     */
+    if (bytes.length < 5) return 'not-pdf'
+
+    const header = String.fromCharCode(...bytes.slice(0, 5))
+    return header === '%PDF-' ? 'pdf' : 'not-pdf'
+  } catch {
+    return 'unknown'
+  }
+}

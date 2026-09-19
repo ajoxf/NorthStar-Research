@@ -13,6 +13,13 @@ export type ReportCardData = {
   summary: string | null
   publishDate: Date
   viewed?: boolean
+  /**
+   * Who wrote it, for the label above the title.
+   *
+   * Null for a report filed under no section — the pre-sections archive — where there is
+   * genuinely nobody to name. Everything filed has one.
+   */
+  authorName?: string | null
 }
 
 /** Prominent card used for the current week's reports (build spec §6). */
@@ -33,12 +40,30 @@ export function ReportCard({ report, index }: { report: ReportCardData; index?: 
       />
 
       <div className="mb-4 flex items-center justify-between gap-3">
-        {/* Nothing rather than a borrowed label: an untyped edition is identified by its
-            own title, which is where the desk now numbers its issues. */}
-        <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
-          {typeof index === 'number' && index >= 0
-            ? `Report ${index + 1}`
-            : (meta?.shortLabel ?? 'Research')}
+        {/*
+          Whose edition this is, in the slot that used to say "RESEARCH".
+
+          That word was a hardcoded fallback shown whenever a report carried no type —
+          which is every report the desk publishes now that it numbers its own editions.
+          So every card on the page said the same thing, on a site whose whole point is
+          that you subscribe to particular people. The author is the useful fact, and the
+          one a member is scanning for.
+
+          The author beats the positional number the archive passes, too. "Report 3" is a
+          fact about the current filter — it renumbers as you type in the search box —
+          where the author is a fact about the report. The dashboard already refused to
+          number these for the same reason; this applies it where the numbering survived.
+
+          The chain still ends where it did. A report filed under no section has no author
+          to name, and falls back to the number, then its type, then "Research" — the
+          pre-sections archive, where that word is the honest answer rather than a
+          placeholder.
+        */}
+        <span className="truncate font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
+          {report.authorName ??
+            (typeof index === 'number' && index >= 0
+              ? `Report ${index + 1}`
+              : (meta?.shortLabel ?? 'Research'))}
         </span>
         {report.viewed ? <Badge tone="muted">Read</Badge> : <Badge tone="accent">New</Badge>}
       </div>
@@ -83,9 +108,12 @@ export function ReportRow({ report }: { report: ReportCardData }) {
       <span className="w-32 shrink-0 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
         {formatDate(report.publishDate)}
       </span>
-      {meta && (
-        <span className="w-44 shrink-0 font-mono text-[11px] uppercase tracking-[0.12em] text-accent">
-          {meta.shortLabel}
+      {/* The same answer as the card's, in the archive's column: who wrote it, falling
+          back to the type for the untagged back catalogue. Still omitted entirely when
+          there is neither, rather than filled with a word that means nothing. */}
+      {(report.authorName ?? meta?.shortLabel) && (
+        <span className="w-44 shrink-0 truncate font-mono text-[11px] uppercase tracking-[0.12em] text-accent">
+          {report.authorName ?? meta?.shortLabel}
         </span>
       )}
       <span className="flex-1 text-[15px] text-ink transition-colors group-hover:text-accent">

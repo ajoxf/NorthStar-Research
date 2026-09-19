@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { db } from '@/lib/db'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
-import { isReportBlobUrl } from '@/lib/report-upload'
+import { isReportBlobUrl, looksLikePdf } from '@/lib/report-upload'
 import { sanitiseReportHtml } from '@/lib/pdf'
 
 export const runtime = 'nodejs'
@@ -116,6 +116,37 @@ export async function POST(request: Request) {
       { error: 'That file location is not a report upload. Choose the PDF again.' },
       { status: 400 },
     )
+  }
+
+  /*
+   * Is the uploaded file actually a PDF?
+   *
+   * Every check until now was on the *name*. The form tests `file.type`, the input has an
+   * accept filter and the blob store is limited to `application/pdf` — but a browser
+   * derives `file.type` from the extension, so anything renamed to `.pdf` satisfies all
+   * three and lands in the store labelled as a PDF.
+   *
+   * What it costs to find out late is the point. Nothing fails at upload; the report is
+   * published, emailed, and the first person to discover it is a member who paid, looking
+   * at "this document could not be opened". So the bytes are read here, where the person
+   * who can fix it is the person being told.
+   *
+   * A failed *check* is not a failed upload. If the store cannot be reached the report is
+   * saved anyway — refusing to publish because a verification request timed out would
+   * trade a rare bad file for an outage.
+   */
+  if (pdfBlobUrl) {
+    const verdict = await looksLikePdf(pdfBlobUrl)
+    if (verdict === 'not-pdf') {
+      return NextResponse.json(
+        {
+          error:
+            'That file is not a PDF. It may have been renamed rather than converted — ' +
+            'export it as a PDF and upload it again.',
+        },
+        { status: 400 },
+      )
+    }
   }
 
   const htmlContent = parsed.data.htmlContent?.trim()

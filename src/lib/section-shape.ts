@@ -112,6 +112,24 @@ export const clearableUrl = z
     'Links must start with http:// or https://',
   )
 
+
+/**
+ * Short text that can be removed, not merely left unset.
+ *
+ * The same distinction `clearableUrl` draws, for a plain string. `optionalText` folds an
+ * empty box to `undefined`, which a PATCH reads as "leave this alone" — so clearing the
+ * field in the admin would silently do nothing and the old value would stay on the page.
+ * Emptying it is said out loud as `null`.
+ */
+export const clearableText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullable()
+    .optional()
+    .transform((value) => (value ? value : value === null ? null : undefined))
+
 /** A URL, or nothing. Rejects anything that is not http(s) so a link cannot be javascript:. */
 const optionalUrl = z
   .string()
@@ -184,6 +202,14 @@ export const sectionInputSchema = z.object({
   description: optionalText(600),
   /** The title image. Optional — a section without one renders a typographic panel. */
   imageUrl: optionalUrl,
+  /**
+   * How often this subject publishes, in the author's own words.
+   *
+   * Short on purpose: it sits on a card beside a price, so "Three mornings a week" fits
+   * and a paragraph does not. Clearable, because a cadence somebody can no longer keep
+   * should be removable rather than stuck on the page — see clearableText.
+   */
+  cadence: clearableText(48),
   priceCents: z
     .number()
     .int()

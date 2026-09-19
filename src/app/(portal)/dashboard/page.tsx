@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import type { Member } from '@prisma/client'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { Check, FileQuestion, Lock, Users } from 'lucide-react'
@@ -11,6 +12,7 @@ import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember, memberHasAnyAccess, memberReportWhere } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { trialOffers } from '@/lib/trial'
+import { RESEARCH_TRIAL_SLUG, researchTrialRefusal } from '@/lib/research-trial'
 import { formatDate, fullName } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Your reports' }
@@ -39,7 +41,7 @@ export default async function DashboardPage({
   if (!member) redirect('/login?next=/dashboard')
 
   const ssoNotice = searchParams?.sso ? SSO_NOTICE[searchParams.sso] : undefined
-  const offer = await trialOffer(member.id)
+  const offer = await trialOffer(member)
 
   if (!(await memberHasAnyAccess(member)))
     return (
@@ -79,7 +81,16 @@ export default async function DashboardPage({
     where: { published: true, ...visible },
     orderBy: { publishDate: 'desc' },
     take: 4,
-    select: { id: true, type: true, title: true, summary: true, publishDate: true },
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      summary: true,
+      publishDate: true,
+      // Who wrote it, for the label above the title. One join rather than a second query
+      // per card — see the note in components/report-card.
+      section: { select: { author: { select: { name: true } } } },
+    },
   })
 
   const viewedIds = current.length
@@ -98,7 +109,16 @@ export default async function DashboardPage({
     where: { published: true, ...visible, id: { notIn: current.map((r) => r.id) } },
     orderBy: { publishDate: 'desc' },
     take: 8,
-    select: { id: true, type: true, title: true, summary: true, publishDate: true },
+    select: {
+      id: true,
+      type: true,
+      title: true,
+      summary: true,
+      publishDate: true,
+      // Who wrote it, for the label above the title. One join rather than a second query
+      // per card — see the note in components/report-card.
+      section: { select: { author: { select: { name: true } } } },
+    },
   })
 
   /*
@@ -149,7 +169,11 @@ export default async function DashboardPage({
           {current.map((report) => (
             <ReportCard
               key={report.id}
-              report={{ ...report, viewed: viewedIds.has(report.id) }}
+              report={{
+                ...report,
+                viewed: viewedIds.has(report.id),
+                authorName: report.section?.author.name ?? null,
+              }}
               /*
                 No index. It used to number the cards 1–4 by the report's position in the
                 type list, which was only ever a restatement of the category — and with
@@ -248,7 +272,10 @@ export default async function DashboardPage({
 
           <div className="border-t border-line">
             {recent.map((report) => (
-              <ReportRow key={report.id} report={report} />
+              <ReportRow
+                key={report.id}
+                report={{ ...report, authorName: report.section?.author.name ?? null }}
+              />
             ))}
           </div>
         </section>
@@ -351,8 +378,9 @@ async function heldItems(memberId: string): Promise<HeldItem[]> {
  * time they load the page.
  */
 async function trialOffer(
-  memberId: string,
+  member: Pick<Member, 'id' | 'subscriptionStatus' | 'researchTrialStartedAt'>,
 ): Promise<{ days: number; itemName: string; itemSlug: string }[]> {
+  const memberId = member.id
   const open = await trialOffers()
   if (open.length === 0) return []
 
@@ -376,8 +404,29 @@ async function trialOffer(
     items.filter((item) => heldIds.has(item.id)).map((item) => item.slug),
   )
 
+  /*
+   * The research trial is judged by its own rule, not by "have they held the item".
+   *
+   * It is not an item — it is two columns on Member — so the held-items filter above can
+   * never match it, and it was therefore offered to everybody, including the people
+   * `researchTrialRefusal` exists to turn away. A member whose membership had lapsed was
+   * shown "Try NordStar Pro research free for 21 days", clicked it, and was told "this
+   * account already has a membership, sign in to read" — while signed in, and unable to
+   * read. Every route off that screen ended somewhere that refused them.
+   *
+   * The refusal itself is right: somebody who has been a customer asking for a free
+   * fortnight is asking for a discount on a renewal. Advertising it to them was the bug.
+   */
+  const researchRefused =
+    researchTrialRefusal({
+      enabled: true,
+      subscriptionStatus: member.subscriptionStatus,
+      researchTrialStartedAt: member.researchTrialStartedAt,
+    }) !== null
+
   return open
     .filter((offer) => !heldSlugs.has(offer.slug))
+    .filter((offer) => !(offer.slug === RESEARCH_TRIAL_SLUG && researchRefused))
     .map((offer) => ({ days: offer.days, itemName: offer.name, itemSlug: offer.slug }))
 }
 
@@ -479,16 +528,23 @@ function InactiveState({
           </p>
         )}
         {/*
-          Their own account, not the public enquiry form. "View membership" used to send a
-          signed-in member to /join — a page that asks a stranger for their name and phone
-          number so the desk can quote them. Somebody who is already signed in and holds a
-          product reads that as having been logged out.
+          Somewhere to go, which this screen did not have.
 
-          A lapsed member gets the way back in first. They have bought this before, so the
-          useful thing is the code box, not a page explaining what the subscription is.
+          It offered "Your account" and nothing else. Somebody reading "the research is a
+          separate subscription" and wanting that subscription had no way to get it from
+          here: no price, no packages, no checkout — and the trial banner above, when it
+          appeared at all, refused anybody who had ever been a member. Every route off
+          this page ended somewhere that would not let them in.
+
+          So the first button is the one that answers the sentence above it. A lapsed
+          member is sent to the packages too rather than only to the code box: a code is
+          what somebody who has *just paid* holds, and this person has not paid yet.
         */}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          {lapsed && <ButtonLink href="/redeem">Redeem a code</ButtonLink>}
+          <ButtonLink href="/join">See packages</ButtonLink>
+          <ButtonLink href="/redeem" variant="secondary">
+            Redeem a code
+          </ButtonLink>
           <ButtonLink href="/account" variant="secondary">
             Your account
           </ButtonLink>
@@ -507,10 +563,15 @@ function InactiveState({
       <h1 className="text-3xl text-ink">Your membership is not active</h1>
       <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
         Reports are available to active members only. If you have just paid, redeem the access code
-        we emailed you. If you believe this is a mistake, contact support.
+        we emailed you. Otherwise the packages are below.
       </p>
+      {/* Subscribing leads, redeeming follows. Only somebody who has already paid holds a
+          code, and this screen is reached far more often by somebody who has not. */}
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <ButtonLink href="/redeem">Redeem a code</ButtonLink>
+        <ButtonLink href="/join">See packages</ButtonLink>
+        <ButtonLink href="/redeem" variant="secondary">
+          Redeem a code
+        </ButtonLink>
         <ButtonLink href="/account" variant="secondary">
           Your account
         </ButtonLink>

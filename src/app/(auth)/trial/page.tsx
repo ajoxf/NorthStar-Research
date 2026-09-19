@@ -68,7 +68,7 @@ async function TrialSignup({ offer }: { offer: TrialOffer }) {
       </h1>
       <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
         {offer.isResearch
-          ? 'Everything a member reads: three reports a week and the complete archive of everything published before today. No card, and it stops on its own — there is nothing to cancel.'
+          ? 'Everything a member reads, including the complete archive of everything published before today. No card, and it stops on its own — there is nothing to cancel.'
           : offer.isPackage
             ? 'Everything in the package, opening at once and stopping together. Every report in each section, including editions published before today — read it properly before you decide.'
             : offer.isSection
