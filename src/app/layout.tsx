@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     template: '%s · NordStar Pro by Fincoursa',
   },
   description:
-    'Three research reports every week covering commodities, international markets and indices, options, crypto and spreads, and FX. Educational and informational only.',
+    'Independent research covering commodities, international markets and indices, options, crypto and spreads, and FX. Educational and informational only.',
   robots: {
     // Member and admin areas are additionally blocked in robots.ts.
     index: true,

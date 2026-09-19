@@ -61,7 +61,7 @@ export const FALLBACK_PACKAGE: PackageShape = {
   interval: PLAN.interval,
   stripePriceId: null,
   stripeProductId: null,
-  features: ['3 reports every week', 'Complete archive access', 'Emailed the moment each report lands'],
+  features: ['Every new report as it publishes', 'Complete archive access', 'Emailed the moment each report lands'],
   sortOrder: 0,
   isDefault: true,
   archivedAt: null,

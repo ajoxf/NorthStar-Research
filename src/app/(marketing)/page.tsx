@@ -229,8 +229,11 @@ function Hero({
 
       <div className="relative mx-auto max-w-6xl px-5 py-24 sm:py-36 lg:py-44">
         <div className="max-w-2xl animate-fade-up lg:max-w-[52%]">
+          {/* No cadence here. Each subject publishes at its own rate and says so on its
+              own card; a figure in the hero would be a promise made on behalf of every
+              expert on the site, including the ones who have not joined yet. */}
           <Badge tone="accent" className="mb-6">
-            Three reports · Every week
+            Technical · Macro · Independent
           </Badge>
 
           {/* Oversized and tightly tracked, per the reference: the headline is the
@@ -242,8 +245,8 @@ function Hero({
           </h1>
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
-            NordStar Pro publishes three reports a week, covering commodities, international
-            markets and indices, options, crypto and spreads, and FX. Each one sets out the
+            NordStar Pro covers commodities, international markets and indices, options, crypto
+            and spreads, and FX. Each report sets out the
             technical structure and the macro context behind it, with the reasoning shown. No
             noise and no upsells.{' '}
             {hasSections
@@ -254,7 +257,9 @@ function Hero({
           {/* Icon + uppercase meta row, sitting between the copy and the actions. */}
           <ul className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3">
             {[
-              { icon: FileText, label: '3 reports / week' },
+              // Not a number. Each subject sets its own cadence and says so on its own
+              // card — a figure here would be a promise made on behalf of every expert.
+              { icon: FileText, label: 'Independent research' },
               // "Full archive" read as the whole site's. What a subscriber gets is every
               // past edition of what they bought, which is what this now says.
               { icon: Archive, label: 'Archive included' },
@@ -725,7 +730,7 @@ function LimeStrip({ trial }: { trial: { days: number } | null }) {
     <Band tone="lime" innerClassName="py-14 sm:py-16">
       <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
         <p className="max-w-xl text-balance font-display text-[26px] font-medium leading-[1.15] tracking-[-0.03em] text-ink-on-light sm:text-[32px]">
-          Independent technical and macro trends, three reports a week.
+          Independent technical and macro trends, from the experts who follow them.
         </p>
         <ButtonLink href={trial ? '/trial' : '/join'} size="lg" variant="on-light-solid" className="shrink-0">
           {trial ? `Start a free ${trial.days}-day trial` : 'Become a member'}
@@ -773,9 +778,9 @@ function PricingSection({
             <Badge tone="accent">Introductory rate</Badge>
           </div>
           <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
-            One plan. Three reports a week, the complete archive of everything published, and an
-            email the moment each one lands. Pay by card and it renews itself — cancel any time —
-            or pay in crypto and renew whenever you choose.
+            One plan. Every report the desk publishes, the complete archive of everything
+            published before it, and an email the moment each one lands. Pay by card and it
+            renews itself — cancel any time — or pay in crypto and renew whenever you choose.
           </p>
           <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
             <span className="text-ink">
@@ -798,7 +803,7 @@ function PricingSection({
           */}
           <ul className="mt-8 space-y-3 border-t border-line pt-7">
             {[
-              'Three new reports every week',
+              'Every new report as it publishes',
               'Full archive of every past report',
               'Mobile-ready reading view',
               'Emailed the moment each report lands',
