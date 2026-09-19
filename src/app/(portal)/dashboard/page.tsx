@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Check, FileQuestion, Lock } from 'lucide-react'
+import { Check, FileQuestion, Lock, Users } from 'lucide-react'
 
 import { TrialOffer } from '@/app/(portal)/trial-offer'
 import { ExpertCard } from '@/components/expert-card'
@@ -160,21 +160,42 @@ export default async function DashboardPage({
       */}
       {experts.length > 1 && (
         <section className="mt-16">
-          <div className="mb-5">
-            <span className="eyebrow">Your experts</span>
-            <h2 className="mt-3 text-2xl text-ink">Everyone you subscribe to.</h2>
-            <p className="mt-2 max-w-lg text-[15px] leading-relaxed text-ink-dim">
-              Open one to read everything of theirs you have access to.
-            </p>
+          {/*
+            One row: what this is on the left, where it goes on the right.
+
+            This was an eyebrow, a sentence-length heading and a line of explanation stacked
+            above the grid — three lines of chrome introducing cards that already say what
+            they are. The cards carry the meaning now they are at this size, so the header
+            steps back to a label and the way out.
+          */}
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-dim">
+              <Users className="h-4 w-4" aria-hidden />
+              Your subscriptions
+            </h2>
+            <Link
+              href="/archive"
+              className="shrink-0 text-[14px] text-ink-dim underline underline-offset-4 transition-colors hover:text-ink"
+            >
+              All reports
+            </Link>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/*
+            Three across, unless there are only two — then two, filling the row.
+
+            A fixed three-column grid left a card-sized hole beside a member who holds two
+            subscriptions, which reads as something failing to load rather than as the end
+            of the list. The count is known here, so the row closes itself.
+          */}
+          <div
+            className={`grid gap-4 sm:grid-cols-2 ${experts.length > 2 ? 'lg:grid-cols-3' : ''}`}
+          >
             {experts.map((expert) => (
               <ExpertCard
                 key={expert.id}
                 href={`/archive?expert=${encodeURIComponent(expert.slug)}`}
                 name={expert.name}
-                headline={expert.headline}
                 photoUrl={expert.photoUrl}
                 topics={expert.topics}
                 meta={`${expert.reportCount} ${expert.reportCount === 1 ? 'report' : 'reports'}`}
