@@ -148,7 +148,69 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
           aria-hidden
         />
 
-        <div className="relative mx-auto max-w-6xl px-5 py-14 sm:py-20">
+        {/*
+          The photograph as the band itself, per the reference's instructor page.
+
+          Two layers, and the second is what makes this safe for a photograph nobody
+          composed for it. A single `object-cover` image would fill the band by scaling
+          until the short edge fits — which for the portraits people actually upload means
+          the same several-times upscale that made these look pixelated everywhere else.
+
+          So the picture is *contained*: shown whole, at its own aspect, and never drawn
+          larger than it was taken (`w-auto h-auto` with max bounds, rather than forced to
+          fill). Behind it, a blurred copy of itself fills whatever is left over. A 16:9
+          photograph meets the band exactly and the backdrop is never seen; a portrait sits
+          centred in its own light. Neither case can pixelate, and neither looks like a
+          mistake.
+        */}
+        {author.photoUrl && (
+          <div className="absolute inset-0" aria-hidden>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={author.photoUrl}
+              alt=""
+              className="h-full w-full scale-110 object-cover opacity-45 blur-2xl"
+            />
+          </div>
+        )}
+
+        {author.photoUrl && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element -- an arbitrary host,
+                which next/image would need configuring for one URL at a time. */}
+            <img
+              src={author.photoUrl}
+              alt={author.name}
+              className="h-auto max-h-full w-auto max-w-full"
+            />
+          </div>
+        )}
+
+        {/*
+          The scrim. Opaque at the left where the name goes and clearing to the right,
+          plus a foot to sit the stats on — the reference's own arrangement, and the reason
+          a subject composed "slightly toward one side" reads rather than competing with
+          the type. Without it the name is white text on whatever the photograph happens to
+          be, which is unreadable on a light shirt and fine nowhere in particular.
+        */}
+        {author.photoUrl && (
+          <>
+            <div
+              className="absolute inset-0 bg-gradient-to-r from-bg via-bg/70 to-transparent"
+              aria-hidden
+            />
+            <div
+              className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-bg via-bg/35 to-transparent"
+              aria-hidden
+            />
+          </>
+        )}
+
+        <div
+          className={`relative mx-auto max-w-6xl px-5 ${
+            author.photoUrl ? 'flex min-h-[520px] flex-col py-10 sm:min-h-[600px]' : 'py-14 sm:py-20'
+          }`}
+        >
           <Link
             href="/experts"
             className="font-mono text-[12px] text-ink-dim transition-colors hover:text-ink"
@@ -156,7 +218,13 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
             ← All experts
           </Link>
 
-          <div className="mt-8 grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
+          <div
+            className={
+              author.photoUrl
+                ? 'mt-auto max-w-2xl pt-16'
+                : 'mt-8 grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]'
+            }
+          >
             <div className="order-2 lg:order-1">
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
@@ -205,23 +273,6 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
               </dl>
             </div>
 
-            {author.photoUrl && (
-              /* Capped at both ends. `lg:max-w-none` let this grow to whatever the grid
-                 column was, which on a wide screen meant a phone portrait rendered far
-                 past its own resolution — the same upscaling that made the section
-                 banners look pixelated, in the one place a face is largest. */
-              <div className="order-1 w-full max-w-[280px] lg:order-2 lg:max-w-[340px]">
-                <div className="aspect-[4/5] overflow-hidden rounded-xl border border-line bg-panel-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- an arbitrary
-                      host, which next/image would need configuring for one URL at a time. */}
-                  <img
-                    src={author.photoUrl}
-                    alt={author.name}
-                    className="h-full w-full object-cover object-top"
-                  />
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </section>
