@@ -421,9 +421,16 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                 )}
                 <div className="p-6">
                 <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
-                    {sectionName(section)}
-                  </h3>
+                  <div className="min-w-0">
+                    <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
+                      {sectionName(section)}
+                    </h3>
+                    {section.cadence && (
+                      <span className="mt-1.5 inline-block rounded-full border border-ink-on-light/20 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-on-light-dim">
+                        {section.cadence}
+                      </span>
+                    )}
+                  </div>
                   <span className="shrink-0 text-right">
                     <span className="block font-display text-[26px] font-medium leading-none tracking-[-0.03em] text-ink-on-light">
                       {formatPrice(section.priceCents, section.currency)}

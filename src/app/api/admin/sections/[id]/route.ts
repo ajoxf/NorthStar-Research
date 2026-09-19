@@ -59,6 +59,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
        * artwork it never mentioned.
        */
       ...(f.imageUrl !== undefined ? { imageUrl: f.imageUrl } : {}),
+      // Same rule: null takes the cadence off the page, undefined leaves it.
+      ...(f.cadence !== undefined ? { cadence: f.cadence } : {}),
       ...(f.priceCents !== undefined ? { priceCents: f.priceCents } : {}),
       ...(f.currency !== undefined ? { currency: f.currency } : {}),
       ...(f.interval !== undefined ? { interval: f.interval } : {}),

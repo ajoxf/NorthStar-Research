@@ -887,6 +887,21 @@ model Section {
   /// their artwork should not have to re-upload it.
   imageUrl String?
 
+  /// How often this subject publishes — "Daily", "Three times a week", "Every Monday".
+  ///
+  /// Per section rather than per site, because it is genuinely per section: one expert
+  /// writes every morning and another writes a long piece on Fridays, and the site used
+  /// to tell every buyer "three reports a week" regardless. That number was true of the
+  /// desk when the desk was the only author.
+  ///
+  /// Free text rather than an enum, with presets offered in the admin. An expert who
+  /// publishes "twice a month, plus event notes" should be able to say so; an enum would
+  /// force that into the nearest wrong word, and a cadence is a promise to a buyer.
+  ///
+  /// Null means nothing is claimed, which is the honest default for a section nobody has
+  /// set one on — better than inheriting a house figure that may not be true of it.
+  cadence String?
+
   priceCents Int
   currency   String          @default("USD")
   interval   BillingInterval @default(month)

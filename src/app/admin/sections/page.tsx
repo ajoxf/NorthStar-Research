@@ -111,6 +111,7 @@ export default async function AdminSectionsPage() {
             slug: section.slug,
             displayName: section.displayName,
             description: section.description,
+            cadence: section.cadence,
             topic: { name: section.topic.name },
             author: { name: section.author.name },
             priceCents: section.priceCents,

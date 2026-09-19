@@ -126,12 +126,21 @@ export default async function CoveragePage() {
                           <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
                             {sectionName(section)}
                           </h3>
-                          <Link
-                            href={`/experts/${section.author.slug}`}
-                            className="text-[13px] text-ink-on-light-dim underline underline-offset-4 hover:text-ink-on-light"
-                          >
-                            About {section.author.name}
-                          </Link>
+                          {/* How often it publishes, next to whose it is — the two
+                              questions asked before the price is worth reading. */}
+                          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                            <Link
+                              href={`/experts/${section.author.slug}`}
+                              className="text-[13px] text-ink-on-light-dim underline underline-offset-4 hover:text-ink-on-light"
+                            >
+                              About {section.author.name}
+                            </Link>
+                            {section.cadence && (
+                              <span className="rounded-full border border-ink-on-light/20 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-on-light-dim">
+                                {section.cadence}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <span className="shrink-0 text-right">
