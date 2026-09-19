@@ -25,7 +25,12 @@ export default async function AdminReportsPage() {
   const [reports, untagged, sections] = await Promise.all([
     db.report.findMany({
       orderBy: { publishDate: 'desc' },
-      include: { _count: { select: { views: true, deliveryLogs: true } } },
+      include: {
+        _count: { select: { views: true, deliveryLogs: true } },
+        // For the Section column. Which section a report is filed under decides who can
+        // read it and whose card it appears behind, so it belongs in the list.
+        section: { include: { topic: true, author: true } },
+      },
     }),
     db.report.count({ where: { sectionId: null } }),
     db.section.findMany({
@@ -61,11 +66,12 @@ export default async function AdminReportsPage() {
       />
 
       <div className="mt-5 overflow-x-auto rounded-lg border border-line bg-panel">
-        <table className="w-full min-w-[720px] text-left">
+        <table className="w-full min-w-[860px] text-left">
           <thead>
             <tr className="border-b border-line font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
               <th className="px-5 py-3 font-medium">Date</th>
               <th className="px-5 py-3 font-medium">Type</th>
+              <th className="px-5 py-3 font-medium">Section</th>
               <th className="px-5 py-3 font-medium">Title</th>
               <th className="px-5 py-3 font-medium">Sends</th>
               <th className="px-5 py-3 font-medium">Views</th>
@@ -75,7 +81,7 @@ export default async function AdminReportsPage() {
           <tbody>
             {reports.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-12 text-center font-mono text-[13px] text-ink-dim">
+                <td colSpan={7} className="px-5 py-12 text-center font-mono text-[13px] text-ink-dim">
                   No reports yet. Upload the first one to get started.
                 </td>
               </tr>
@@ -88,7 +94,25 @@ export default async function AdminReportsPage() {
                   <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-accent">
                     {reportTypeLabel(report.type)}
                   </td>
-                  <td className="px-5 py-3.5">
+                  {/*
+                    Where this report is filed, stated per row rather than only as a total.
+
+                    The count of unfiled reports was already above the table, but a total
+                    does not tell you which ones — and an unfiled report is invisible to
+                    every member who is not all-access, and appears behind nobody's card on
+                    the dashboard. "Unfiled" in red is the one state worth spotting from
+                    across the list.
+                  */}
+                  {/* Wraps rather than holding one line: "Markets research by NordStarPro
+                      Desk" on a single line pushed every title into a five-line column. */}
+                  <td className="max-w-[170px] px-5 py-3.5 font-mono text-[12px] leading-snug">
+                    {report.section ? (
+                      <span className="text-ink-dim">{sectionName(report.section)}</span>
+                    ) : (
+                      <span className="text-down">Unfiled</span>
+                    )}
+                  </td>
+                  <td className="min-w-[280px] px-5 py-3.5">
                     <div className="flex items-center gap-2.5">
                       <Link
                         href={`/admin/reports/${report.id}`}
