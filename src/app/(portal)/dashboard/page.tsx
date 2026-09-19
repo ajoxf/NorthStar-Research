@@ -153,12 +153,20 @@ export default async function DashboardPage({
         "show me everything from Dean" — and it is the one the archive could not answer
         without knowing which names a member holds.
 
-        Shown only to somebody who holds more than one. With a single expert the band is
-        one card restating what the whole dashboard already is — every report on the page
-        is theirs, and "everything of theirs" is what the Archive link already opens. A
-        band that tells a member something they can see without it is furniture.
+        Shown to anybody who holds one, not only to somebody who holds several.
+
+        This used to require more than one, on the reasoning that a single card restates
+        what the whole dashboard already is. That reasoning was wrong in the case that
+        matters most: a site with one contributor is the normal early state, and the
+        member who most needs to see what they are subscribed to is the one who has just
+        subscribed. It also made the band vanish silently, which is indistinguishable from
+        it being broken.
+
+        Nothing is shown when there is nothing to show. An empty list means no report this
+        member can read carries a section — see the note in lib/member-experts — and there
+        is no expert to name, so there is no band rather than an empty one.
       */}
-      {experts.length > 1 && (
+      {experts.length > 0 && (
         <section className="mt-16">
           {/*
             One row: what this is on the left, where it goes on the right.
@@ -182,14 +190,22 @@ export default async function DashboardPage({
           </div>
 
           {/*
-            Three across, unless there are only two — then two, filling the row.
+            The row is sized to how many there are.
 
-            A fixed three-column grid left a card-sized hole beside a member who holds two
-            subscriptions, which reads as something failing to load rather than as the end
-            of the list. The count is known here, so the row closes itself.
+            A fixed three-column grid left card-sized holes beside a member who holds one
+            or two subscriptions, which reads as something failing to load rather than as
+            the end of the list. The count is known here, so: three across from three up,
+            two across for two, and a single card held to one card's width rather than
+            stretched across a column it would be a 650px-tall banner in.
           */}
           <div
-            className={`grid gap-4 sm:grid-cols-2 ${experts.length > 2 ? 'lg:grid-cols-3' : ''}`}
+            className={`grid gap-4 ${
+              experts.length === 1
+                ? 'max-w-md'
+                : experts.length === 2
+                  ? 'sm:grid-cols-2'
+                  : 'sm:grid-cols-2 lg:grid-cols-3'
+            }`}
           >
             {experts.map((expert) => (
               <ExpertCard
