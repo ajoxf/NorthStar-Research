@@ -77,6 +77,26 @@ export default async function ArchivePage({
               Everything of theirs you can read, including editions published before you
               joined.
             </p>
+            {/*
+              The way to the person, which the portal did not have.
+
+              An expert's profile — their background, what they cover, what else they sell
+              — lives at /experts/<slug>, and every route to it was outside the member
+              area: the card on the dashboard opens this list, the member nav is Reports,
+              Archive, Tools and Account, and the portal's own footer is the disclaimer
+              rather than the marketing one. A member who wanted to know who they were
+              reading had to guess the URL.
+
+              Here rather than on the card, where "View reports" is the one action and a
+              second link beside it would compete with it. This page is one click from the
+              card and already about this one person.
+            */}
+            <Link
+              href={`/experts/${expert.slug}`}
+              className="mt-4 inline-flex items-center gap-1.5 text-[14px] text-accent underline underline-offset-4 transition-colors hover:text-accent-hover"
+            >
+              About {expert.name}
+            </Link>
           </>
         ) : (
           <>
