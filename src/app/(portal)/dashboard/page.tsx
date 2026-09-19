@@ -42,7 +42,23 @@ export default async function DashboardPage({
   const offer = await trialOffer(member.id)
 
   if (!(await memberHasAnyAccess(member)))
-    return <InactiveState held={await heldItems(member.id)} notice={ssoNotice} offer={offer} />
+    return (
+      <InactiveState
+        held={await heldItems(member.id)}
+        notice={ssoNotice}
+        offer={offer}
+        /*
+         * Has this account ever had research access?
+         *
+         * The difference between the two people who land here. Somebody who signed up for
+         * a product five seconds ago has never had a membership and is genuinely all set.
+         * Somebody whose membership has lapsed is not, whatever else they hold — and
+         * telling them they are is how a lapse goes unnoticed until they come looking for
+         * a report that is no longer there.
+         */
+        lapsed={member.subscriptionStartedAt !== null}
+      />
+    )
 
   /*
    * What this member may read. Empty for an all-access member, so their two queries
@@ -285,7 +301,22 @@ const SIGN_IN_NOTE = 'Has its own sign-in. Use your account there.'
  */
 async function heldItems(memberId: string): Promise<HeldItem[]> {
   const rows = await db.entitlement.findMany({
-    where: { memberId, status: 'active', itemId: { not: null }, item: { kind: 'product' } },
+    /*
+     * Archived products are left out.
+     *
+     * Archiving an item withdraws it from sale and does not revoke anybody's entitlement —
+     * that is the rule everywhere else and it is not being changed here. But this screen
+     * is not an access check: it is a list of things being offered to somebody to go and
+     * use, under a heading saying they are all set, with a link to open each one. A
+     * product this site has disconnected has nowhere to send them, so naming it here is
+     * an invitation to a dead end.
+     */
+    where: {
+      memberId,
+      status: 'active',
+      itemId: { not: null },
+      item: { kind: 'product', archivedAt: null },
+    },
     select: {
       renewsAt: true,
       item: { select: { name: true, url: true } },
@@ -354,10 +385,13 @@ function InactiveState({
   held = [],
   notice,
   offer,
+  lapsed = false,
 }: {
   held?: HeldItem[]
   notice?: string
   offer?: { days: number; itemName: string; itemSlug: string }[]
+  /** This account has had research access before, so being here is a lapse. */
+  lapsed?: boolean
 }) {
   const offerBlock = offer && offer.length > 0 ? (
     <div className="mb-6 flex flex-col gap-3 text-left">
@@ -381,10 +415,32 @@ function InactiveState({
       <div className="mx-auto max-w-md px-5 py-24 text-center">
         {banner}
         {offerBlock}
+        {/*
+          "You're all set" only when they are.
+
+          This branch fires for anybody holding a product, and it used to greet them all
+          the same way. But a member whose research subscription has lapsed is not all
+          set — they are locked out of the thing they were paying for — and a tick and a
+          congratulation is how a lapse goes unnoticed until they come looking for a
+          report that is no longer there. The other person here, who signed up for a
+          product five seconds ago and has never had a membership, genuinely is all set.
+        */}
         <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full border border-line bg-panel">
-          <Check className="h-5 w-5 text-accent" aria-hidden />
+          {lapsed ? (
+            <Lock className="h-5 w-5 text-ink-dim" aria-hidden />
+          ) : (
+            <Check className="h-5 w-5 text-accent" aria-hidden />
+          )}
         </div>
-        <h1 className="text-3xl text-ink">You're all set</h1>
+        <h1 className="text-3xl text-ink">
+          {lapsed ? 'Your membership has expired' : "You're all set"}
+        </h1>
+        {lapsed && (
+          <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
+            Reports are available to active members only. Redeem the code from your renewal
+            email to pick up where you left off. What you still hold is below.
+          </p>
+        )}
         <ul className="mt-6 flex flex-col gap-2">
           {held.map((item) => (
             <li key={item.name} className="rounded-lg border border-line bg-panel px-4 py-3 text-left">
@@ -417,16 +473,22 @@ function InactiveState({
             </li>
           ))}
         </ul>
-        <p className="mt-6 text-[15px] leading-relaxed text-ink-dim">
-          This page is the research desk's reports, which are a separate subscription.
-        </p>
+        {!lapsed && (
+          <p className="mt-6 text-[15px] leading-relaxed text-ink-dim">
+            This page is the research desk's reports, which are a separate subscription.
+          </p>
+        )}
         {/*
           Their own account, not the public enquiry form. "View membership" used to send a
           signed-in member to /join — a page that asks a stranger for their name and phone
           number so the desk can quote them. Somebody who is already signed in and holds a
           product reads that as having been logged out.
+
+          A lapsed member gets the way back in first. They have bought this before, so the
+          useful thing is the code box, not a page explaining what the subscription is.
         */}
         <div className="mt-8 flex flex-wrap justify-center gap-3">
+          {lapsed && <ButtonLink href="/redeem">Redeem a code</ButtonLink>}
           <ButtonLink href="/account" variant="secondary">
             Your account
           </ButtonLink>

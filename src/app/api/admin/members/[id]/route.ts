@@ -4,6 +4,8 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { resolveContactNumbers } from '@/lib/contact-numbers'
+import { addPeriod } from '@/lib/package-shape'
+import { intervalForPackage } from '@/lib/packages'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -76,9 +78,28 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (parsed.data.subscriptionStatus === 'active') {
       const existing = await db.member.findUnique({
         where: { id: params.id },
-        select: { subscriptionStartedAt: true },
+        select: { subscriptionStartedAt: true, subscriptionRenewsAt: true, packageId: true },
       })
       if (!existing?.subscriptionStartedAt) data.subscriptionStartedAt = new Date()
+
+      /*
+       * Move a renewal date that has already passed, or activating does nothing.
+       *
+       * `isAllAccess` reads the *date*, not the status: `active` with a renewal in the
+       * past is refused exactly like `expired`. So reactivating a lapsed member from this
+       * console set the word "active" on their record and changed nothing they could see
+       * — they stayed locked out, and the console said they were fine. Two places
+       * disagreeing about whether somebody has paid, with the member's own dashboard
+       * taking the other side.
+       *
+       * One period forward from now, measured by whatever they are on. A null date is
+       * left exactly as it is: null already means open-ended — a comp granted by hand —
+       * and overwriting it with a date would quietly put an end on somebody's comp.
+       */
+      const now = new Date()
+      if (existing?.subscriptionRenewsAt && existing.subscriptionRenewsAt <= now) {
+        data.subscriptionRenewsAt = addPeriod(await intervalForPackage(existing.packageId), now)
+      }
     }
   }
 
