@@ -28,17 +28,28 @@ import { db } from '@/lib/db'
 export const sectionItemSlug = (slug: string): string => `section-${slug}`
 
 /**
- * Products that must exist as items.
+ * The products this portal offers, as items.
  *
- * Listed in code rather than typed into the database by hand so a fresh environment ends
- * up with the same handles the rest of the code checks against.
+ * Declared in code rather than typed into the database by hand so a fresh environment ends
+ * up with the same handles the rest of the code checks against — and so this list is the
+ * single answer to "what does this site sell besides research".
+ *
+ * **Empty, deliberately.** Nexus RAMP used to be here. It bills its own customers, lives
+ * on its own domain behind its own sign-in, and this site stopped opening accounts there
+ * some time ago; what was left was a name on the dashboard with an Open link and nothing
+ * on the other end of it. It is no longer part of this portal.
+ *
+ * Repair makes the database match this list in both directions — see below — so removing
+ * a line here is how a product leaves, and adding one is how the next arrives.
  */
-const PRODUCTS = [{ slug: 'nexus-ramp', name: 'Nexus RAMP' }] as const
+const PRODUCTS: readonly { slug: string; name: string }[] = []
 
 export type RepairReport = {
   dryRun: boolean
   itemsCreated: number
   itemsRenamed: number
+  /** Products withdrawn because this portal no longer offers them. Never deleted. */
+  productsArchived: number
   sectionsLinked: number
   entitlementsLinked: number
   /** Still unresolved afterwards. Above zero on a real run means something needs a person. */
@@ -89,6 +100,7 @@ export async function syncItemNames(sectionIds: string[]): Promise<number> {
 export async function repairSections({ dryRun }: { dryRun: boolean }): Promise<RepairReport> {
   let itemsCreated = 0
   let itemsRenamed = 0
+  let productsArchived = 0
   let sectionsLinked = 0
   let entitlementsLinked = 0
   const warnings: string[] = []
@@ -152,6 +164,39 @@ export async function repairSections({ dryRun }: { dryRun: boolean }): Promise<R
     if (!dryRun) await db.item.create({ data: { kind: 'product', ...product } })
   }
 
+  /*
+   * A product this portal no longer offers is withdrawn.
+   *
+   * The other direction of the same rule: PRODUCTS is the declared set, and repair makes
+   * the database agree with it. Without this, taking a product out of the list only meant
+   * "stop recreating it" — the row stayed exactly as it was, on sale and on every holder's
+   * dashboard, and there is no screen in this admin that can archive an item by hand.
+   *
+   * **Archived, never deleted.** Nothing here is removed: the item keeps its row, its
+   * entitlements and its history, and everybody who bought it still holds it. Archiving is
+   * the same withdrawal an archived package or section gets — it stops being sold, stops
+   * being offered, and stops being advertised on the dashboard as something to go and open.
+   * Reversing it is one field.
+   *
+   * Sections are untouched. They are declared by the sections table, not by this list, and
+   * matching them against it would archive every one of them.
+   */
+  const declared = PRODUCTS.map((product) => product.slug)
+  const undeclared = await db.item.findMany({
+    where: { kind: 'product', archivedAt: null, slug: { notIn: declared.length ? declared : ['-'] } },
+    select: { id: true, name: true },
+  })
+
+  for (const item of undeclared) {
+    productsArchived += 1
+    warnings.push(
+      `${item.name} is no longer a product of this portal, so it has been withdrawn from ` +
+        `sale. Nobody loses access: existing entitlements are untouched and the record is ` +
+        `kept. Put its slug back in PRODUCTS to offer it again.`,
+    )
+    if (!dryRun) await db.item.update({ where: { id: item.id }, data: { archivedAt: new Date() } })
+  }
+
   // ---- 3. every entitlement points at its section's item -------------------------
   //
   // One at a time rather than a single UPDATE ... FROM, so the count is honest and a row
@@ -204,6 +249,7 @@ export async function repairSections({ dryRun }: { dryRun: boolean }): Promise<R
     dryRun,
     itemsCreated,
     itemsRenamed,
+    productsArchived,
     sectionsLinked,
     entitlementsLinked,
     // After a real run this is the honest figure. After a dry run it still counts the rows
@@ -211,6 +257,10 @@ export async function repairSections({ dryRun }: { dryRun: boolean }): Promise<R
     entitlementsUnresolved: dryRun ? 0 : entitlementsUnresolved,
     warnings,
     clean:
-      itemsCreated === 0 && itemsRenamed === 0 && sectionsLinked === 0 && entitlementsLinked === 0,
+      itemsCreated === 0 &&
+      itemsRenamed === 0 &&
+      productsArchived === 0 &&
+      sectionsLinked === 0 &&
+      entitlementsLinked === 0,
   }
 }

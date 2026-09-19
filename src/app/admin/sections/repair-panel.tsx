@@ -11,6 +11,7 @@ type Report = {
   dryRun: boolean
   itemsCreated: number
   itemsRenamed: number
+  productsArchived: number
   sectionsLinked: number
   entitlementsLinked: number
   entitlementsUnresolved: number
@@ -124,6 +125,10 @@ export function RepairPanel({ unlinked }: { unlinked: number }) {
               {[
                 ['Items created', report.itemsCreated],
                 ['Items renamed', report.itemsRenamed],
+                // Withdrawing a product is the one line here that takes something off
+                // sale rather than filling a gap in, so it is named rather than folded
+                // into "items". The warning below says which, and that nobody loses it.
+                ['Products withdrawn', report.productsArchived],
                 ['Sections linked', report.sectionsLinked],
                 ['Subscriber records linked', report.entitlementsLinked],
               ].map(([label, value]) => (
