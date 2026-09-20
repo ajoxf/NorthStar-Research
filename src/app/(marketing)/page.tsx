@@ -250,13 +250,13 @@ function Hero({
               steps back down at the large breakpoint, where the photograph takes the
               right of the frame and the headline has half the width to live in. */}
           <h1 className="text-balance font-display text-[2.75rem] font-semibold tracking-[-0.035em] text-ink sm:text-6xl md:text-7xl lg:text-[3.5rem] xl:text-[4rem]">
-            Independent technical and macro trends.
+            Independent technical and macro research.
           </h1>
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
-            Commodities, international markets and indices, options, crypto and spreads, and
-            FX — each report setting out the technical structure and the macro context behind
-            it, with the reasoning shown rather than the conclusion asserted.{' '}
+            NordStar Pro brings insight on commodities, FX, global indices, AI and related
+            financial markets — written by experienced industry practitioners, with the
+            reasoning shown rather than the conclusion asserted.{' '}
             {hasSections
               ? 'Every subject has one author, and you subscribe to the ones you follow.'
               : 'One membership, one price.'}
@@ -302,7 +302,10 @@ function Hero({
           {trial ? (
             <div className="mt-9 grid max-w-md grid-cols-1 gap-3 sm:inline-grid sm:max-w-none sm:grid-cols-2">
               <ButtonLink href="/trial" size="lg">
-                Start a free {trial.days}-day trial
+                {/* The length belongs to the offer, not the button. It is on the trial
+                    page itself and in the strip at the foot, where there is room for it
+                    to read as a sentence rather than crowd a call to action. */}
+                Start Trial
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </ButtonLink>
               {/*
@@ -805,7 +808,7 @@ function LimeStrip({ trial }: { trial: { days: number } | null }) {
             : 'Pick the desk you follow and start reading today.'}
         </p>
         <ButtonLink href={trial ? '/trial' : '/join'} size="lg" variant="on-light-solid" className="shrink-0">
-          {trial ? `Start a free ${trial.days}-day trial` : 'Become a member'}
+          {trial ? 'Start Trial' : 'Become a member'}
           <ArrowRight className="h-4 w-4" aria-hidden />
         </ButtonLink>
       </div>
@@ -892,7 +895,7 @@ function PricingSection({
               above both, so neither button is hiding a figure from anybody. */}
           {trial && (
             <ButtonLink href="/trial" size="lg" className="mt-9 w-full">
-              Start a free {trial.days}-day trial
+              Start Trial
               <ArrowRight className="h-4 w-4" aria-hidden />
             </ButtonLink>
           )}

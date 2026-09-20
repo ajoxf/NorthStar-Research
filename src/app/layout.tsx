@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     template: '%s · NordStar Pro',
   },
   description:
-    'Independent research covering commodities, international markets and indices, options, crypto and spreads, and FX. Educational and informational only.',
+    'Insight on commodities, FX, global indices, AI and related financial markets, supported by technical and macro research from experienced industry practitioners. Educational and informational only.',
   robots: {
     // Member and admin areas are additionally blocked in robots.ts.
     index: true,
