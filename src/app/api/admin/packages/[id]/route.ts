@@ -89,6 +89,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       stripePriceId: price.stripePriceId,
       stripeProductId: price.stripeProductId,
       features: input.features,
+      // null takes the picture off the card; undefined leaves whatever is there.
+      ...(input.imageUrl !== undefined ? { imageUrl: input.imageUrl } : {}),
       sortOrder: input.sortOrder,
       /*
        * `undefined` leaves the attribution alone, `null` clears it back to the house.

@@ -75,3 +75,81 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   return NextResponse.json({ ok: true, section })
 }
+
+/**
+ * Delete a section nothing has ever been sold or published through.
+ *
+ * The same rule packages and topics follow. "Nothing is ever deleted" is a promise about
+ * records — what was published, what somebody bought, who read it. A section created by
+ * mistake, with no reports filed under it and nobody subscribed to it, is none of those:
+ * it is a name and a price, and leaving it on the shelf forever means every picker in the
+ * admin fills with corrections that cannot be cleared.
+ *
+ * Anything that makes it a record refuses the delete and is named in the refusal, so an
+ * operator is told which of the four it was rather than a flat no. Archiving stays
+ * available for all of them: it takes the section off sale and leaves every reference
+ * working, which is what a real product that has run its course needs.
+ *
+ * Its item goes with it, but only if the item is equally unused. An item with entitlements
+ * behind it is somebody's access, and an item ticked onto a package is part of what that
+ * package sells — either one is a record, and the section row going away does not make
+ * them any less so.
+ */
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const input = await adminInput(request, z.object({}).optional())
+  if ('response' in input) return input.response
+
+  const existing = await db.section.findUnique({
+    where: { id: params.id },
+    select: {
+      id: true,
+      slug: true,
+      itemId: true,
+      _count: { select: { reports: true, entitlements: true, orders: true, codes: true } },
+    },
+  })
+  if (!existing) return NextResponse.json({ error: 'No such section.' }, { status: 404 })
+
+  const held = [
+    ['report', existing._count.reports],
+    ['subscriber', existing._count.entitlements],
+    ['order', existing._count.orders],
+    ['access code', existing._count.codes],
+  ].filter(([, count]) => (count as number) > 0) as [string, number][]
+
+  if (held.length > 0) {
+    const parts = held.map(([noun, n]) => `${n} ${noun}${n === 1 ? '' : 's'}`)
+    return NextResponse.json(
+      {
+        error:
+          `This section has ${parts.join(' and ')} behind it, so it is a record of what was ` +
+          `published and bought. Retire it instead — it comes off sale and everyone who holds ` +
+          `it keeps reading.`,
+      },
+      { status: 409 },
+    )
+  }
+
+  /*
+   * The item first, and only when nothing else points at it — a delete would otherwise
+   * fail on the foreign key from the section, and an orphaned item would sit in the
+   * package contents picker forever offering a section that no longer exists.
+   */
+  const itemId = existing.itemId
+  await db.section.delete({ where: { id: existing.id } })
+
+  if (itemId) {
+    const itemUsage = await db.item.findUnique({
+      where: { id: itemId },
+      select: { _count: { select: { entitlements: true, packages: true, accounts: true } } },
+    })
+    const itemUnused =
+      itemUsage !== null &&
+      itemUsage._count.entitlements === 0 &&
+      itemUsage._count.packages === 0 &&
+      itemUsage._count.accounts === 0
+    if (itemUnused) await db.item.delete({ where: { id: itemId } })
+  }
+
+  return NextResponse.json({ ok: true, deleted: existing.slug })
+}

@@ -52,3 +52,43 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   return NextResponse.json({ ok: true, topic })
 }
+
+/**
+ * Delete a topic that nothing has ever been filed under.
+ *
+ * The same rule packages follow, and for the same reason. "Nothing is ever deleted" is a
+ * promise about *records* — what was published, what somebody bought, who read it. A topic
+ * with no sections is none of those things: it is a name somebody typed, usually a
+ * mistake, and keeping it forever means the list an operator picks from fills with
+ * corrections they cannot clear.
+ *
+ * One section is enough to refuse. Even an archived one carries reports, and a topic is
+ * what those reports are filed under — so retiring is offered instead, which takes it out
+ * of every picker while leaving every reference intact.
+ */
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+  const input = await adminInput(_request, z.object({}).optional())
+  if ('response' in input) return input.response
+
+  const existing = await db.topic.findUnique({
+    where: { id: params.id },
+    select: { id: true, name: true, _count: { select: { sections: true } } },
+  })
+  if (!existing) return NextResponse.json({ error: 'No such topic.' }, { status: 404 })
+
+  if (existing._count.sections > 0) {
+    return NextResponse.json(
+      {
+        error:
+          `${existing.name} has ${existing._count.sections} section` +
+          `${existing._count.sections === 1 ? '' : 's'} filed under it, so deleting it would ` +
+          `orphan what those sections have published. Retire it instead — it disappears from ` +
+          `every picker and everything still resolves.`,
+      },
+      { status: 409 },
+    )
+  }
+
+  await db.topic.delete({ where: { id: existing.id } })
+  return NextResponse.json({ ok: true, deleted: existing.name })
+}

@@ -25,6 +25,8 @@ export type JoinPackage = {
   /** Whose package this is — the face on the summary card. Null for the house membership. */
   authorName: string | null
   authorPhotoUrl: string | null
+  /** The package's own artwork, shown above the name on the order summary. */
+  imageUrl: string | null
   /** The subjects this package grants, named as the entitlement names them. */
   includes: string[]
 }
@@ -274,7 +276,25 @@ export function JoinForm({
  */
 function OrderSummary({ chosen, price }: { chosen: JoinPackage; price: string }) {
   return (
-    <aside className="h-fit rounded-2xl border border-ink-on-light/12 bg-white p-6 shadow-sm lg:sticky lg:top-24">
+    <aside className="h-fit overflow-hidden rounded-2xl border border-ink-on-light/12 bg-white shadow-sm lg:sticky lg:top-24">
+      {/*
+        The package's own artwork at the head of the summary.
+
+        A buyer arriving from a card that had a picture on it should see the same picture
+        here — a checkout that looks like a different product from the one clicked is how
+        somebody starts wondering whether they clicked the right thing.
+      */}
+      {chosen.imageUrl && (
+        <div className="aspect-[16/10] w-full overflow-hidden bg-ink-on-light/5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={chosen.imageUrl}
+            alt=""
+            className="h-full w-full object-cover object-top"
+          />
+        </div>
+      )}
+      <div className="p-6">
       <div className="flex items-center gap-4">
         <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-ink-on-light/5">
           {chosen.authorPhotoUrl ? (
@@ -362,6 +382,7 @@ function OrderSummary({ chosen, price }: { chosen: JoinPackage; price: string })
           </span>
           <span className="text-[13px] text-ink-on-light-dim">/{chosen.interval}</span>
         </span>
+      </div>
       </div>
     </aside>
   )

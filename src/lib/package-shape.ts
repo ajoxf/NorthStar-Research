@@ -26,6 +26,8 @@ export type PackageShape = {
   stripePriceId: string | null
   stripeProductId: string | null
   features: string[]
+  /** The picture on this package's card. Null renders a typographic panel instead. */
+  imageUrl: string | null
   sortOrder: number
   isDefault: boolean
   archivedAt: Date | null
@@ -62,6 +64,8 @@ export const FALLBACK_PACKAGE: PackageShape = {
   stripePriceId: null,
   stripeProductId: null,
   features: ['Every new report as it publishes', 'Complete archive access', 'Emailed the moment each report lands'],
+  // The built-in plan corresponds to no row, so there is nowhere to store artwork for it.
+  imageUrl: null,
   sortOrder: 0,
   isDefault: true,
   archivedAt: null,
@@ -229,6 +233,24 @@ export const packageInputSchema = z.object({
   /** Optional: an existing Stripe price to use instead of one this app creates. */
   stripePriceId: stripePriceIdSchema.optional().nullable(),
   features: z.array(z.string().trim().min(1).max(80)).max(12, 'Twelve bullet points is plenty.').default([]),
+  /**
+   * The card's picture.
+   *
+   * Clearable rather than merely optional: an empty box has to mean "take the picture
+   * off", and `optionalUrl`-style folding of '' to undefined would make a PATCH read it
+   * as "leave it alone" — the same trap `clearableUrl` exists to close for sections.
+   */
+  imageUrl: z
+    .string()
+    .trim()
+    .max(300)
+    .nullable()
+    .optional()
+    .transform((value) => (value ? value : value === null ? null : undefined))
+    .refine(
+      (value) => value === undefined || value === null || /^https?:\/\//.test(value),
+      'Links must start with http:// or https://',
+    ),
   sortOrder: z.number().int().min(0).max(999).default(0),
   /**
    * Whose package this is. Null — the default — is the house membership.

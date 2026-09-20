@@ -352,8 +352,26 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
               {packages.map((pkg) => (
                 <div
                   key={pkg.id}
-                  className="flex flex-col rounded-2xl bg-paper-card p-6 shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
+                  className="flex flex-col overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
                 >
+                  {/*
+                    The package's picture, sized like a subject's — see the note on the
+                    coverage page. Wide and modest rather than a tall banner, so artwork
+                    of any shape is downscaled into it rather than blown up past its own
+                    resolution.
+                  */}
+                  {pkg.imageUrl && (
+                    <div className="aspect-[16/10] w-full overflow-hidden bg-paper">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={pkg.imageUrl}
+                        alt=""
+                        className="h-full w-full object-cover object-top"
+                        loading="lazy"
+                      />
+                    </div>
+                  )}
+                  <div className="flex flex-1 flex-col p-6">
                   <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
                     {pkg.name}
                   </h3>
@@ -416,6 +434,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                   >
                     Subscribe
                   </ButtonLink>
+                  </div>
                 </div>
               ))}
             </div>

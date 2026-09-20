@@ -145,6 +145,7 @@ export default async function JoinPage({
               cardAvailable: pkg.stripePriceId !== null || pkg.id === FALLBACK_PACKAGE.id,
               authorName: author?.name ?? null,
               authorPhotoUrl: author?.photoUrl ?? null,
+              imageUrl: pkg.imageUrl,
               includes: contents[pkg.id] ?? [],
             }
           })}

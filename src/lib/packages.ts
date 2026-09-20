@@ -36,6 +36,7 @@ export function toShape(row: Package): PackageShape {
     stripePriceId: row.stripePriceId,
     stripeProductId: row.stripeProductId,
     features: row.features,
+    imageUrl: row.imageUrl,
     sortOrder: row.sortOrder,
     isDefault: row.isDefault,
     archivedAt: row.archivedAt,

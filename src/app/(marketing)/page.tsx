@@ -89,6 +89,15 @@ export default async function LandingPage() {
         ...entry.author,
         hasPackages: entry.packages.length > 0,
         liveSectionCount: mine.length,
+        /*
+         * The subjects this person writes, named under their photograph.
+         *
+         * A face and a price told a visitor who somebody is and what they cost, and not
+         * what they actually write about — which is the thing being sold. Topic names
+         * rather than full section names, because "Energy by Dean Rogers" under a card
+         * headed "Dean Rogers" says his name twice and the subject once.
+         */
+        subjects: [...new Set(mine.map((section) => section.topic.name))],
         // The cheapest way in, across packages and single subjects alike.
         fromCents: prices.length > 0 ? Math.min(...prices) : null,
         soon: comingSoonVisible({
@@ -245,13 +254,12 @@ function Hero({
           </h1>
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
-            NordStar Pro covers commodities, international markets and indices, options, crypto
-            and spreads, and FX. Each report sets out the
-            technical structure and the macro context behind it, with the reasoning shown. No
-            noise and no upsells.{' '}
+            Commodities, international markets and indices, options, crypto and spreads, and
+            FX — each report setting out the technical structure and the macro context behind
+            it, with the reasoning shown rather than the conclusion asserted.{' '}
             {hasSections
-              ? 'Subscribe to the experts whose subjects you actually follow.'
-              : 'One price.'}
+              ? 'Every subject has one author, and you subscribe to the ones you follow.'
+              : 'One membership, one price.'}
           </p>
 
           {/* Icon + uppercase meta row, sitting between the copy and the actions. */}
@@ -353,6 +361,8 @@ function ContributorStrip({
     photoUrl: string | null
     /** The lowest price at which this person can be read. Null while nothing is on sale. */
     fromCents: number | null
+    /** The subjects they write, shown under the name. */
+    subjects: string[]
     /** Announced but not yet publishing. Labelled rather than quietly listed. */
     soon: boolean
   }[]
@@ -360,14 +370,20 @@ function ContributorStrip({
 }) {
   return (
     <Band tone="dark">
-      <div className="text-center">
-        <Eyebrow tone="dark">The desk</Eyebrow>
-        <BandHeading className="mx-auto mt-4 max-w-2xl">
-          Research from practitioners.
-        </BandHeading>
-        <p className="mx-auto mt-4 max-w-xl text-[16px] leading-relaxed text-ink-dim">
-          Every report carries a name and the reasoning behind it. Subscribe to the people
-          you follow rather than to everything at once.
+      {/*
+        Left, like every other band on the site.
+
+        The headers here were centred while the contributor pages, the coverage page and
+        the member portal all set theirs to the left — the same page furniture arranged two
+        different ways depending which route somebody took. Left also gives the paragraph a
+        natural measure instead of a centred block that has to be width-capped by hand.
+      */}
+      <div className="max-w-2xl">
+        <Eyebrow tone="dark">Who writes it</Eyebrow>
+        <BandHeading className="mt-4">Practitioners, not a house view.</BandHeading>
+        <p className="mt-4 text-[16px] leading-relaxed text-ink-dim">
+          Every report carries one name and the working behind it. These are the people
+          publishing on the desk right now, and what each of them covers.
         </p>
       </div>
 
@@ -416,6 +432,20 @@ function ContributorStrip({
                   {contributor.headline}
                 </p>
               )}
+              {/* What they write, under who they are. Two at most: the card is a
+                  portrait, and a fourth pill pushes the price off the bottom of it. */}
+              {contributor.subjects.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {contributor.subjects.slice(0, 2).map((subject) => (
+                    <span
+                      key={subject}
+                      className="rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.1em] text-white/85 backdrop-blur-sm"
+                    >
+                      {subject}
+                    </span>
+                  ))}
+                </div>
+              )}
               {/* The price belongs on the card — see the note on the experts listing. */}
               {!contributor.soon && contributor.fromCents !== null && (
                 <p className="mt-2 text-[14px] text-white">
@@ -431,7 +461,7 @@ function ContributorStrip({
         ))}
       </div>
 
-      <div className="mt-10 text-center">
+      <div className="mt-10">
         <ButtonLink href="/experts" size="lg" variant="secondary">
           View all experts
         </ButtonLink>
@@ -475,13 +505,12 @@ function CoverageTable({
 
   return (
     <Band tone="light">
-      <div className="text-center">
-        <Eyebrow tone="light">Coverage</Eyebrow>
-        <BandHeading className="mx-auto mt-4 max-w-2xl">
-          Every subject, and who writes it.
-        </BandHeading>
-        <p className="mx-auto mt-4 max-w-xl text-[16px] leading-[1.7] text-ink-on-light-dim">
-          Buy a single subject from a single contributor, if that is all you follow.
+      <div className="max-w-2xl">
+        <Eyebrow tone="light">Featured</Eyebrow>
+        <BandHeading className="mt-4">What the desk is covering.</BandHeading>
+        <p className="mt-4 text-[16px] leading-[1.7] text-ink-on-light-dim">
+          Take a subject on its own if that is all you follow, or a bundle if you follow
+          more than one. Every edition ever published comes with it.
         </p>
       </div>
 
@@ -528,7 +557,7 @@ function CoverageTable({
         ))}
       </div>
 
-      <div className="mt-10 text-center">
+      <div className="mt-10">
         <ButtonLink href="/coverage" size="lg" variant="on-light">
           See every subject
         </ButtonLink>
@@ -611,13 +640,13 @@ function PackagePricing({
   return (
     <Band tone="light" id="pricing">
       <div>
-        <div className="mx-auto max-w-2xl text-center">
+        <div className="max-w-2xl">
           <Eyebrow tone="light">Pricing</Eyebrow>
           <BandHeading className="mt-4">Choose your package.</BandHeading>
           <p className="mt-4 text-[16px] leading-[1.7] text-ink-on-light-dim">
-            Each one is written by the contributor whose name is on it, and priced by them.
-            Pay by card and it renews itself — cancel any time — or pay in crypto and renew
-            whenever you choose.
+            Priced by the contributor whose name is on it. Pay by card and it renews itself,
+            cancellable any time; pay in crypto and you renew it whenever you choose. We
+            email an access code either way.
           </p>
         </div>
 
@@ -627,8 +656,25 @@ function PackagePricing({
             return (
               <div
                 key={pkg.id}
-                className="flex flex-col rounded-2xl bg-paper-card p-6 shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
+                className="flex flex-col overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
               >
+                {/*
+                  The package's artwork, above the face rather than instead of it. The
+                  avatar answers "whose is this"; the picture answers "what is it about",
+                  and a card selling a subject wants both.
+                */}
+                {pkg.imageUrl && (
+                  <div className="aspect-[16/10] w-full overflow-hidden bg-paper">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={pkg.imageUrl}
+                      alt=""
+                      className="h-full w-full object-cover object-top"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-1 flex-col p-6">
                 {/* The face first. Whose work this is comes before what it costs. */}
                 <div className="flex items-center gap-3">
                   <AuthorAvatar
@@ -709,6 +755,7 @@ function PackagePricing({
                     About {pkg.author.name}
                   </Link>
                 )}
+                </div>
               </div>
             )
           })}
@@ -735,12 +782,27 @@ function PackagePricing({
  * button. It works because there is exactly one of it — a second lime band anywhere would
  * cost this one everything it has.
  */
+/**
+ * The closing strip, arguing for the button beside it.
+ *
+ * It used to say "Independent technical and macro trends, from the experts who follow
+ * them" — the hero's own headline, repeated at the foot of the page to somebody who has
+ * just scrolled past everything it introduces. A closing line has one job, and restating
+ * the opening one is not it.
+ *
+ * The line now depends on which button is actually shown. With a trial open, the argument
+ * is that there is nothing to lose by reading first; without one, it is what a
+ * subscription actually gets you. A fixed line could only ever be right for one of those,
+ * and was right for neither.
+ */
 function LimeStrip({ trial }: { trial: { days: number } | null }) {
   return (
     <Band tone="lime" innerClassName="py-14 sm:py-16">
       <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
         <p className="max-w-xl text-balance font-display text-[26px] font-medium leading-[1.15] tracking-[-0.03em] text-ink-on-light sm:text-[32px]">
-          Independent technical and macro trends, from the experts who follow them.
+          {trial
+            ? `Read it for ${trial.days} days before you pay anything.`
+            : 'Pick the desk you follow and start reading today.'}
         </p>
         <ButtonLink href={trial ? '/trial' : '/join'} size="lg" variant="on-light-solid" className="shrink-0">
           {trial ? `Start a free ${trial.days}-day trial` : 'Become a member'}

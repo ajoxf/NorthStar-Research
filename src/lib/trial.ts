@@ -7,8 +7,15 @@ import {
   RESEARCH_TRIAL_ENABLED_KEY,
   RESEARCH_TRIAL_NAME,
   RESEARCH_TRIAL_SLUG,
+  researchTrialRefusal,
 } from '@/lib/research-trial'
-import { packageSlugFromTrial, packageTrial, packageTrialSlug } from '@/lib/package-trial'
+import {
+  grantableItems,
+  packageSlugFromTrial,
+  packageTrial,
+  packageTrialHeldEver,
+  packageTrialSlug,
+} from '@/lib/package-trial'
 import { itemTrial, offerUsable } from '@/lib/trial-offer-shape'
 import {
   TRIAL_DAYS_KEY,
@@ -135,6 +142,13 @@ function toOffer(
 }
 
 /** Every package trial that is open right now. */
+const PACKAGE_ITEM_SELECT = {
+  id: true,
+  archivedAt: true,
+  kind: true,
+  section: { select: { id: true, archivedAt: true } },
+} as const
+
 const PACKAGE_OFFER_SELECT = {
   slug: true,
   name: true,
@@ -345,5 +359,90 @@ export async function setItemTrial(
       trialEnabled: input.enabled,
       trialDays: input.days === null ? null : clampDays(input.days),
     },
+  })
+}
+
+/**
+ * The open trials this member could actually take up.
+ *
+ * Every surface that *advertises* a trial has to answer the same question the API answers
+ * when somebody clicks it, and until this existed they did not. The dashboard filtered by
+ * item slug, which a package offer can never match — its slug is `package:<slug>` — so a
+ * member who already subscribed to a bundle was shown a banner offering that same bundle
+ * free for a month, and clicking it was refused by the route. An offer that refuses the
+ * person it is shown to is worse than no offer.
+ *
+ * All three rules, in one place, matching what /api/trial enforces:
+ *
+ *   - **The research membership** is refused to anybody whose status is not `pending` —
+ *     a former or current customer asking for a free month is asking for a discount.
+ *   - **A single subject** is refused once its item has ever been held.
+ *   - **A package** is refused once *any part* of it has ever been held. Bundles overlap
+ *     on purpose, so this is also the conflict rule: holding Energy stops "Everything by
+ *     Dean" being offered, because most of what it grants is already paid for.
+ *
+ * Ever, not currently, throughout — otherwise a lapsed trial returns as a fresh offer to
+ * anybody willing to wait.
+ */
+export async function eligibleTrialOffers(
+  member: {
+    id: string
+    subscriptionStatus: string
+    researchTrialStartedAt: Date | null
+  },
+  offers: TrialOffer[],
+): Promise<TrialOffer[]> {
+  if (offers.length === 0) return []
+
+  const held = await db.entitlement.findMany({
+    where: { memberId: member.id },
+    select: { itemId: true, sectionId: true },
+  })
+  const heldItemIds = held.map((row) => row.itemId).filter((id): id is string => id !== null)
+  const heldSectionIds = held.map((row) => row.sectionId).filter((id): id is string => id !== null)
+  const heldItemSet = new Set(heldItemIds)
+
+  const researchRefused =
+    researchTrialRefusal({
+      enabled: true,
+      subscriptionStatus: member.subscriptionStatus,
+      researchTrialStartedAt: member.researchTrialStartedAt,
+    }) !== null
+
+  // One query for every package in play rather than one per offer.
+  const packageSlugs = offers
+    .filter((offer) => offer.isPackage)
+    .map((offer) => packageSlugFromTrial(offer.slug))
+    .filter((slug): slug is string => slug !== null)
+
+  const packages = packageSlugs.length
+    ? await db.package.findMany({
+        where: { slug: { in: packageSlugs } },
+        select: { slug: true, items: { select: { item: { select: PACKAGE_ITEM_SELECT } } } },
+      })
+    : []
+  const itemsByPackage = new Map(
+    packages.map((pkg) => [pkg.slug, grantableItems(pkg.items.map((row) => row.item))]),
+  )
+
+  const sectionItems = offers.filter((offer) => offer.isSection).map((offer) => offer.slug)
+  const sectionItemIds = sectionItems.length
+    ? await db.item.findMany({
+        where: { slug: { in: sectionItems } },
+        select: { id: true, slug: true },
+      })
+    : []
+  const idBySlug = new Map(sectionItemIds.map((item) => [item.slug, item.id]))
+
+  return offers.filter((offer) => {
+    if (offer.isResearch) return !researchRefused
+    if (offer.isPackage) {
+      const slug = packageSlugFromTrial(offer.slug)
+      const items = slug ? itemsByPackage.get(slug) : undefined
+      if (!items || items.length === 0) return false
+      return !packageTrialHeldEver(items, heldItemIds, heldSectionIds)
+    }
+    const itemId = idBySlug.get(offer.slug)
+    return itemId !== undefined && !heldItemSet.has(itemId)
   })
 }
