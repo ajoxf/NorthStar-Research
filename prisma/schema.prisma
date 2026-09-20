@@ -614,6 +614,22 @@ model Package {
   stripeProductId String?
 
   /// Bullet points on the join page. Plain strings so they stay editable by hand.
+  /// Push this package at members who do not hold it.
+  ///
+  /// Merchandising, not eligibility. What a member is *allowed* to trial is decided by
+  /// overlap — holding any part of a bundle takes it off their list automatically — and
+  /// that rule needs no operator. This is the separate question of whether the desk wants
+  /// to put a given package in front of existing members at all, which only a person can
+  /// answer: a bundle aimed at new buyers, or one being wound down, should not be
+  /// suggested to somebody already subscribed to something else.
+  ///
+  /// Defaults to true so nothing changes on the day this ships. An operator turns off what
+  /// they would rather not push, rather than having to turn on everything they would.
+  ///
+  /// It does not hide the package anywhere it is sold — the homepage, the contributor's
+  /// page and checkout are unaffected. Only the suggestion inside the member portal.
+  offerToMembers Boolean @default(true)
+
   /// The picture on this package's card — the thing a buyer sees before the price.
   ///
   /// Optional, like a section's. A package without one renders a typographic panel rather

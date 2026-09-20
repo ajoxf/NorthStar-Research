@@ -11,7 +11,7 @@ import { memberExperts } from '@/lib/member-experts'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember, memberHasAnyAccess, memberReportWhere } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { eligibleTrialOffers, trialOffers } from '@/lib/trial'
+import { memberUpsellOffers } from '@/lib/trial'
 import { formatDate, fullName } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Your reports' }
@@ -422,8 +422,7 @@ async function trialOffer(
    * banner offering that same bundle free for a month, and clicking it was refused by the
    * route. Two places deciding who may trial what, disagreeing.
    */
-  const open = await trialOffers()
-  const eligible = await eligibleTrialOffers(member, open)
+  const eligible = await memberUpsellOffers(member)
   return eligible.map((offer) => ({
     days: offer.days,
     itemName: offer.name,

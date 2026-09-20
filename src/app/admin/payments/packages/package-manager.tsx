@@ -44,6 +44,7 @@ export type AdminPackage = {
   stripePriceId: string | null
   features: string[]
   imageUrl: string | null
+  offerToMembers: boolean
   sortOrder: number
   isDefault: boolean
   archived: boolean
@@ -423,6 +424,9 @@ function PackageForm({
   const [stripePriceId, setStripePriceId] = React.useState(initial?.stripePriceId ?? '')
   const [features, setFeatures] = React.useState((initial?.features ?? []).join('\n'))
   const [imageUrl, setImageUrl] = React.useState(initial?.imageUrl ?? '')
+  // Defaults on for a new package, matching the column — an operator turns off what they
+  // would rather not push, rather than turning on everything they would.
+  const [offerToMembers, setOfferToMembers] = React.useState(initial?.offerToMembers ?? true)
   const [sortOrder, setSortOrder] = React.useState(String(initial?.sortOrder ?? 0))
   const [authorId, setAuthorId] = React.useState(initial?.authorId ?? '')
   const [itemIds, setItemIds] = React.useState<string[]>(initial?.itemIds ?? [])
@@ -463,6 +467,7 @@ function PackageForm({
         // Explicit null when emptied: the schema folds a blank to "leave alone", so
         // removing the picture has to be said out loud.
         imageUrl: imageUrl.trim() || null,
+        offerToMembers,
         sortOrder: Number(sortOrder) || 0,
         // Explicitly null rather than omitted, so choosing "the house" on a package that
         // had an author actually clears it.
@@ -652,6 +657,34 @@ function PackageForm({
           something in it to open — so the worst case here is a switch that is on and
           waiting, not a signup page that grants nothing. The line below says which it is.
         */}
+        {/*
+          Who this gets suggested to, as opposed to who may take it up.
+
+          The overlap rule already stops a member being offered a bundle they hold part of,
+          and needs nobody's attention. This is the other half: whether the desk wants this
+          package put in front of members at all. A package aimed at new buyers, or one
+          being wound down, should not be suggested to somebody already subscribed.
+        */}
+        <div className="sm:col-span-2">
+          <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
+              checked={offerToMembers}
+              onChange={(event) => setOfferToMembers(event.target.checked)}
+            />
+            <span className="min-w-0">
+              <span className="block text-[14px] text-ink">Suggest this to existing members</span>
+              <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
+                Shows it under &ldquo;Also available to you&rdquo; on the member dashboard, to
+                members who do not already hold any part of it — that overlap is handled for
+                you. Turning this off does not withdraw the package: it is still sold on the
+                homepage, on its contributor&rsquo;s page and at checkout.
+              </span>
+            </span>
+          </label>
+        </div>
+
         <div className="sm:col-span-2">
           <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
             <input

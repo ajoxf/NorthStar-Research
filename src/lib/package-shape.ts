@@ -28,6 +28,8 @@ export type PackageShape = {
   features: string[]
   /** The picture on this package's card. Null renders a typographic panel instead. */
   imageUrl: string | null
+  /** Suggest this to members who do not hold it. Merchandising, not eligibility. */
+  offerToMembers: boolean
   sortOrder: number
   isDefault: boolean
   archivedAt: Date | null
@@ -66,6 +68,8 @@ export const FALLBACK_PACKAGE: PackageShape = {
   features: ['Every new report as it publishes', 'Complete archive access', 'Emailed the moment each report lands'],
   // The built-in plan corresponds to no row, so there is nowhere to store artwork for it.
   imageUrl: null,
+  // Nor a switch. It is the whole membership, so there is nothing to upsell somebody onto.
+  offerToMembers: false,
   sortOrder: 0,
   isDefault: true,
   archivedAt: null,
@@ -240,6 +244,13 @@ export const packageInputSchema = z.object({
    * off", and `optionalUrl`-style folding of '' to undefined would make a PATCH read it
    * as "leave it alone" — the same trap `clearableUrl` exists to close for sections.
    */
+  /**
+   * Suggest this package to members who do not hold it.
+   *
+   * Defaults to true so an older client that does not send the field leaves a package
+   * being offered, rather than silently withdrawing it from the portal.
+   */
+  offerToMembers: z.boolean().default(true),
   imageUrl: z
     .string()
     .trim()

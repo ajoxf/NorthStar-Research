@@ -77,6 +77,7 @@ export async function POST(request: Request) {
       stripePriceId: price.stripePriceId,
       stripeProductId: price.stripeProductId,
       features: input.features,
+      offerToMembers: input.offerToMembers,
       imageUrl: input.imageUrl ?? null,
       sortOrder: input.sortOrder,
       authorId: input.authorId ?? null,
