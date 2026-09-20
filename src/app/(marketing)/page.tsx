@@ -782,12 +782,27 @@ function PackagePricing({
  * button. It works because there is exactly one of it — a second lime band anywhere would
  * cost this one everything it has.
  */
+/**
+ * The closing strip, arguing for the button beside it.
+ *
+ * It used to say "Independent technical and macro trends, from the experts who follow
+ * them" — the hero's own headline, repeated at the foot of the page to somebody who has
+ * just scrolled past everything it introduces. A closing line has one job, and restating
+ * the opening one is not it.
+ *
+ * The line now depends on which button is actually shown. With a trial open, the argument
+ * is that there is nothing to lose by reading first; without one, it is what a
+ * subscription actually gets you. A fixed line could only ever be right for one of those,
+ * and was right for neither.
+ */
 function LimeStrip({ trial }: { trial: { days: number } | null }) {
   return (
     <Band tone="lime" innerClassName="py-14 sm:py-16">
       <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
         <p className="max-w-xl text-balance font-display text-[26px] font-medium leading-[1.15] tracking-[-0.03em] text-ink-on-light sm:text-[32px]">
-          Read the desk properly before you decide.
+          {trial
+            ? `Read it for ${trial.days} days before you pay anything.`
+            : 'Pick the desk you follow and start reading today.'}
         </p>
         <ButtonLink href={trial ? '/trial' : '/join'} size="lg" variant="on-light-solid" className="shrink-0">
           {trial ? `Start a free ${trial.days}-day trial` : 'Become a member'}
