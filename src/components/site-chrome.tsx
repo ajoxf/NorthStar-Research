@@ -20,14 +20,6 @@ export function Wordmark({ href = '/' }: { href?: string }) {
         </span>
       </span>
 
-      {/*
-        The parent brand on its own line, in a serif and a warm imprint tone — three ways
-        apart from the two spans above, so it reads as an attribution rather than as a
-        third word in the logo.
-      */}
-      <span className="mt-1 font-serif text-[15px] italic tracking-[0.02em] text-imprint/80">
-        by Fincoursa
-      </span>
     </Link>
   )
 }
