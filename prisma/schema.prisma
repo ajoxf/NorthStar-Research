@@ -614,6 +614,16 @@ model Package {
   stripeProductId String?
 
   /// Bullet points on the join page. Plain strings so they stay editable by hand.
+  /// The picture on this package's card — the thing a buyer sees before the price.
+  ///
+  /// Optional, like a section's. A package without one renders a typographic panel rather
+  /// than a broken frame, so adding packages never waits on artwork.
+  ///
+  /// A Vercel Blob URL when uploaded here, but any https URL is accepted: a deployment
+  /// with no Blob store configured can still set one, and an operator who already hosts
+  /// their artwork should not have to re-upload it.
+  imageUrl String?
+
   features String[] @default([])
 
   /// Low first on the join page. Ties break on name, so the order is never arbitrary.

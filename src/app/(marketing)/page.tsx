@@ -627,8 +627,25 @@ function PackagePricing({
             return (
               <div
                 key={pkg.id}
-                className="flex flex-col rounded-2xl bg-paper-card p-6 shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
+                className="flex flex-col overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)]"
               >
+                {/*
+                  The package's artwork, above the face rather than instead of it. The
+                  avatar answers "whose is this"; the picture answers "what is it about",
+                  and a card selling a subject wants both.
+                */}
+                {pkg.imageUrl && (
+                  <div className="aspect-[16/10] w-full overflow-hidden bg-paper">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={pkg.imageUrl}
+                      alt=""
+                      className="h-full w-full object-cover object-top"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+                <div className="flex flex-1 flex-col p-6">
                 {/* The face first. Whose work this is comes before what it costs. */}
                 <div className="flex items-center gap-3">
                   <AuthorAvatar
@@ -709,6 +726,7 @@ function PackagePricing({
                     About {pkg.author.name}
                   </Link>
                 )}
+                </div>
               </div>
             )
           })}

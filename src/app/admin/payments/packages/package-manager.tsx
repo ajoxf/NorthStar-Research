@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label, Select, Textarea } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
+import { SectionImageField } from '@/app/admin/sections/image-field'
 import {
   type BillingIntervalValue,
   formatPrice,
@@ -42,6 +43,7 @@ export type AdminPackage = {
   interval: BillingIntervalValue
   stripePriceId: string | null
   features: string[]
+  imageUrl: string | null
   sortOrder: number
   isDefault: boolean
   archived: boolean
@@ -420,6 +422,7 @@ function PackageForm({
   )
   const [stripePriceId, setStripePriceId] = React.useState(initial?.stripePriceId ?? '')
   const [features, setFeatures] = React.useState((initial?.features ?? []).join('\n'))
+  const [imageUrl, setImageUrl] = React.useState(initial?.imageUrl ?? '')
   const [sortOrder, setSortOrder] = React.useState(String(initial?.sortOrder ?? 0))
   const [authorId, setAuthorId] = React.useState(initial?.authorId ?? '')
   const [itemIds, setItemIds] = React.useState<string[]>(initial?.itemIds ?? [])
@@ -457,6 +460,9 @@ function PackageForm({
         sellByCard,
         stripePriceId: stripePriceId.trim() || null,
         features: parseFeatures(features),
+        // Explicit null when emptied: the schema folds a blank to "leave alone", so
+        // removing the picture has to be said out loud.
+        imageUrl: imageUrl.trim() || null,
         sortOrder: Number(sortOrder) || 0,
         // Explicitly null rather than omitted, so choosing "the house" on a package that
         // had an author actually clears it.
@@ -738,6 +744,23 @@ function PackageForm({
             </div>
           </details>
         )}
+
+        {/*
+          The card's picture, uploaded exactly as a section's is.
+
+          Reuses the section uploader and its `sections/` blob prefix rather than adding a
+          third one. The prefix is a security boundary between *kinds of thing an admin
+          uploads* — a token for it cannot write into the author area — and a package's
+          title image is the same kind of thing as a section's: wide artwork for a card,
+          chosen by the same person on an adjacent screen.
+        */}
+        <div className="sm:col-span-2">
+          <SectionImageField
+            id={`pkg-${initial?.id ?? 'new'}`}
+            value={imageUrl}
+            onChange={setImageUrl}
+          />
+        </div>
 
         <div className="sm:col-span-2">
           <Label htmlFor={`features-${initial?.id ?? 'new'}`}>What it includes — one per line</Label>

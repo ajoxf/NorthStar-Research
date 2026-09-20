@@ -77,6 +77,7 @@ export default async function PackagesPage() {
     interval: pkg.interval,
     stripePriceId: pkg.stripePriceId,
     features: pkg.features,
+    imageUrl: pkg.imageUrl,
     sortOrder: pkg.sortOrder,
     isDefault: pkg.isDefault,
     archived: pkg.archivedAt !== null,
