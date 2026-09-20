@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import type { Member } from '@prisma/client'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Check, FileQuestion, Lock, Users } from 'lucide-react'
+import { Check, FileQuestion, Lock, Sparkles, Users } from 'lucide-react'
 
 import { TrialOffer } from '@/app/(portal)/trial-offer'
 import { ExpertCard } from '@/components/expert-card'
@@ -11,8 +11,7 @@ import { memberExperts } from '@/lib/member-experts'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember, memberHasAnyAccess, memberReportWhere } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { trialOffers } from '@/lib/trial'
-import { RESEARCH_TRIAL_SLUG, researchTrialRefusal } from '@/lib/research-trial'
+import { eligibleTrialOffers, trialOffers } from '@/lib/trial'
 import { formatDate, fullName } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Your reports' }
@@ -144,9 +143,6 @@ export default async function DashboardPage({
           {ssoNotice}
         </p>
       )}
-      {offer.map((one) => (
-        <TrialOffer key={one.itemSlug} days={one.days} itemName={one.itemName} itemSlug={one.itemSlug} />
-      ))}
       <div className="mb-10">
         {/*
           "Latest", not "This week". The query below takes the four most recent editions
@@ -258,6 +254,44 @@ export default async function DashboardPage({
               />
             ))}
           </div>
+        </section>
+      )}
+
+      {/*
+        What else is on offer, at the foot and in the site's own voice.
+
+        These were two full-width lime banners above the reports — the loudest thing on a
+        page somebody opens to read what they have already paid for, in acquisition copy
+        written for a stranger. A member is not a stranger, and a portal that greets them
+        with a signup offer before their own research has the priorities backwards.
+
+        So it sits under everything they came for, reads as a suggestion rather than a
+        pitch, and each row is one line and one link. `eligibleTrialOffers` has already
+        taken out anything overlapping what they hold, so nothing here is an offer of
+        something they are already paying for.
+      */}
+      {offer.length > 0 && (
+        <section className="mt-16 border-t border-line pt-8">
+          <h2 className="flex items-center gap-2 font-mono text-[12px] uppercase tracking-[0.16em] text-ink-dim">
+            <Sparkles className="h-4 w-4" aria-hidden />
+            Also available to you
+          </h2>
+          <ul className="mt-4 divide-y divide-line">
+            {offer.map((one) => (
+              <li
+                key={one.itemSlug}
+                className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 py-3.5"
+              >
+                <span className="min-w-0 text-[15px] text-ink">{one.itemName}</span>
+                <Link
+                  href={`/trial?item=${encodeURIComponent(one.itemSlug)}`}
+                  className="shrink-0 text-[14px] text-accent underline underline-offset-4 transition-colors hover:text-accent-hover"
+                >
+                  Read it free for {one.days} days
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -380,54 +414,21 @@ async function heldItems(memberId: string): Promise<HeldItem[]> {
 async function trialOffer(
   member: Pick<Member, 'id' | 'subscriptionStatus' | 'researchTrialStartedAt'>,
 ): Promise<{ days: number; itemName: string; itemSlug: string }[]> {
-  const memberId = member.id
+  /*
+   * Every rule lives in `eligibleTrialOffers`, beside the ones /api/trial enforces.
+   *
+   * This used to filter by item slug alone, which a package offer can never match — its
+   * slug is `package:<slug>` — so a member already subscribed to a bundle was shown a
+   * banner offering that same bundle free for a month, and clicking it was refused by the
+   * route. Two places deciding who may trial what, disagreeing.
+   */
   const open = await trialOffers()
-  if (open.length === 0) return []
-
-  /*
-   * Everything they have not already had, not the first thing on the list.
-   *
-   * The offers are independent — a member may run a trial of every product at once — so
-   * showing one of several would quietly hide the rest. "Ever held" is the filter, so a
-   * trial that has already expired does not come back as a fresh offer next month.
-   */
-  const items = await db.item.findMany({
-    where: { slug: { in: open.map((offer) => offer.slug) } },
-    select: { id: true, slug: true },
-  })
-  const held = await db.entitlement.findMany({
-    where: { memberId, itemId: { in: items.map((item) => item.id) } },
-    select: { itemId: true },
-  })
-  const heldIds = new Set(held.map((row) => row.itemId))
-  const heldSlugs = new Set(
-    items.filter((item) => heldIds.has(item.id)).map((item) => item.slug),
-  )
-
-  /*
-   * The research trial is judged by its own rule, not by "have they held the item".
-   *
-   * It is not an item — it is two columns on Member — so the held-items filter above can
-   * never match it, and it was therefore offered to everybody, including the people
-   * `researchTrialRefusal` exists to turn away. A member whose membership had lapsed was
-   * shown "Try NordStar Pro research free for 21 days", clicked it, and was told "this
-   * account already has a membership, sign in to read" — while signed in, and unable to
-   * read. Every route off that screen ended somewhere that refused them.
-   *
-   * The refusal itself is right: somebody who has been a customer asking for a free
-   * fortnight is asking for a discount on a renewal. Advertising it to them was the bug.
-   */
-  const researchRefused =
-    researchTrialRefusal({
-      enabled: true,
-      subscriptionStatus: member.subscriptionStatus,
-      researchTrialStartedAt: member.researchTrialStartedAt,
-    }) !== null
-
-  return open
-    .filter((offer) => !heldSlugs.has(offer.slug))
-    .filter((offer) => !(offer.slug === RESEARCH_TRIAL_SLUG && researchRefused))
-    .map((offer) => ({ days: offer.days, itemName: offer.name, itemSlug: offer.slug }))
+  const eligible = await eligibleTrialOffers(member, open)
+  return eligible.map((offer) => ({
+    days: offer.days,
+    itemName: offer.name,
+    itemSlug: offer.slug,
+  }))
 }
 
 function InactiveState({
