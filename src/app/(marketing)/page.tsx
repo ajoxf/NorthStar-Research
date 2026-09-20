@@ -382,11 +382,12 @@ function ContributorStrip({
         natural measure instead of a centred block that has to be width-capped by hand.
       */}
       <div className="max-w-2xl">
-        <Eyebrow tone="dark">Who writes it</Eyebrow>
-        <BandHeading className="mt-4">Practitioners, not a house view.</BandHeading>
+        <Eyebrow tone="dark">Subject matter experts</Eyebrow>
+        <BandHeading className="mt-4">Authored by industry practitioners.</BandHeading>
         <p className="mt-4 text-[16px] leading-relaxed text-ink-dim">
-          Every report carries one name and the working behind it. These are the people
-          publishing on the desk right now, and what each of them covers.
+          Every report is attributed to a named analyst and published under their own
+          coverage. Those currently publishing are listed below, with the markets each
+          covers.
         </p>
       </div>
 
@@ -510,10 +511,10 @@ function CoverageTable({
     <Band tone="light">
       <div className="max-w-2xl">
         <Eyebrow tone="light">Featured</Eyebrow>
-        <BandHeading className="mt-4">What the desk is covering.</BandHeading>
+        <BandHeading className="mt-4">Research coverage.</BandHeading>
         <p className="mt-4 text-[16px] leading-[1.7] text-ink-on-light-dim">
-          Take a subject on its own if that is all you follow, or a bundle if you follow
-          more than one. Every edition ever published comes with it.
+          Subscribe to an individual subject, or to a package spanning several. Every
+          subscription includes the complete archive of previously published editions.
         </p>
       </div>
 
@@ -645,11 +646,12 @@ function PackagePricing({
       <div>
         <div className="max-w-2xl">
           <Eyebrow tone="light">Pricing</Eyebrow>
-          <BandHeading className="mt-4">Choose your package.</BandHeading>
+          <BandHeading className="mt-4">Subscription plans.</BandHeading>
           <p className="mt-4 text-[16px] leading-[1.7] text-ink-on-light-dim">
-            Priced by the contributor whose name is on it. Pay by card and it renews itself,
-            cancellable any time; pay in crypto and you renew it whenever you choose. We
-            email an access code either way.
+            Each package is priced by the analyst who authors it. Card subscriptions renew
+            automatically and may be cancelled at any time; cryptocurrency subscriptions are
+            renewed at your discretion. Access credentials are issued by email once payment
+            is confirmed.
           </p>
         </div>
 
@@ -804,8 +806,8 @@ function LimeStrip({ trial }: { trial: { days: number } | null }) {
       <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
         <p className="max-w-xl text-balance font-display text-[26px] font-medium leading-[1.15] tracking-[-0.03em] text-ink-on-light sm:text-[32px]">
           {trial
-            ? `Read it for ${trial.days} days before you pay anything.`
-            : 'Pick the desk you follow and start reading today.'}
+            ? `Evaluate the research for ${trial.days} days at no cost.`
+            : 'Subscribe to the coverage you follow.'}
         </p>
         <ButtonLink href={trial ? '/trial' : '/join'} size="lg" variant="on-light-solid" className="shrink-0">
           {trial ? 'Start Trial' : 'Become a member'}
