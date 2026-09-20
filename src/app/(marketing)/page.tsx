@@ -89,6 +89,15 @@ export default async function LandingPage() {
         ...entry.author,
         hasPackages: entry.packages.length > 0,
         liveSectionCount: mine.length,
+        /*
+         * The subjects this person writes, named under their photograph.
+         *
+         * A face and a price told a visitor who somebody is and what they cost, and not
+         * what they actually write about — which is the thing being sold. Topic names
+         * rather than full section names, because "Energy by Dean Rogers" under a card
+         * headed "Dean Rogers" says his name twice and the subject once.
+         */
+        subjects: [...new Set(mine.map((section) => section.topic.name))],
         // The cheapest way in, across packages and single subjects alike.
         fromCents: prices.length > 0 ? Math.min(...prices) : null,
         soon: comingSoonVisible({
@@ -245,13 +254,12 @@ function Hero({
           </h1>
 
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
-            NordStar Pro covers commodities, international markets and indices, options, crypto
-            and spreads, and FX. Each report sets out the
-            technical structure and the macro context behind it, with the reasoning shown. No
-            noise and no upsells.{' '}
+            Commodities, international markets and indices, options, crypto and spreads, and
+            FX — each report setting out the technical structure and the macro context behind
+            it, with the reasoning shown rather than the conclusion asserted.{' '}
             {hasSections
-              ? 'Subscribe to the experts whose subjects you actually follow.'
-              : 'One price.'}
+              ? 'Every subject has one author, and you subscribe to the ones you follow.'
+              : 'One membership, one price.'}
           </p>
 
           {/* Icon + uppercase meta row, sitting between the copy and the actions. */}
@@ -353,6 +361,8 @@ function ContributorStrip({
     photoUrl: string | null
     /** The lowest price at which this person can be read. Null while nothing is on sale. */
     fromCents: number | null
+    /** The subjects they write, shown under the name. */
+    subjects: string[]
     /** Announced but not yet publishing. Labelled rather than quietly listed. */
     soon: boolean
   }[]
@@ -360,14 +370,20 @@ function ContributorStrip({
 }) {
   return (
     <Band tone="dark">
-      <div className="text-center">
-        <Eyebrow tone="dark">The desk</Eyebrow>
-        <BandHeading className="mx-auto mt-4 max-w-2xl">
-          Research from practitioners.
-        </BandHeading>
-        <p className="mx-auto mt-4 max-w-xl text-[16px] leading-relaxed text-ink-dim">
-          Every report carries a name and the reasoning behind it. Subscribe to the people
-          you follow rather than to everything at once.
+      {/*
+        Left, like every other band on the site.
+
+        The headers here were centred while the contributor pages, the coverage page and
+        the member portal all set theirs to the left — the same page furniture arranged two
+        different ways depending which route somebody took. Left also gives the paragraph a
+        natural measure instead of a centred block that has to be width-capped by hand.
+      */}
+      <div className="max-w-2xl">
+        <Eyebrow tone="dark">Who writes it</Eyebrow>
+        <BandHeading className="mt-4">Practitioners, not a house view.</BandHeading>
+        <p className="mt-4 text-[16px] leading-relaxed text-ink-dim">
+          Every report carries one name and the working behind it. These are the people
+          publishing on the desk right now, and what each of them covers.
         </p>
       </div>
 
@@ -416,6 +432,20 @@ function ContributorStrip({
                   {contributor.headline}
                 </p>
               )}
+              {/* What they write, under who they are. Two at most: the card is a
+                  portrait, and a fourth pill pushes the price off the bottom of it. */}
+              {contributor.subjects.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  {contributor.subjects.slice(0, 2).map((subject) => (
+                    <span
+                      key={subject}
+                      className="rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.1em] text-white/85 backdrop-blur-sm"
+                    >
+                      {subject}
+                    </span>
+                  ))}
+                </div>
+              )}
               {/* The price belongs on the card — see the note on the experts listing. */}
               {!contributor.soon && contributor.fromCents !== null && (
                 <p className="mt-2 text-[14px] text-white">
@@ -431,7 +461,7 @@ function ContributorStrip({
         ))}
       </div>
 
-      <div className="mt-10 text-center">
+      <div className="mt-10">
         <ButtonLink href="/experts" size="lg" variant="secondary">
           View all experts
         </ButtonLink>
@@ -475,13 +505,12 @@ function CoverageTable({
 
   return (
     <Band tone="light">
-      <div className="text-center">
-        <Eyebrow tone="light">Coverage</Eyebrow>
-        <BandHeading className="mx-auto mt-4 max-w-2xl">
-          Every subject, and who writes it.
-        </BandHeading>
-        <p className="mx-auto mt-4 max-w-xl text-[16px] leading-[1.7] text-ink-on-light-dim">
-          Buy a single subject from a single contributor, if that is all you follow.
+      <div className="max-w-2xl">
+        <Eyebrow tone="light">Featured</Eyebrow>
+        <BandHeading className="mt-4">What the desk is covering.</BandHeading>
+        <p className="mt-4 text-[16px] leading-[1.7] text-ink-on-light-dim">
+          Take a subject on its own if that is all you follow, or a bundle if you follow
+          more than one. Every edition ever published comes with it.
         </p>
       </div>
 
@@ -528,7 +557,7 @@ function CoverageTable({
         ))}
       </div>
 
-      <div className="mt-10 text-center">
+      <div className="mt-10">
         <ButtonLink href="/coverage" size="lg" variant="on-light">
           See every subject
         </ButtonLink>
@@ -611,13 +640,13 @@ function PackagePricing({
   return (
     <Band tone="light" id="pricing">
       <div>
-        <div className="mx-auto max-w-2xl text-center">
+        <div className="max-w-2xl">
           <Eyebrow tone="light">Pricing</Eyebrow>
           <BandHeading className="mt-4">Choose your package.</BandHeading>
           <p className="mt-4 text-[16px] leading-[1.7] text-ink-on-light-dim">
-            Each one is written by the contributor whose name is on it, and priced by them.
-            Pay by card and it renews itself — cancel any time — or pay in crypto and renew
-            whenever you choose.
+            Priced by the contributor whose name is on it. Pay by card and it renews itself,
+            cancellable any time; pay in crypto and you renew it whenever you choose. We
+            email an access code either way.
           </p>
         </div>
 
@@ -758,7 +787,7 @@ function LimeStrip({ trial }: { trial: { days: number } | null }) {
     <Band tone="lime" innerClassName="py-14 sm:py-16">
       <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
         <p className="max-w-xl text-balance font-display text-[26px] font-medium leading-[1.15] tracking-[-0.03em] text-ink-on-light sm:text-[32px]">
-          Independent technical and macro trends, from the experts who follow them.
+          Read the desk properly before you decide.
         </p>
         <ButtonLink href={trial ? '/trial' : '/join'} size="lg" variant="on-light-solid" className="shrink-0">
           {trial ? `Start a free ${trial.days}-day trial` : 'Become a member'}
