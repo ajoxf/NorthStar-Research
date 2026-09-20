@@ -446,3 +446,58 @@ export async function eligibleTrialOffers(
     return itemId !== undefined && !heldItemSet.has(itemId)
   })
 }
+
+/**
+ * What to actually suggest to a member inside the portal.
+ *
+ * Deliberately a second function rather than another clause inside
+ * {@link eligibleTrialOffers}, because they answer different questions and only one of
+ * them is a rule.
+ *
+ * Eligibility is arithmetic: a member who holds any part of a bundle cannot trial it, and
+ * nobody needs to decide that. Merchandising is a judgement — whether the desk wants this
+ * package put in front of existing members at all — and it belongs to an operator. Folding
+ * the switch into the eligibility helper would let a merchandising decision quietly look
+ * like an access rule, and the next person to read it could not tell which they were
+ * changing.
+ *
+ * Only the portal's suggestion is filtered. The package is still sold on the homepage, on
+ * its contributor's page and at checkout; `offerToMembers` says nothing about any of them.
+ *
+ * The research membership is never suggested here. It is the whole site — there is nothing
+ * to upsell somebody who already has a subscription onto — and `eligibleTrialOffers` has
+ * already refused it to anybody who is not `pending`.
+ */
+export async function memberUpsellOffers(
+  member: {
+    id: string
+    subscriptionStatus: string
+    researchTrialStartedAt: Date | null
+  },
+): Promise<TrialOffer[]> {
+  const eligible = await eligibleTrialOffers(member, await trialOffers())
+  if (eligible.length === 0) return []
+
+  const packageSlugs = eligible
+    .filter((offer) => offer.isPackage)
+    .map((offer) => packageSlugFromTrial(offer.slug))
+    .filter((slug): slug is string => slug !== null)
+
+  const offered = packageSlugs.length
+    ? new Set(
+        (
+          await db.package.findMany({
+            where: { slug: { in: packageSlugs }, offerToMembers: true },
+            select: { slug: true },
+          })
+        ).map((row) => row.slug),
+      )
+    : new Set<string>()
+
+  return eligible.filter((offer) => {
+    if (offer.isResearch) return false
+    if (!offer.isPackage) return true
+    const slug = packageSlugFromTrial(offer.slug)
+    return slug !== null && offered.has(slug)
+  })
+}
