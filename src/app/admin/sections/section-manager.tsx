@@ -361,6 +361,35 @@ export function SectionManager({
                 >
                   {section.archived ? 'Put back' : 'Take off sale'}
                 </Button>
+                {/*
+                  Offered only for a section that is not yet a record of anything.
+
+                  The counts beside the name are the same two the route checks, so what
+                  the operator can see explains what they can do. The route checks two
+                  more — orders and access codes — and refuses with the reason, so a
+                  section that looks empty here and is not stays safe.
+
+                  Confirmed, because unlike "Take off sale" it cannot be undone by
+                  pressing the button again.
+                */}
+                {section.reportCount === 0 && section.subscriberCount === 0 && (
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    disabled={busy}
+                    onClick={() => {
+                      if (!window.confirm(`Delete "${sectionName(section)}"? It has no reports and no subscribers, so nothing is lost — but this cannot be undone.`)) return
+                      void send(
+                        `/api/admin/sections/${section.id}`,
+                        'DELETE',
+                        {},
+                        'Section deleted',
+                      )
+                    }}
+                  >
+                    Delete
+                  </Button>
+                )}
                 <SectionRename
                   section={section}
                   busy={busy}

@@ -124,6 +124,35 @@ export function TopicManager({ topics }: { topics: TopicRow[] }) {
               >
                 {topic.archived ? 'Restore' : 'Retire'}
               </Button>
+              {/*
+                Offered only for a topic nothing has been filed under.
+
+                A topic with sections is what those sections' reports are filed under, and
+                the route refuses it anyway — but a button that is always there and
+                usually refuses teaches an operator to expect failure. This appears
+                exactly when it will work.
+
+                Confirmed, because unlike Retire it cannot be undone by pressing the
+                button again.
+              */}
+              {topic.sectionCount === 0 && (
+                <Button
+                  size="sm"
+                  variant="danger"
+                  disabled={busy}
+                  onClick={() => {
+                    if (!window.confirm(`Delete "${topic.name}"? Nothing is filed under it, so nothing is lost — but this cannot be undone.`)) return
+                    void send(
+                      `/api/admin/topics/${topic.id}`,
+                      'DELETE',
+                      {},
+                      `${topic.name} deleted`,
+                    )
+                  }}
+                >
+                  Delete
+                </Button>
+              )}
             </li>
           ))}
         </ul>
