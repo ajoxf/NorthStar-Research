@@ -109,8 +109,8 @@ export async function SiteFooter() {
           <div className="max-w-xs">
             <Wordmark />
             <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
-              Independent research covering commodities, international markets and indices,
-              options, crypto and spreads, and FX.
+              Insight on commodities, FX, global indices, AI and related financial markets,
+              supported by technical and macro research.
             </p>
           </div>
 
