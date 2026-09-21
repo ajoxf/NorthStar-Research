@@ -226,20 +226,24 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
             }
           >
             <div className="order-2 lg:order-1">
+              {/*
+                One badge, not four.
+
+                The topics were pills here too, and this hero is the worst place on the
+                site for them: the photograph is the full-bleed background, the block is
+                anchored above the name, and a topic called "Price Forecasting - Precious
+                Metals" is wide enough that three of them stacked into three full-width
+                bars across the subject's face. The page whose whole job is to make a
+                named person the reason to trust the research was covering them up.
+
+                Nothing is lost by removing them. Every subject this person covers is
+                listed further down the page, priced, with a button to buy it — which is
+                more than a pill said and in the place somebody is deciding.
+              */}
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
                   The desk
                 </span>
-                {[...new Set(author.sections.map((section) => section.topic.name))]
-                  .slice(0, 3)
-                  .map((topic) => (
-                    <span
-                      key={topic}
-                      className="rounded-full border border-line bg-panel px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim"
-                    >
-                      {topic}
-                    </span>
-                  ))}
               </div>
 
               <h1 className="mt-6 text-balance font-display text-4xl leading-[1.04] text-ink sm:text-[56px]">
