@@ -10,36 +10,8 @@ import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label, Select, Textarea } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 import { compressReportPdf } from '@/lib/pdf-compress'
+import { explainUploadFailure } from '@/app/admin/reports/upload-failure'
 import { MAX_PDF_BYTES, REPORT_BLOB_PREFIX, formatBytes, slugify } from '@/lib/report-upload'
-
-/**
- * Turn a Blob upload failure into something an operator can act on.
- *
- * The client library collapses every token problem into one opaque sentence, so this
- * re-asks our own token endpoint and prefers the reason it gives — "file storage is not
- * configured", a 403 after the admin session expired mid-upload, and so on.
- */
-async function explainUploadFailure(error: unknown): Promise<string> {
-  try {
-    const response = await fetch('/api/admin/reports/upload', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    })
-    const data = await response.json().catch(() => null)
-
-    if (response.status === 403) {
-      return 'Your admin session has expired. Sign in again, then re-upload the PDF.'
-    }
-    if (data?.error) return data.error
-  } catch {
-    // The probe itself failed, which usually means the connection dropped.
-  }
-
-  return error instanceof Error
-    ? `The PDF could not be uploaded: ${error.message}`
-    : 'The PDF could not be uploaded.'
-}
 
 /** Starter JSON so an admin can see the shape of the instrument table without docs. */
 const INSTRUMENT_TEMPLATE = JSON.stringify(

@@ -6,6 +6,7 @@ import { del } from '@vercel/blob'
 import { db } from '@/lib/db'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { sanitiseReportHtml } from '@/lib/pdf'
+import { isReportBlobUrl, looksLikePdf } from '@/lib/report-upload'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -24,6 +25,20 @@ const schema = z.object({
    * is a real answer here, not a missing one — see the note on Report.sectionId.
    */
   sectionId: z.string().min(1).nullable().optional(),
+  /**
+   * The edition PDF, attached after the report was created.
+   *
+   * Absent until now, which meant a report saved without a document could never be given
+   * one: the only upload on the site was on the create form, and the edit screen's own
+   * warning told an operator to "upload the edition PDF below" next to nothing that could.
+   * The only way out was to delete the report and start again, losing its section, its
+   * publish date and anything already written on it.
+   *
+   * Validated exactly as the create route validates it — same prefix check, same look at
+   * the bytes — because an edit is not a lesser write than a create.
+   */
+  pdfBlobUrl: z.string().min(1).optional(),
+  pdfBlobPathname: z.string().min(1).optional(),
 })
 
 /**
@@ -53,6 +68,50 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (parsed.data.shareHook !== undefined) data.shareHook = parsed.data.shareHook || null
   if (parsed.data.htmlContent !== undefined) {
     data.htmlContent = parsed.data.htmlContent ? sanitiseReportHtml(parsed.data.htmlContent) : null
+  }
+
+  /*
+   * The PDF, checked before it is recorded.
+   *
+   * `isReportBlobUrl` first: without it this field accepts any URL, and a report would
+   * happily point at somebody else's host — or at the authors' blob prefix, which is a
+   * different security boundary. Then the bytes, because a browser derives `file.type`
+   * from the extension and anything renamed to `.pdf` satisfies every check made before
+   * this one.
+   *
+   * A failed *check* is not a failed upload: `unknown` means the store could not be
+   * reached, and refusing the edit because a verification request timed out would trade a
+   * rare bad file for an outage.
+   */
+  if (parsed.data.pdfBlobUrl !== undefined) {
+    if (!isReportBlobUrl(parsed.data.pdfBlobUrl)) {
+      return NextResponse.json(
+        { error: 'That file location is not a report upload. Choose the PDF again.' },
+        { status: 400 },
+      )
+    }
+    if ((await looksLikePdf(parsed.data.pdfBlobUrl)) === 'not-pdf') {
+      return NextResponse.json(
+        {
+          error:
+            'That file is not a PDF. It may have been renamed rather than converted — ' +
+            'export it as a PDF and upload it again.',
+        },
+        { status: 400 },
+      )
+    }
+    data.pdfBlobUrl = parsed.data.pdfBlobUrl
+    /*
+     * A replaced PDF leaves the old blob where it is.
+     *
+     * Deleting it here would save a little storage and risk destroying the only copy of a
+     * document if anything about this write is wrong. Nothing on this site is ever deleted
+     * as a side effect of something else; the delete route removes a report's blob because
+     * removing the report is what an operator asked for there.
+     */
+    if (parsed.data.pdfBlobPathname !== undefined) {
+      data.pdfBlobPathname = parsed.data.pdfBlobPathname
+    }
   }
 
   if (parsed.data.publishDate) {
