@@ -146,24 +146,56 @@ export default async function ExpertsPage() {
               />
 
               <div className="absolute inset-x-0 bottom-0 p-5">
-                {/* What they cover, in place of the reference's employer badges — the
-                    subject is what a reader is choosing between here. */}
-                <div className="mb-2 flex flex-wrap gap-1.5">
+                {/*
+                  What they cover, in place of the reference's employer badges — the
+                  subject is what a reader is choosing between here.
+
+                  **One row, and each pill truncates.** These used to wrap, and a topic
+                  named "Energy, Metals and Commodities Price Forecasting" became a pill
+                  three lines deep. The block is anchored to the foot and grows upward, so
+                  a long topic did not just look heavy — it climbed over the face in the
+                  photograph, and pushed the name to a different height on every card in
+                  the row. Bounding this to a single line bounds the whole overlay, which
+                  is what makes four cards line up.
+
+                  `min-w-0` because a flex child will not shrink below its content width
+                  without it, and `truncate` silently does nothing.
+
+                  **One topic, not two.** Two pills sharing a card's width reduced both to
+                  "PRICE F…" and "ENERGY, METAL…", which is a bounded overlay made of
+                  words nobody can read — trading one fault for another. One pill gets the
+                  full width and stays legible, and a narrow "+1" says there is more
+                  without competing for room. The profile page behind the card lists them
+                  all, which is where somebody comparing subjects is going anyway.
+                */}
+                <div className="mb-2 flex gap-1.5">
                   {author.soon ? (
                     <span className="rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-accent backdrop-blur-sm">
                       Coming soon
                     </span>
                   ) : (
-                    [...new Set(author.sections.map((section) => section.topic.name))]
-                      .slice(0, 2)
-                      .map((topic) => (
-                        <span
-                          key={topic}
-                          className="rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm"
-                        >
-                          {topic}
-                        </span>
-                      ))
+                    (() => {
+                      const topics = [
+                        ...new Set(author.sections.map((section) => section.topic.name)),
+                      ]
+                      if (topics.length === 0) return null
+                      return (
+                        <>
+                          <span
+                            // The full name on hover, since a long one still truncates.
+                            title={topics.join(' · ')}
+                            className="min-w-0 truncate rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm"
+                          >
+                            {topics[0]}
+                          </span>
+                          {topics.length > 1 && (
+                            <span className="shrink-0 rounded-full border border-white/25 bg-black/40 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm">
+                              +{topics.length - 1}
+                            </span>
+                          )}
+                        </>
+                      )
+                    })()
                   )}
                 </div>
 

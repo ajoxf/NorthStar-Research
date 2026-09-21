@@ -398,7 +398,7 @@ export function SectionManager({
                       `/api/admin/sections/${section.id}`,
                       'PATCH',
                       fields,
-                      'Section title updated',
+                      'Section details updated',
                     )
                   }
                 />
@@ -427,7 +427,14 @@ export function SectionManager({
 }
 
 /**
- * Rename a section, and edit the line under its name.
+ * Rename a section, and edit the three things written about it: title, cadence and
+ * description.
+ *
+ * The button says "Edit details" rather than "Edit title", which is what it said while it
+ * already opened all three. An operator looking for where to change a description read a
+ * row of buttons — Price, Take off sale, Edit title, Start a trial, Add image — and
+ * concluded there was nowhere, because nothing on it claimed to be the place. A control
+ * that does more than its label says is the same as a missing control.
  *
  * A section is called "<topic> by <expert>" unless a display name overrides it, and that
  * override could only be set at creation — so a subject the desk wanted to call
@@ -464,7 +471,7 @@ function SectionRename({
   if (!open) {
     return (
       <Button size="sm" variant="secondary" disabled={busy} onClick={() => setOpen(true)}>
-        Edit title
+        Edit details
       </Button>
     )
   }
