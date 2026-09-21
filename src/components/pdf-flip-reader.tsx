@@ -271,7 +271,7 @@ export function PdfFlipReader({
           />
         )}
 
-        {/* The turning leaf: the outgoing page, hinged on the spine, corner leading. */}
+        {/* The turning leaf: the outgoing page, hinged on the spine, curling as it goes. */}
         {turn && pageWidth > 0 && (
           <div
             className={turn.dir === 'next' ? 'page-turn-next' : 'page-turn-prev'}
@@ -285,33 +285,12 @@ export function PdfFlipReader({
               ...(turn.dir === 'next'
                 ? { right: 0, transformOrigin: 'left center' }
                 : { left: 0, transformOrigin: 'right center' }),
-              backfaceVisibility: 'hidden',
+              transformStyle: 'preserve-3d',
               willChange: 'transform',
             }}
             aria-hidden
           >
-            {/*
-              The bow, on its own element.
-
-              The hinge above does a pure rotateY and nothing else, so the bound edge
-              cannot move; the shear that makes the sheet read as paper rather than as a
-              board lives here, anchored on the spine where it contributes nothing. Doing
-              both on one element means tilting the rotation axis, which leads with the
-              right corner and drags the binding 29px off centre with it.
-            */}
-            <div
-              className={cn(
-                'h-full w-full',
-                turn.dir === 'next' ? 'page-turn-bow' : 'page-turn-bow-prev',
-              )}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- a data URL snapshot
-                  of a canvas; there is nothing for next/image to fetch or optimise. */}
-              <img src={turn.image} alt="" className="block h-full w-full object-cover" />
-              {/* Shading across the leaf as it lifts, so it reads as paper catching light
-                  rather than a flat rectangle rotating. */}
-              <div className="page-turn-shade absolute inset-0" />
-            </div>
+            <CurledLeaf image={turn.image} width={pageWidth} dir={turn.dir} />
           </div>
         )}
 
@@ -379,6 +358,92 @@ export function PdfFlipReader({
       </div>
     </div>
   )
+}
+
+/**
+ * How many strips the turning sheet is cut into.
+ *
+ * Each one rotates by a fraction of the bend, nested inside the last, so the angles
+ * accumulate outward from a spine that never moves — which is the only way to get a
+ * curve out of CSS. A transform is affine: it cannot bend a plane, so a single element
+ * can only ever pivot flat, and the one trick that fakes a lead — tilting the rotation
+ * axis — does it by swinging the bound edge off centre, which books do not do.
+ *
+ * Twelve is where this stopped paying. Fewer and the arc is visibly faceted; more and
+ * the seams between strips start to matter more than the curve does, on a sheet that is
+ * on screen for two thirds of a second.
+ */
+const STRIPS = 12
+
+/**
+ * The outgoing page, cut into strips and curled.
+ *
+ * Every strip carries the same snapshot with its background offset by its own width, so
+ * together they reassemble one image — nothing is re-rendered per strip, and the whole
+ * sheet is still the single canvas photograph taken before the page changed.
+ *
+ * Built by folding from the outside in, because each strip has to be the *child* of the
+ * one before it: nesting is what makes the rotations accumulate rather than all measuring
+ * from the spine. Strip zero does not rotate at all — it is the sewn-in edge.
+ *
+ * Each strip is drawn a shade over its own width. Rotated neighbours otherwise leave
+ * hairline gaps along every seam, which read as scratches across the page.
+ */
+function CurledLeaf({
+  image,
+  width,
+  dir,
+}: {
+  image: string
+  width: number
+  dir: 'next' | 'prev'
+}) {
+  const strip = width / STRIPS
+  const forward = dir === 'next'
+
+  let node: React.ReactNode = null
+  for (let i = STRIPS - 1; i >= 0; i--) {
+    const child = node
+    node = (
+      <div
+        key={i}
+        className={cn(
+          'absolute top-0 h-full',
+          // The spine strip is glued; every other one bends relative to its neighbour.
+          i > 0 && (forward ? 'page-turn-curl' : 'page-turn-curl-prev'),
+        )}
+        style={{
+          width: strip + 0.7,
+          ...(forward
+            ? { left: i === 0 ? 0 : strip, transformOrigin: 'left center' }
+            : { right: i === 0 ? 0 : strip, transformOrigin: 'right center' }),
+          backgroundImage: `url(${image})`,
+          backgroundSize: `${width}px 100%`,
+          backgroundPosition: `${forward ? -i * strip : -(STRIPS - 1 - i) * strip}px 0`,
+          backgroundRepeat: 'no-repeat',
+          transformStyle: 'preserve-3d',
+          backfaceVisibility: 'hidden',
+        }}
+      >
+        {child}
+        {/*
+          Light across this strip.
+
+          Per strip rather than one gradient over the whole sheet, because on a curved
+          surface each band faces the light differently — that difference is most of what
+          makes a curve read as a curve rather than as a picture of one. Outer strips sit
+          deeper in shadow, which is also where the sheet is standing furthest off the
+          spread.
+        */}
+        <div
+          className="page-turn-shade pointer-events-none absolute inset-0"
+          style={{ opacity: undefined, backgroundColor: `rgba(0,0,0,${0.06 + (i / STRIPS) * 0.5})` }}
+        />
+      </div>
+    )
+  }
+
+  return <>{node}</>
 }
 
 /**

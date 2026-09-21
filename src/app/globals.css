@@ -220,19 +220,19 @@
    A page lifts off the spine and swings across, revealing the next beneath it. The leaf
    is a snapshot of the outgoing page (see pdf-flip-reader.tsx).
 
-   **The hinge and the bow are two elements, and that is the whole design.**
+   **The hinge and the curl are separate, and that is the whole design.**
 
-   The obvious way to make the lower outer corner lead is to tilt the rotation axis —
-   `rotate3d(-0.2, 1, 0, …)` instead of a plain `rotateY`. It does lead with the right
-   corner, and it also ungluies the binding: a tilted axis rotates the hinge *line* as
-   well, so the sheet's spine edge swings off the centre by up to 29px mid-turn. Measured,
-   not guessed. A bound page does not do that — the one edge that never moves in a real
-   book is the one that is sewn in.
+   A CSS transform is affine: it cannot bend a plane. So a single element can only pivot
+   flat, and the one trick that fakes a leading edge — tilting the rotation axis with
+   `rotate3d` — buys it by rotating the hinge *line* too, swinging the sheet's bound edge
+   up to 29px off the centre mid-turn. Measured, not guessed. The one edge that never
+   moves in a real book is the one that is sewn in.
 
-   So the outer element does a pure `rotateY` about the spine and nothing else, which
-   keeps the binding exactly fixed, and an inner element carries the deformation. `skewY`
-   maps (x, y) to (x, y + x·tan a), so at x = 0 — the spine — it contributes nothing at
-   all, while the free edge shears. The corner leads and the binding holds.
+   So this element does a pure `rotateY` about the spine and nothing else, which holds the
+   binding exactly still, and the sheet inside it is cut into nested strips that each bend
+   a little relative to the last (see `page-turn-curl`). The angles accumulate outward, so
+   the free edge leads by a wide margin while the spine has not moved at all — a curve
+   rather than a pivot, which is what a page actually does.
 
    **The visible half gets the time.** The leaf's back face is hidden, so everything a
    reader sees happens between 0 and 90 degrees — past that the sheet is edge-on and the
@@ -289,49 +289,63 @@
   animation: page-turn-prev 700ms linear forwards;
 }
 
-/* The bow: the sheet is not a rigid board.
+/* The curl.
 
-   Anchored on the spine so it cannot move it — see above. The shear peaks while the sheet
-   is broadside and returns to nothing as it goes edge-on, because a sheet that arrived
-   flat on the other side still bent would have taken a crease. */
-@keyframes page-turn-bow {
+   Applied to every strip but the one on the spine. Each rotates by this much *relative to
+   its neighbour*, and because the strips are nested the angles accumulate outward: with
+   twelve strips a 3.2 degree step is a 35 degree bend by the free edge, while the sewn-in
+   edge has not moved at all. That accumulation is the whole reason for the nesting.
+
+   It peaks while the sheet is broadside, where a curve is actually visible, and relaxes to
+   nothing before it goes edge-on — a sheet that arrived on the other side still bent would
+   have taken a crease.
+
+   The free edge leading is what this buys. Tilting the hinge also produces a lead, and
+   pays for it by swinging the bound edge 29px off centre mid-turn; this leads without
+   moving the binding by a pixel, because every rotation here is measured from the strip
+   inside it rather than from the spine. */
+@keyframes page-turn-curl {
   0% {
-    transform: skewY(0deg) scaleX(1);
+    transform: rotateY(0deg);
   }
-  42% {
-    transform: skewY(-2.2deg) scaleX(0.985);
+  34% {
+    transform: rotateY(-3.2deg);
   }
-  78% {
-    transform: skewY(-0.8deg) scaleX(0.995);
+  62% {
+    transform: rotateY(-2.1deg);
+  }
+  82% {
+    transform: rotateY(0deg);
   }
   100% {
-    transform: skewY(0deg) scaleX(1);
+    transform: rotateY(0deg);
   }
 }
 
-@keyframes page-turn-bow-prev {
+@keyframes page-turn-curl-prev {
   0% {
-    transform: skewY(0deg) scaleX(1);
+    transform: rotateY(0deg);
   }
-  42% {
-    transform: skewY(2.2deg) scaleX(0.985);
+  34% {
+    transform: rotateY(3.2deg);
   }
-  78% {
-    transform: skewY(0.8deg) scaleX(0.995);
+  62% {
+    transform: rotateY(2.1deg);
+  }
+  82% {
+    transform: rotateY(0deg);
   }
   100% {
-    transform: skewY(0deg) scaleX(1);
+    transform: rotateY(0deg);
   }
 }
 
-.page-turn-bow {
-  transform-origin: left center;
-  animation: page-turn-bow 700ms linear forwards;
+.page-turn-curl {
+  animation: page-turn-curl 700ms ease-out forwards;
 }
 
-.page-turn-bow-prev {
-  transform-origin: right center;
-  animation: page-turn-bow-prev 700ms linear forwards;
+.page-turn-curl-prev {
+  animation: page-turn-curl-prev 700ms ease-out forwards;
 }
 
 /* Light across the lifting leaf.
@@ -354,9 +368,10 @@
 
 .page-turn-shade {
   pointer-events: none;
-  background:
-    radial-gradient(120% 90% at 100% 100%, rgba(0, 0, 0, 0.58) 0%, rgba(0, 0, 0, 0) 62%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0) 58%);
+  /* The depth is set per strip in pdf-flip-reader.tsx — outer strips sit darker — and
+     this only fades that in as the sheet lifts. One gradient across the whole leaf would
+     not do: on a curve each band faces the light differently, and that difference is most
+     of what makes a curve read as one. */
   animation: page-turn-shade 700ms ease-in forwards;
 }
 
@@ -394,8 +409,8 @@
   /* The turn is decoration; the page change is the function. Skip straight to it. */
   .page-turn-next,
   .page-turn-prev,
-  .page-turn-bow,
-  .page-turn-bow-prev,
+  .page-turn-curl,
+  .page-turn-curl-prev,
   .page-turn-shade,
   .page-turn-cast {
     animation: none;
