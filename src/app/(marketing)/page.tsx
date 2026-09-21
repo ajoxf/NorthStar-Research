@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Archive, ArrowRight, Check, FileText, Smartphone } from 'lucide-react'
 
+import { FeaturedGrid } from '@/app/(marketing)/featured-grid'
 import { AuthorAvatar } from '@/components/author-avatar'
 import { Band, BandHeading, Eyebrow } from '@/components/band'
 import { HeroMedia } from '@/components/hero-media'
@@ -12,6 +13,7 @@ import { authorListable, comingSoonVisible } from '@/lib/section-shape'
 import { db } from '@/lib/db'
 import { trialOffers } from '@/lib/trial'
 import { sectionsPublic } from '@/lib/sections-mode'
+import { featuredTopics } from '@/lib/featured-topics'
 import { formatPrice, type PackageShape } from '@/lib/package-shape'
 
 /**
@@ -55,7 +57,7 @@ export default async function LandingPage() {
           sections: {
             where: { archivedAt: null },
             orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
-            include: { topic: true, author: true },
+            include: { topic: true, author: true, item: { select: { slug: true } } },
           },
         },
       })
@@ -63,6 +65,32 @@ export default async function LandingPage() {
 
   const covered = topics.filter((topic) => topic.sections.length > 0)
   const allSections = covered.flatMap((topic) => topic.sections)
+
+  /*
+   * Which subjects the Featured band shows.
+   *
+   * `featuredTopics` falls back to all of them while nothing is ticked, so this band is
+   * unchanged on a site that has never opened the admin — and becomes a chosen few the
+   * moment an operator ticks one. Only the band narrows: the contributors strip and the
+   * pricing below it still speak for everything on sale, because featuring is about what
+   * leads the page rather than about what is for sale.
+   */
+  const featuredSections = featuredTopics(covered).flatMap((topic) => topic.sections)
+
+  /*
+   * Which individual subjects have a trial open, by item slug.
+   *
+   * Asked of the trial system rather than read off the item's own switch, for the same
+   * reason /coverage does: an archived item has the switch on and nothing to open.
+   */
+  const sectionTrials = new Set(
+    offers.filter((offer) => offer.isSection).map((offer) => offer.slug),
+  )
+  const withTrial = (rows: typeof allSections) =>
+    rows.map((section) => ({
+      ...section,
+      hasTrial: section.item ? sectionTrials.has(section.item.slug) : false,
+    }))
 
   /*
    * What is on sale, and who each package belongs to.
@@ -203,7 +231,7 @@ export default async function LandingPage() {
       */}
       {contributors.length > 0 ? (
         <>
-          <CoverageTable sections={allSections} currency={plan.currency} />
+          <CoverageTable sections={withTrial(featuredSections)} currency={plan.currency} />
           {pricing}
           <ContributorStrip contributors={contributors} currency={plan.currency} />
         </>
@@ -524,18 +552,23 @@ function CoverageTable({
     imageUrl: string | null
     topic: { name: string }
     author: { name: string; slug: string }
+    hasTrial: boolean
   }[]
   currency: string
 }) {
   // One card per subject, naming everybody who covers it and the cheapest way in.
   const byTopic = [...new Set(sections.map((section) => section.topic.name))].map((name) => {
     const rows = sections.filter((section) => section.topic.name === name)
+    const authors = new Map(rows.map((row) => [row.author.slug, row.author]))
     return {
       name,
-      authors: [...new Set(rows.map((row) => row.author.name))],
+      authors: [...authors.values()].map((a) => ({ slug: a.slug, name: a.name })),
       fromCents: Math.min(...rows.map((row) => row.priceCents)),
       image: rows.find((row) => row.imageUrl)?.imageUrl ?? null,
       href: rows.length === 1 ? `/experts/${rows[0].author.slug}` : '/coverage',
+      // A subject is trialable if any section under it is — the filter answers "can I
+      // start reading this today", and one open trial is enough for that to be yes.
+      hasTrial: rows.some((row) => row.hasTrial),
     }
   })
 
@@ -550,48 +583,9 @@ function CoverageTable({
         </p>
       </div>
 
-      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {byTopic.map((topic) => (
-          <Link
-            key={topic.name}
-            href={topic.href}
-            className="group flex flex-col overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)] transition-shadow hover:shadow-[0_8px_24px_rgba(17,24,39,0.10)]"
-          >
-            {topic.image && (
-              <div className="aspect-[16/9] w-full overflow-hidden bg-paper">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={topic.image}
-                  alt=""
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  loading="lazy"
-                />
-              </div>
-            )}
-
-            <div className="flex flex-1 flex-col p-6">
-              <h3 className="text-[20px] font-medium leading-[1.2] tracking-[-0.02em] text-ink-on-light">
-                {topic.name}
-              </h3>
-              <p className="mt-2 flex-1 text-[14px] leading-[1.6] text-ink-on-light-dim">
-                {topic.authors.join(' · ')}
-              </p>
-
-              <div className="mt-5 flex items-center justify-between border-t border-line-on-light pt-4">
-                <span className="text-[15px] text-ink-on-light">
-                  from{' '}
-                  <span className="font-medium">{formatPrice(topic.fromCents, currency)}</span>
-                  <span className="text-ink-on-light-dim">/mo</span>
-                </span>
-                <ArrowRight
-                  className="h-4 w-4 text-ink-on-light-dim transition-transform group-hover:translate-x-0.5"
-                  aria-hidden
-                />
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+      {/* The grid and its controls are a client component: filtering the first list on the
+          landing page through the server would be a page load per chip. */}
+      <FeaturedGrid cards={byTopic} currency={currency} />
 
       <div className="mt-10">
         <ButtonLink href="/coverage" size="lg" variant="on-light">
@@ -602,6 +596,12 @@ function CoverageTable({
   )
 }
 
+/**
+ * The three standing themes, for a site with no sections configured.
+ *
+ * Static copy rather than data: this band only renders when nothing has been created, so
+ * there is nothing to read it from.
+ */
 const COVERAGE = [
   {
     title: 'Commodities & Energy',

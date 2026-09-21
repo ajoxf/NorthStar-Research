@@ -33,6 +33,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       ...(fields.name !== undefined ? { name: fields.name } : {}),
       ...(fields.blurb !== undefined ? { blurb: fields.blurb ?? null } : {}),
       ...(fields.sortOrder !== undefined ? { sortOrder: fields.sortOrder } : {}),
+      ...(fields.featured !== undefined ? { featured: fields.featured } : {}),
       ...(archived === undefined ? {} : { archivedAt: archived ? new Date() : null }),
     },
   })

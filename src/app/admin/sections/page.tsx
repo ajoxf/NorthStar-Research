@@ -77,6 +77,7 @@ export default async function AdminSectionsPage() {
             sortOrder: topic.sortOrder,
             archived: topic.archivedAt !== null,
             sectionCount: topic._count.sections,
+            featured: topic.featured,
           }))}
         />
 

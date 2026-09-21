@@ -146,6 +146,14 @@ export const topicInputSchema = z.object({
   name,
   blurb: optionalText(200),
   sortOrder: z.number().int().min(0).max(999).default(0),
+  /**
+   * Show this subject in the homepage's featured band.
+   *
+   * Optional rather than defaulted, because this schema is used `.partial()` for edits and
+   * whole for creation: a default of false here would mean every edit that did not mention
+   * featuring quietly un-featured the topic.
+   */
+  featured: z.boolean().optional(),
 })
 
 /**
