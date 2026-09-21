@@ -1,0 +1,46 @@
+Subject: Publishing your research on NordStar Pro
+
+{{FIRST_NAME}},
+
+NordStar Pro is a subscription research platform for commodities, FX, global
+indices and related markets. Readers do not buy a bundle from a masthead they
+have never heard of — they subscribe to a named analyst whose reasoning they
+want to follow. We are writing because {{THEIR_MARKET}} is coverage our readers
+ask for, and we would rather have it from someone who has traded it.
+
+What you would have:
+
+  Your own masthead. A profile page carrying your photograph, your biography
+  and your track record. Every edition is published under your byline, never
+  the house's.
+
+  Your price, your schedule. You set what your coverage costs and how often it
+  goes out — daily, weekly, or whenever the market warrants it. Nothing obliges
+  you to publish to someone else's calendar.
+
+  Subscribers who are yours. Readers subscribe to your coverage specifically,
+  not to a site-wide pass. You can see how many, and what they read.
+
+  Nothing to run. Payments, renewals, access control, the archive and the
+  delivery emails are ours. You send a PDF; we do the rest.
+
+Terms: {{REVENUE_TERMS}}
+
+If it is of interest, send a recent piece of your work and we will set up your
+page — there is no application and no committee. If it is not, a one-line reply
+saying so is genuinely useful and you will not hear from us again.
+
+{{SENDER_NAME}}
+{{SENDER_ROLE}}, NordStar Pro
+{{REPLY_EMAIL}}
+
+---
+You are receiving this because your published work covers markets NordStar Pro
+writes about. Reply with the word "remove" and we will not contact you again.
+
+Research published on NordStar Pro is for educational and informational
+purposes only and is not financial advice. Trading involves substantial risk
+and past performance does not indicate future results.
+
+NordStar Pro will never contact you privately to request money or offer account
+management via WhatsApp, Telegram, Discord or social media DMs.
