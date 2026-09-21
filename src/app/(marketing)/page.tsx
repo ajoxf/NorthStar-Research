@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Archive, ArrowRight, Check, FileText, Smartphone } from 'lucide-react'
+import { Archive, ArrowRight, Check, CreditCard, PenLine } from 'lucide-react'
 
 import { FeaturedGrid } from '@/app/(marketing)/featured-grid'
 import { AuthorAvatar } from '@/components/author-avatar'
@@ -316,25 +316,51 @@ function Hero({
             Independent technical and macro trends.
           </h1>
 
+          {/*
+            Reframed from "NordStar Pro brings insight on...".
+
+            Three things were wrong with it. "Brings insight on" is a weak verb doing the
+            work of a strong one, and what this actually does is publish analysis. The
+            brand name is in the masthead directly above, so repeating it here spends the
+            first four words of the page on something already answered. And it ran to four
+            lines, which at this type size is a paragraph where the design wants a stated
+            position.
+
+            What survives is the one clause that says something a competitor would not:
+            the reasoning is shown rather than the conclusion asserted. That is the actual
+            product claim, so it now ends the sentence instead of trailing off it.
+          */}
           <p className="mt-7 max-w-xl text-[17px] leading-relaxed text-ink-dim">
-            NordStar Pro brings insight on commodities, FX, global indices, AI and related
-            financial markets — written by experienced industry practitioners, with the
-            reasoning shown rather than the conclusion asserted.{' '}
+            Technical and macro analysis on commodities, FX, global indices, AI and the
+            markets around them — each subject written by one practitioner who has traded
+            it, showing the reasoning rather than asserting the conclusion.{' '}
             {hasSections
-              ? 'Every subject has one author, and you subscribe to the ones you follow.'
+              ? 'Subscribe to the subjects you follow.'
               : 'One membership, one price.'}
           </p>
 
           {/* Icon + uppercase meta row, sitting between the copy and the actions. */}
           <ul className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3">
             {[
-              // Not a number. Each subject sets its own cadence and says so on its own
-              // card — a figure here would be a promise made on behalf of every expert.
-              { icon: FileText, label: 'Independent research' },
+              /*
+                Three claims that are true of this site and not of every site.
+
+                They were "Independent research", "Archive included" and "Mobile
+                friendly". The first repeated the headline's own word back at a reader who
+                had just read it. The third is not a feature — a site that did not work on
+                a phone would be broken, and listing the absence of a defect as a benefit
+                invites the question of what else might be missing. Both were spending a
+                line to say nothing.
+
+                Still not a cadence figure: each subject sets its own and says so on its
+                own card, so a number here would be a promise made on behalf of every
+                expert, including the ones who have not joined yet.
+              */
+              { icon: PenLine, label: 'One named author per subject' },
               // "Full archive" read as the whole site's. What a subscriber gets is every
               // past edition of what they bought, which is what this now says.
-              { icon: Archive, label: 'Archive included' },
-              { icon: Smartphone, label: 'Mobile friendly' },
+              { icon: Archive, label: 'Full archive included' },
+              { icon: CreditCard, label: 'Cancel any time' },
             ].map((item) => (
               <li key={item.label} className="flex items-center gap-2">
                 <item.icon className="h-3.5 w-3.5 text-accent" aria-hidden />
