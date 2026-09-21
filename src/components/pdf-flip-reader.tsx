@@ -33,8 +33,14 @@ import type { PdfDocument } from '@/lib/pdf-client'
 /** Below this container width a spread would make each page too small to read. */
 const SPREAD_MIN_WIDTH = 880
 
-/** Long enough to read as paper with weight, short enough not to be in the way. */
-const TURN_MS = 620
+/**
+ * Long enough to read as paper with weight, short enough not to be in the way.
+ *
+ * Coupled to the `page-turn-*` animations in globals.css, which this unmounts the leaf
+ * at the end of. Change one and the other has to follow: shorter here and the sheet pops
+ * out of existence mid-sweep, longer and it sits invisible while the reader waits.
+ */
+const TURN_MS = 700
 
 type Turn = { image: string; dir: 'next' | 'prev' }
 
@@ -248,7 +254,24 @@ export function PdfFlipReader({
           </div>
         )}
 
-        {/* The turning leaf: the outgoing page, hinged on the spine. */}
+        {/*
+          The shadow the lifting sheet throws on the page underneath.
+
+          A sibling rather than a child of the leaf: it belongs to the page being revealed,
+          so it must not rotate with the sheet casting it.
+        */}
+        {turn && pageWidth > 0 && (
+          <div
+            className={cn(
+              'page-turn-cast pointer-events-none absolute top-0 h-full',
+              turn.dir === 'prev' && 'page-turn-cast-prev',
+            )}
+            style={{ width: pageWidth, ...(turn.dir === 'next' ? { right: 0 } : { left: 0 }) }}
+            aria-hidden
+          />
+        )}
+
+        {/* The turning leaf: the outgoing page, hinged on the spine, corner leading. */}
         {turn && pageWidth > 0 && (
           <div
             className={turn.dir === 'next' ? 'page-turn-next' : 'page-turn-prev'}
