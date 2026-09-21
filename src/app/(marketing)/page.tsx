@@ -153,6 +153,27 @@ export default async function LandingPage() {
     null,
   )
 
+  /*
+   * Packages, when any have been created; the single membership card when none have.
+   *
+   * The card is what this site sold before packages existed and is still exactly right
+   * for a site selling one thing — so it stays as the fallback rather than being replaced
+   * by an empty grid. Once there are packages, the buyer picks one, and that choice is the
+   * whole commercial model: a payment belongs to the package it bought, and the package
+   * belongs to one contributor.
+   *
+   * Bound to a name rather than written inline because it now sits between two bands in
+   * one branch and after a band in the other. Inline, that is the same conditional written
+   * out twice — two places for the fallback rule to be edited, and one of them to be
+   * forgotten.
+   */
+  const pricing =
+    onSale.length > 0 ? (
+      <PackagePricing packages={onSale} trialDaysBySlug={trialDaysBySlug} />
+    ) : (
+      <PricingSection plan={plan} trial={trial} cheapestSectionCents={cheapest} />
+    )
+
   return (
     <>
       <Hero
@@ -162,32 +183,29 @@ export default async function LandingPage() {
         packagesOnSale={onSale.length}
       />
       {/*
-        The bands alternate, and the order is what makes them do so: dark hero, light
-        subjects, dark contributors, light prices. Two light bands in a row
-        would flatten the whole page, which is the one thing this rhythm exists to avoid —
-        so the order here is load-bearing, not arrangement.
+        Order: hero, what is published, what it costs, who writes it.
+
+        Prices used to come last, after the contributors. They sit above them now — a
+        visitor who has just read what the desk covers is at the point of asking what it
+        costs, and the people writing it are the reason to stay rather than the reason to
+        arrive. The experts band closing the page also gives it somewhere to end now that
+        the lime strip is gone.
+
+        The band rhythm pays for this. It was dark, light, dark, light; it is now dark,
+        light, light, dark, so Featured and Pricing are two light bands running together.
+        That is the trade the order asks for, and it is the order that was asked for.
       */}
       {contributors.length > 0 ? (
         <>
           <CoverageTable sections={allSections} currency={plan.currency} />
+          {pricing}
           <ContributorStrip contributors={contributors} currency={plan.currency} />
         </>
       ) : (
-        <CoverageSection />
-      )}
-      {/*
-        Packages, when any have been created; the single membership card when none have.
-
-        The card is what this site sold before packages existed and is still exactly right
-        for a site selling one thing — so it stays as the fallback rather than being
-        replaced by an empty grid. Once there are packages, the buyer picks one, and that
-        choice is the whole commercial model: a payment belongs to the package it bought,
-        and the package belongs to one contributor.
-      */}
-      {onSale.length > 0 ? (
-        <PackagePricing packages={onSale} trialDaysBySlug={trialDaysBySlug} />
-      ) : (
-        <PricingSection plan={plan} trial={trial} cheapestSectionCents={cheapest} />
+        <>
+          <CoverageSection />
+          {pricing}
+        </>
       )}
       {/*
         No closing strip.
