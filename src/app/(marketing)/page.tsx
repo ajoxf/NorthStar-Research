@@ -436,14 +436,16 @@ function ContributorStrip({
                   {contributor.headline}
                 </p>
               )}
-              {/* What they write, under who they are. Two at most: the card is a
-                  portrait, and a fourth pill pushes the price off the bottom of it. */}
+              {/* What they write, under who they are. Two at most, on one row, each
+                  truncating — see the note on the experts listing: a long topic name
+                  wrapped to three lines and climbed over the photograph. */}
               {contributor.subjects.length > 0 && (
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                <div className="mt-2.5 flex gap-1.5">
                   {contributor.subjects.slice(0, 2).map((subject) => (
                     <span
                       key={subject}
-                      className="rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.1em] text-white/85 backdrop-blur-sm"
+                      title={subject}
+                      className="min-w-0 truncate rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.1em] text-white/85 backdrop-blur-sm"
                     >
                       {subject}
                     </span>

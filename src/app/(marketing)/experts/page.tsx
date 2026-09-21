@@ -146,9 +146,22 @@ export default async function ExpertsPage() {
               />
 
               <div className="absolute inset-x-0 bottom-0 p-5">
-                {/* What they cover, in place of the reference's employer badges — the
-                    subject is what a reader is choosing between here. */}
-                <div className="mb-2 flex flex-wrap gap-1.5">
+                {/*
+                  What they cover, in place of the reference's employer badges — the
+                  subject is what a reader is choosing between here.
+
+                  **One row, and each pill truncates.** These used to wrap, and a topic
+                  named "Energy, Metals and Commodities Price Forecasting" became a pill
+                  three lines deep. The block is anchored to the foot and grows upward, so
+                  a long topic did not just look heavy — it climbed over the face in the
+                  photograph, and pushed the name to a different height on every card in
+                  the row. Bounding this to a single line bounds the whole overlay, which
+                  is what makes four cards line up.
+
+                  `min-w-0` because a flex child will not shrink below its content width
+                  without it, and `truncate` silently does nothing.
+                */}
+                <div className="mb-2 flex gap-1.5">
                   {author.soon ? (
                     <span className="rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-accent backdrop-blur-sm">
                       Coming soon
@@ -159,7 +172,9 @@ export default async function ExpertsPage() {
                       .map((topic) => (
                         <span
                           key={topic}
-                          className="rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm"
+                          // The full name on hover, since the pill may be showing half of it.
+                          title={topic}
+                          className="min-w-0 truncate rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm"
                         >
                           {topic}
                         </span>
