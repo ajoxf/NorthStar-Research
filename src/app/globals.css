@@ -220,66 +220,64 @@
    A page lifts off the spine and swings across, revealing the next beneath it. The leaf
    is a snapshot of the outgoing page (see pdf-flip-reader.tsx).
 
-   Three things make this read as paper rather than as a rectangle rotating.
+   **The hinge and the bow are two elements, and that is the whole design.**
 
-   **The lower outer corner leads.** A page is not turned by its whole edge at once — a
-   hand takes the bottom outer corner and the sheet peels from there, so that corner is
-   well clear of the spread while the top edge has barely moved. A plain `rotateY` cannot
-   do this; `rotate3d` with a small *negative* x component tilts the hinge axis off
-   vertical so the bottom of the sheet travels further than the top.
+   The obvious way to make the lower outer corner lead is to tilt the rotation axis —
+   `rotate3d(-0.2, 1, 0, …)` instead of a plain `rotateY`. It does lead with the right
+   corner, and it also ungluies the binding: a tilted axis rotates the hinge *line* as
+   well, so the sheet's spine edge swings off the centre by up to 29px mid-turn. Measured,
+   not guessed. A bound page does not do that — the one edge that never moves in a real
+   book is the one that is sewn in.
 
-   The sign is the whole behaviour and it is not guessable by reading it: a positive x
-   leads with the *top* corner, which is nobody's idea of turning a page. Measured rather
-   than assumed — see the note on verification in the commit.
+   So the outer element does a pure `rotateY` about the spine and nothing else, which
+   keeps the binding exactly fixed, and an inner element carries the deformation. `skewY`
+   maps (x, y) to (x, y + x·tan a), so at x = 0 — the spine — it contributes nothing at
+   all, while the free edge shears. The corner leads and the binding holds.
 
    **The visible half gets the time.** The leaf's back face is hidden, so everything a
-   reader actually sees happens between 0 and 90 degrees — past that the sheet is edge-on
-   and the new page is already underneath. The old keyframes reached 90 degrees at the
-   halfway mark, which spent half the duration animating something invisible and made the
-   visible part twice as abrupt as its timing suggested. Ninety degrees now lands at 78%.
+   reader sees happens between 0 and 90 degrees — past that the sheet is edge-on and the
+   new page is already underneath. Reaching 90 degrees at the halfway mark, as this used
+   to, spends half the duration animating something invisible and makes the visible part
+   twice as abrupt as its timing suggests. Ninety degrees lands at 78%.
 
-   **It is not a rigid board.** A slight skew and a narrowing across the middle of the
-   sweep stand in for the sheet bowing as it lifts, and both return to nothing as it
-   goes over.
-
-   Eased so the sheet resists at first and then falls: paper accelerates once it passes
-   its own balance point, and a single symmetric curve reads as a slide transition.
+   Eased per keyframe rather than by one curve across the run, so the sheet resists and
+   then falls once it is past its own balance point.
 
    The duration is coupled to TURN_MS in pdf-flip-reader.tsx, which unmounts the leaf.
    Change one and the other has to follow, or the leaf pops away mid-sweep. */
 @keyframes page-turn-next {
   0% {
-    transform: rotate3d(-0.2, 1, 0, 0deg) skewY(0deg) scaleX(1);
+    transform: rotateY(0deg);
     animation-timing-function: cubic-bezier(0.28, 0.05, 0.55, 0.52);
   }
   38% {
-    transform: rotate3d(-0.2, 1, 0, -48deg) skewY(-0.9deg) scaleX(0.994);
+    transform: rotateY(-48deg);
     animation-timing-function: cubic-bezier(0.4, 0.1, 0.5, 1);
   }
   78% {
-    transform: rotate3d(-0.2, 1, 0, -90deg) skewY(-0.5deg) scaleX(0.988);
+    transform: rotateY(-90deg);
     animation-timing-function: ease-in;
   }
   100% {
-    transform: rotate3d(-0.2, 1, 0, -180deg) skewY(0deg) scaleX(1);
+    transform: rotateY(-180deg);
   }
 }
 
 @keyframes page-turn-prev {
   0% {
-    transform: rotate3d(-0.2, 1, 0, 0deg) skewY(0deg) scaleX(1);
+    transform: rotateY(0deg);
     animation-timing-function: cubic-bezier(0.28, 0.05, 0.55, 0.52);
   }
   38% {
-    transform: rotate3d(-0.2, 1, 0, 48deg) skewY(0.9deg) scaleX(0.994);
+    transform: rotateY(48deg);
     animation-timing-function: cubic-bezier(0.4, 0.1, 0.5, 1);
   }
   78% {
-    transform: rotate3d(-0.2, 1, 0, 90deg) skewY(0.5deg) scaleX(0.988);
+    transform: rotateY(90deg);
     animation-timing-function: ease-in;
   }
   100% {
-    transform: rotate3d(-0.2, 1, 0, 180deg) skewY(0deg) scaleX(1);
+    transform: rotateY(180deg);
   }
 }
 
@@ -291,12 +289,57 @@
   animation: page-turn-prev 700ms linear forwards;
 }
 
+/* The bow: the sheet is not a rigid board.
+
+   Anchored on the spine so it cannot move it — see above. The shear peaks while the sheet
+   is broadside and returns to nothing as it goes edge-on, because a sheet that arrived
+   flat on the other side still bent would have taken a crease. */
+@keyframes page-turn-bow {
+  0% {
+    transform: skewY(0deg) scaleX(1);
+  }
+  42% {
+    transform: skewY(-2.2deg) scaleX(0.985);
+  }
+  78% {
+    transform: skewY(-0.8deg) scaleX(0.995);
+  }
+  100% {
+    transform: skewY(0deg) scaleX(1);
+  }
+}
+
+@keyframes page-turn-bow-prev {
+  0% {
+    transform: skewY(0deg) scaleX(1);
+  }
+  42% {
+    transform: skewY(2.2deg) scaleX(0.985);
+  }
+  78% {
+    transform: skewY(0.8deg) scaleX(0.995);
+  }
+  100% {
+    transform: skewY(0deg) scaleX(1);
+  }
+}
+
+.page-turn-bow {
+  transform-origin: left center;
+  animation: page-turn-bow 700ms linear forwards;
+}
+
+.page-turn-bow-prev {
+  transform-origin: right center;
+  animation: page-turn-bow-prev 700ms linear forwards;
+}
+
 /* Light across the lifting leaf.
 
-   Weighted to the outer corner, because that is the part standing furthest off the
-   spread and so the part that falls into shadow first. It peaks as the sheet reaches
-   edge-on rather than at the end of the timeline — after 90 degrees the leaf is not
-   visible, so shading that kept deepening would be deepening in private. */
+   Weighted to the lower outer corner — the part standing furthest off the spread, and so
+   the part that falls into shadow first. It peaks as the sheet reaches edge-on rather than
+   at the end of the timeline: after 90 degrees the leaf is not visible, and shading that
+   kept deepening would be deepening in private. */
 @keyframes page-turn-shade {
   0% {
     opacity: 0;
@@ -319,9 +362,9 @@
 
 /* The shadow the lifting sheet throws on the page underneath.
 
-   Without it the new page is evenly lit while something is demonstrably hovering over
-   it, which is the tell that the leaf is a picture sliding rather than an object with a
-   position. Strongest under the corner, and gone by the time the sheet is edge-on. */
+   Without it the new page is evenly lit while something is demonstrably hovering over it,
+   which is the tell that the leaf is a picture sliding rather than an object with a
+   position. Strongest near the binding, and gone by the time the sheet is edge-on. */
 @keyframes page-turn-cast {
   0% {
     opacity: 0;
@@ -339,18 +382,20 @@
 
 .page-turn-cast {
   pointer-events: none;
-  background: radial-gradient(90% 120% at 0% 60%, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 70%);
+  background: radial-gradient(90% 120% at 0% 70%, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 70%);
   animation: page-turn-cast 700ms ease-out forwards;
 }
 
 .page-turn-cast-prev {
-  background: radial-gradient(90% 120% at 100% 60%, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 70%);
+  background: radial-gradient(90% 120% at 100% 70%, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 70%);
 }
 
 @media (prefers-reduced-motion: reduce) {
   /* The turn is decoration; the page change is the function. Skip straight to it. */
   .page-turn-next,
   .page-turn-prev,
+  .page-turn-bow,
+  .page-turn-bow-prev,
   .page-turn-shade,
   .page-turn-cast {
     animation: none;

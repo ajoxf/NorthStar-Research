@@ -290,12 +290,28 @@ export function PdfFlipReader({
             }}
             aria-hidden
           >
-            {/* eslint-disable-next-line @next/next/no-img-element -- a data URL snapshot
-                of a canvas; there is nothing for next/image to fetch or optimise. */}
-            <img src={turn.image} alt="" className="block h-full w-full object-cover" />
-            {/* Shading across the leaf as it lifts, so it reads as paper catching light
-                rather than a flat rectangle rotating. */}
-            <div className="page-turn-shade absolute inset-0" />
+            {/*
+              The bow, on its own element.
+
+              The hinge above does a pure rotateY and nothing else, so the bound edge
+              cannot move; the shear that makes the sheet read as paper rather than as a
+              board lives here, anchored on the spine where it contributes nothing. Doing
+              both on one element means tilting the rotation axis, which leads with the
+              right corner and drags the binding 29px off centre with it.
+            */}
+            <div
+              className={cn(
+                'h-full w-full',
+                turn.dir === 'next' ? 'page-turn-bow' : 'page-turn-bow-prev',
+              )}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element -- a data URL snapshot
+                  of a canvas; there is nothing for next/image to fetch or optimise. */}
+              <img src={turn.image} alt="" className="block h-full w-full object-cover" />
+              {/* Shading across the leaf as it lifts, so it reads as paper catching light
+                  rather than a flat rectangle rotating. */}
+              <div className="page-turn-shade absolute inset-0" />
+            </div>
           </div>
         )}
 
