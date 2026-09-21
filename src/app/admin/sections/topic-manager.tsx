@@ -17,6 +17,8 @@ export type TopicRow = {
   sortOrder: number
   archived: boolean
   sectionCount: number
+  /** Shown in the homepage's featured band. See `featuredTopics` for what none means. */
+  featured: boolean
 }
 
 /**
@@ -102,6 +104,34 @@ export function TopicManager({ topics }: { topics: TopicRow[] }) {
                 </p>
               </div>
               {topic.archived && <Badge tone="muted">retired</Badge>}
+              {topic.featured && <Badge>featured</Badge>}
+              {/*
+                Featuring, offered only for a topic that has something to show.
+
+                The homepage band renders a topic's cheapest section, its artwork and who
+                writes it. A topic with no sections has none of those, so featuring one
+                would tick a box that changes nothing on the page — and an operator who
+                cannot see why is left assuming the feature is broken.
+              */}
+              {topic.sectionCount > 0 && !topic.archived && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() =>
+                    send(
+                      `/api/admin/topics/${topic.id}`,
+                      'PATCH',
+                      { featured: !topic.featured },
+                      topic.featured
+                        ? `${topic.name} removed from Featured`
+                        : `${topic.name} added to Featured`,
+                    )
+                  }
+                >
+                  {topic.featured ? 'Unfeature' : 'Feature'}
+                </Button>
+              )}
               <TopicRename
                 topic={topic}
                 busy={busy}

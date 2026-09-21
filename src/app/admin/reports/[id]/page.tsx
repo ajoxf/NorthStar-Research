@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ArrowLeft, Users } from 'lucide-react'
 
+import { PdfAttach } from '@/app/admin/reports/[id]/pdf-attach'
 import { ReportAdminPanel } from '@/app/admin/reports/[id]/report-admin-panel'
 import { sectionName } from '@/lib/section-shape'
 import { ShareLinks } from '@/app/admin/reports/[id]/share-links'
@@ -101,6 +102,15 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
           </p>
         </div>
       )}
+
+      {/*
+        The control that warning has always pointed at.
+
+        It was not here. The only upload on the site was on the create form, so a report
+        saved without a document could never be given one, and this banner told an operator
+        to upload the PDF "below" next to nothing that could.
+      */}
+      <PdfAttach reportId={report.id} title={report.title} hasPdf={Boolean(report.pdfBlobUrl)} />
 
       <ReportAdminPanel
         report={{

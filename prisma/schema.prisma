@@ -817,6 +817,16 @@ model Topic {
   blurb     String?
   sortOrder Int     @default(0)
 
+  /// Show this subject in the homepage's featured band.
+  ///
+  /// **False by default, and "none ticked" means "show them all."** The band used to be
+  /// every topic with something on sale, which is right for three subjects and wrong for
+  /// fifteen — but defaulting this to true would have been a migration that silently
+  /// features everything, and defaulting to false without the fallback would empty the
+  /// band on deploy for every site already running. The fallback is in `featuredTopics`,
+  /// so the first tick is what turns the band from automatic into curated.
+  featured  Boolean @default(false)
+
   archivedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
