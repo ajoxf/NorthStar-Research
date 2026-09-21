@@ -191,9 +191,15 @@ export default async function LandingPage() {
         arrive. The experts band closing the page also gives it somewhere to end now that
         the lime strip is gone.
 
-        The band rhythm pays for this. It was dark, light, dark, light; it is now dark,
-        light, light, dark, so Featured and Pricing are two light bands running together.
-        That is the trade the order asks for, and it is the order that was asked for.
+        The alternation survives the move, because the two bands swapped grounds with
+        it: Pricing is on the dark ground and the experts band on the light one, so the
+        page still runs dark, light, dark, light. Moving Pricing up without that swap put
+        Featured and Pricing together as two light bands, which is the one thing this
+        rhythm exists to avoid.
+
+        The package cards stay white on the dark ground, as the expert cards stay
+        photographs on the light one. A band's ground sets the ink around its content,
+        not the content itself.
       */}
       {contributors.length > 0 ? (
         <>
@@ -401,7 +407,7 @@ function ContributorStrip({
   currency: string
 }) {
   return (
-    <Band tone="dark">
+    <Band tone="light">
       {/*
         Left, like every other band on the site.
 
@@ -411,9 +417,9 @@ function ContributorStrip({
         natural measure instead of a centred block that has to be width-capped by hand.
       */}
       <div className="max-w-2xl">
-        <Eyebrow tone="dark">Subject matter experts</Eyebrow>
+        <Eyebrow tone="light">Subject matter experts</Eyebrow>
         <BandHeading className="mt-4">Authored by industry practitioners.</BandHeading>
-        <p className="mt-4 text-[16px] leading-relaxed text-ink-dim">
+        <p className="mt-4 text-[16px] leading-relaxed text-ink-on-light-dim">
           Every report is attributed to a named analyst and published under their own
           coverage. Those currently publishing are listed below, with the markets each
           covers.
@@ -429,7 +435,7 @@ function ContributorStrip({
           <Link
             key={contributor.id}
             href={`/experts/${contributor.slug}`}
-            className="group relative block aspect-[3/4] overflow-hidden rounded-2xl border border-line bg-panel-2 transition-colors hover:border-accent/45"
+            className="group relative block aspect-[3/4] overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)] transition-shadow hover:shadow-[0_8px_24px_rgba(17,24,39,0.12)]"
           >
             {contributor.photoUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element -- an arbitrary host,
@@ -492,7 +498,7 @@ function ContributorStrip({
       </div>
 
       <div className="mt-10">
-        <ButtonLink href="/experts" size="lg" variant="secondary">
+        <ButtonLink href="/experts" size="lg" variant="on-light">
           View all experts
         </ButtonLink>
       </div>
@@ -668,12 +674,12 @@ function PackagePricing({
   trialDaysBySlug: Map<string, number>
 }) {
   return (
-    <Band tone="light" id="pricing">
+    <Band tone="dark" id="pricing">
       <div>
         <div className="max-w-2xl">
-          <Eyebrow tone="light">Pricing</Eyebrow>
+          <Eyebrow tone="dark">Pricing</Eyebrow>
           <BandHeading className="mt-4">Subscription plans.</BandHeading>
-          <p className="mt-4 text-[16px] leading-[1.7] text-ink-on-light-dim">
+          <p className="mt-4 text-[16px] leading-[1.7] text-ink-dim">
             Each package is priced by the analyst who authors it. Card subscriptions renew
             automatically and may be cancelled at any time; cryptocurrency subscriptions are
             renewed at your discretion. Access credentials are issued by email once payment
@@ -792,11 +798,11 @@ function PackagePricing({
           })}
         </div>
 
-        <p className="mt-8 text-center text-[13px] text-ink-on-light-dim">
+        <p className="mt-8 text-center text-[13px] text-ink-dim">
           Already paid?{' '}
           <Link
             href="/redeem"
-            className="text-ink-on-light underline underline-offset-4"
+            className="text-ink underline underline-offset-4"
           >
             Redeem your code
           </Link>
