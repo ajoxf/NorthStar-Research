@@ -160,6 +160,13 @@ export default async function ExpertsPage() {
 
                   `min-w-0` because a flex child will not shrink below its content width
                   without it, and `truncate` silently does nothing.
+
+                  **One topic, not two.** Two pills sharing a card's width reduced both to
+                  "PRICE F…" and "ENERGY, METAL…", which is a bounded overlay made of
+                  words nobody can read — trading one fault for another. One pill gets the
+                  full width and stays legible, and a narrow "+1" says there is more
+                  without competing for room. The profile page behind the card lists them
+                  all, which is where somebody comparing subjects is going anyway.
                 */}
                 <div className="mb-2 flex gap-1.5">
                   {author.soon ? (
@@ -167,18 +174,28 @@ export default async function ExpertsPage() {
                       Coming soon
                     </span>
                   ) : (
-                    [...new Set(author.sections.map((section) => section.topic.name))]
-                      .slice(0, 2)
-                      .map((topic) => (
-                        <span
-                          key={topic}
-                          // The full name on hover, since the pill may be showing half of it.
-                          title={topic}
-                          className="min-w-0 truncate rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm"
-                        >
-                          {topic}
-                        </span>
-                      ))
+                    (() => {
+                      const topics = [
+                        ...new Set(author.sections.map((section) => section.topic.name)),
+                      ]
+                      if (topics.length === 0) return null
+                      return (
+                        <>
+                          <span
+                            // The full name on hover, since a long one still truncates.
+                            title={topics.join(' · ')}
+                            className="min-w-0 truncate rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm"
+                          >
+                            {topics[0]}
+                          </span>
+                          {topics.length > 1 && (
+                            <span className="shrink-0 rounded-full border border-white/25 bg-black/40 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm">
+                              +{topics.length - 1}
+                            </span>
+                          )}
+                        </>
+                      )
+                    })()
                   )}
                 </div>
 
