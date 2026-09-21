@@ -436,24 +436,16 @@ function ContributorStrip({
                   {contributor.headline}
                 </p>
               )}
-              {/* What they write, under who they are: one pill on one row, plus a count
-                  of the rest — see the note on the experts listing for why a long topic
-                  name wrapping to three lines climbed over the photograph, and why two
-                  pills sharing the width is not the fix either. */}
+              {/* What they write, as a caption rather than badges — see the note on the
+                  experts listing for why a pill is the wrong container for a topic named
+                  "Price Forecasting - Precious Metals". */}
               {contributor.subjects.length > 0 && (
-                <div className="mt-2.5 flex gap-1.5">
-                  <span
-                    title={contributor.subjects.join(' · ')}
-                    className="min-w-0 truncate rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.1em] text-white/85 backdrop-blur-sm"
-                  >
-                    {contributor.subjects[0]}
-                  </span>
-                  {contributor.subjects.length > 1 && (
-                    <span className="shrink-0 rounded-full border border-white/25 bg-black/40 px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-white/85 backdrop-blur-sm">
-                      +{contributor.subjects.length - 1}
-                    </span>
-                  )}
-                </div>
+                <p
+                  title={contributor.subjects.join(' · ')}
+                  className="mt-1.5 truncate text-[11px] uppercase tracking-[0.1em] text-white/55"
+                >
+                  {contributor.subjects.slice(0, 2).join(' · ')}
+                </p>
               )}
               {/* The price belongs on the card — see the note on the experts listing. */}
               {!contributor.soon && contributor.fromCents !== null && (

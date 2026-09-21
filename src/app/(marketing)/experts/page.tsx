@@ -147,57 +147,16 @@ export default async function ExpertsPage() {
 
               <div className="absolute inset-x-0 bottom-0 p-5">
                 {/*
-                  What they cover, in place of the reference's employer badges — the
-                  subject is what a reader is choosing between here.
+                  Only a status badge sits up here now.
 
-                  **One row, and each pill truncates.** These used to wrap, and a topic
-                  named "Energy, Metals and Commodities Price Forecasting" became a pill
-                  three lines deep. The block is anchored to the foot and grows upward, so
-                  a long topic did not just look heavy — it climbed over the face in the
-                  photograph, and pushed the name to a different height on every card in
-                  the row. Bounding this to a single line bounds the whole overlay, which
-                  is what makes four cards line up.
-
-                  `min-w-0` because a flex child will not shrink below its content width
-                  without it, and `truncate` silently does nothing.
-
-                  **One topic, not two.** Two pills sharing a card's width reduced both to
-                  "PRICE F…" and "ENERGY, METAL…", which is a bounded overlay made of
-                  words nobody can read — trading one fault for another. One pill gets the
-                  full width and stays legible, and a narrow "+1" says there is more
-                  without competing for room. The profile page behind the card lists them
-                  all, which is where somebody comparing subjects is going anyway.
+                  "Coming soon" is two short words and will always be one small pill, so it
+                  can sit above the name without touching the photograph.
                 */}
-                <div className="mb-2 flex gap-1.5">
-                  {author.soon ? (
-                    <span className="rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-accent backdrop-blur-sm">
-                      Coming soon
-                    </span>
-                  ) : (
-                    (() => {
-                      const topics = [
-                        ...new Set(author.sections.map((section) => section.topic.name)),
-                      ]
-                      if (topics.length === 0) return null
-                      return (
-                        <>
-                          <span
-                            // The full name on hover, since a long one still truncates.
-                            title={topics.join(' · ')}
-                            className="min-w-0 truncate rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm"
-                          >
-                            {topics[0]}
-                          </span>
-                          {topics.length > 1 && (
-                            <span className="shrink-0 rounded-full border border-white/25 bg-black/40 px-2 py-1 text-[10px] uppercase tracking-[0.12em] text-white/85 backdrop-blur-sm">
-                              +{topics.length - 1}
-                            </span>
-                          )}
-                        </>
-                      )
-                    })()
-                  )}
-                </div>
+                {author.soon && (
+                  <span className="mb-2 inline-block rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-accent backdrop-blur-sm">
+                    Coming soon
+                  </span>
+                )}
 
                 <h3 className="font-display text-[17px] leading-snug text-white">{author.name}</h3>
                 {author.headline && (
@@ -205,6 +164,39 @@ export default async function ExpertsPage() {
                     {author.headline}
                   </p>
                 )}
+
+                {/*
+                  What they cover — a caption, not badges.
+
+                  These were pills, and pills are the wrong container for this content. A
+                  topic here is a sentence-length name like "Price Forecasting - Precious
+                  Metals", and a badge is a shape that promises a short word. Given a long
+                  one it either wraps — stacking two deep and climbing over the face in the
+                  photograph — or truncates to "PRICE FORECASTING - …", which is a badge
+                  with its own label cut in half. Bounding the height fixed the climbing and
+                  left the second fault; there is no width at which a pill holds this text
+                  well, because the problem is the container rather than the layout.
+
+                  As a quiet line under the headline it is just a caption, where truncating
+                  is ordinary rather than broken, and the face stays a face. Two at most,
+                  joined — the full list is on the profile behind the card, which is where
+                  somebody comparing subjects is going anyway.
+                */}
+                {!author.soon &&
+                  (() => {
+                    const topics = [
+                      ...new Set(author.sections.map((section) => section.topic.name)),
+                    ]
+                    if (topics.length === 0) return null
+                    return (
+                      <p
+                        title={topics.join(' · ')}
+                        className="mt-1.5 truncate text-[11px] uppercase tracking-[0.1em] text-white/55"
+                      >
+                        {topics.slice(0, 2).join(' · ')}
+                      </p>
+                    )
+                  })()}
                 {/*
                   The price on the card, not a click away. Somebody comparing four experts
                   is comparing what each costs as much as what each covers, and making them
