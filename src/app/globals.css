@@ -222,11 +222,15 @@
 
    Three things make this read as paper rather than as a rectangle rotating.
 
-   **The corner leads.** A real page is not turned by its whole edge at once — a hand
-   takes the outer corner and the sheet peels from there, so the corner is already well
-   clear of the spread while the top edge has barely moved. That is `rotate3d` with a
-   small x component rather than a plain `rotateY`: tilting the hinge axis off vertical
-   makes the far corner travel further than the near one through the whole sweep.
+   **The lower outer corner leads.** A page is not turned by its whole edge at once — a
+   hand takes the bottom outer corner and the sheet peels from there, so that corner is
+   well clear of the spread while the top edge has barely moved. A plain `rotateY` cannot
+   do this; `rotate3d` with a small *negative* x component tilts the hinge axis off
+   vertical so the bottom of the sheet travels further than the top.
+
+   The sign is the whole behaviour and it is not guessable by reading it: a positive x
+   leads with the *top* corner, which is nobody's idea of turning a page. Measured rather
+   than assumed — see the note on verification in the commit.
 
    **The visible half gets the time.** The leaf's back face is hidden, so everything a
    reader actually sees happens between 0 and 90 degrees — past that the sheet is edge-on
@@ -245,37 +249,37 @@
    Change one and the other has to follow, or the leaf pops away mid-sweep. */
 @keyframes page-turn-next {
   0% {
-    transform: rotate3d(0.2, 1, 0, 0deg) skewY(0deg) scaleX(1);
+    transform: rotate3d(-0.2, 1, 0, 0deg) skewY(0deg) scaleX(1);
     animation-timing-function: cubic-bezier(0.28, 0.05, 0.55, 0.52);
   }
   38% {
-    transform: rotate3d(0.2, 1, 0, -48deg) skewY(0.9deg) scaleX(0.994);
+    transform: rotate3d(-0.2, 1, 0, -48deg) skewY(-0.9deg) scaleX(0.994);
     animation-timing-function: cubic-bezier(0.4, 0.1, 0.5, 1);
   }
   78% {
-    transform: rotate3d(0.2, 1, 0, -90deg) skewY(0.5deg) scaleX(0.988);
+    transform: rotate3d(-0.2, 1, 0, -90deg) skewY(-0.5deg) scaleX(0.988);
     animation-timing-function: ease-in;
   }
   100% {
-    transform: rotate3d(0.2, 1, 0, -180deg) skewY(0deg) scaleX(1);
+    transform: rotate3d(-0.2, 1, 0, -180deg) skewY(0deg) scaleX(1);
   }
 }
 
 @keyframes page-turn-prev {
   0% {
-    transform: rotate3d(0.2, 1, 0, 0deg) skewY(0deg) scaleX(1);
+    transform: rotate3d(-0.2, 1, 0, 0deg) skewY(0deg) scaleX(1);
     animation-timing-function: cubic-bezier(0.28, 0.05, 0.55, 0.52);
   }
   38% {
-    transform: rotate3d(0.2, 1, 0, 48deg) skewY(-0.9deg) scaleX(0.994);
+    transform: rotate3d(-0.2, 1, 0, 48deg) skewY(0.9deg) scaleX(0.994);
     animation-timing-function: cubic-bezier(0.4, 0.1, 0.5, 1);
   }
   78% {
-    transform: rotate3d(0.2, 1, 0, 90deg) skewY(-0.5deg) scaleX(0.988);
+    transform: rotate3d(-0.2, 1, 0, 90deg) skewY(0.5deg) scaleX(0.988);
     animation-timing-function: ease-in;
   }
   100% {
-    transform: rotate3d(0.2, 1, 0, 180deg) skewY(0deg) scaleX(1);
+    transform: rotate3d(-0.2, 1, 0, 180deg) skewY(0deg) scaleX(1);
   }
 }
 
