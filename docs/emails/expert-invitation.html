@@ -1,0 +1,134 @@
+<!doctype html>
+<!--
+  Invitation to an analyst to publish their research on NordStar Pro.
+
+  Table-based and inline-styled, like every other email this site sends: Outlook renders
+  neither flexbox nor a <style> block reliably, so the app's Tailwind component set is no
+  use here. The palette and the furniture match src/lib/notifications/templates.ts so a
+  recipient who later becomes a contributor sees the same brand twice.
+
+  PLACEHOLDERS — every one is wrapped in {{ }} and must be replaced before sending:
+    {{FIRST_NAME}}     the recipient's first name
+    {{THEIR_MARKET}}   what they actually cover, in their words: "crude and natural gas"
+    {{REVENUE_TERMS}}  the commercial split. Left blank deliberately; see the note below.
+    {{SENDER_NAME}}    who is signing it
+    {{SENDER_ROLE}}    their role
+    {{REPLY_EMAIL}}    the address a reply should reach
+
+  On {{REVENUE_TERMS}}: this is the one line a recipient will read twice, and it is the one
+  thing that cannot be guessed. An invitation that is vague about money reads as an
+  invitation that intends to be vague about money. Put a real number in it.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>An invitation to publish on NordStar Pro</title>
+</head>
+<body style="margin:0;padding:0;background:#000000;color:#FFFFFF;font-family:Inter,Helvetica,Arial,sans-serif;">
+
+<!-- Preheader: the grey line beside the subject in an inbox list. Hidden in the body
+     itself, because shown it reads as a duplicate first sentence. -->
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;height:0;width:0;">
+  Your own masthead, your own price, and readers who subscribe to you rather than to a magazine.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#000000;padding:24px 12px;">
+  <tr><td align="center">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#0B0B0B;border:1px solid #1F1F1F;border-radius:12px;overflow:hidden;">
+
+      <tr><td style="padding:24px 28px 8px;border-bottom:1px solid #1F1F1F;">
+        <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#D6FD3A;">NordStar Pro</div>
+      </td></tr>
+
+      <tr><td style="padding:28px;">
+
+        <p style="margin:0 0 18px;color:#FFFFFF;font-size:16px;">{{FIRST_NAME}},</p>
+
+        <h1 style="margin:0 0 16px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:25px;line-height:1.25;font-weight:500;color:#FFFFFF;">
+          Publish your research under your own name.
+        </h1>
+
+        <p style="margin:0 0 18px;color:#A3A3A3;font-size:15px;line-height:1.65;">
+          NordStar Pro is a subscription research platform for commodities, FX, global
+          indices and related markets. Readers do not buy a bundle from a masthead they
+          have never heard of — they subscribe to a named analyst whose reasoning they want
+          to follow. We are writing because {{THEIR_MARKET}} is coverage our readers ask for
+          and we would rather have it from someone who has traded it.
+        </p>
+
+        <!-- What they get. Four lines, because an invitation that needs eight is a
+             proposal, and a proposal is the second email rather than the first. -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 6px;border-top:1px solid #1F1F1F;">
+          <tr><td style="padding:16px 0 0;">
+            <p style="margin:0 0 4px;color:#FFFFFF;font-size:15px;font-weight:600;">Your own masthead</p>
+            <p style="margin:0 0 16px;color:#A3A3A3;font-size:14px;line-height:1.6;">
+              A profile page carrying your photograph, your biography and your track record.
+              Every edition is published under your byline, never the house's.
+            </p>
+
+            <p style="margin:0 0 4px;color:#FFFFFF;font-size:15px;font-weight:600;">Your price, your schedule</p>
+            <p style="margin:0 0 16px;color:#A3A3A3;font-size:14px;line-height:1.6;">
+              You set what your coverage costs and how often it goes out — daily, weekly,
+              or whenever the market warrants it. Nothing obliges you to publish to someone
+              else's calendar.
+            </p>
+
+            <p style="margin:0 0 4px;color:#FFFFFF;font-size:15px;font-weight:600;">Subscribers who are yours</p>
+            <p style="margin:0 0 16px;color:#A3A3A3;font-size:14px;line-height:1.6;">
+              Readers subscribe to your coverage specifically, not to a site-wide pass. You
+              can see how many, and what they read.
+            </p>
+
+            <p style="margin:0 0 4px;color:#FFFFFF;font-size:15px;font-weight:600;">Nothing to run</p>
+            <p style="margin:0 0 0;color:#A3A3A3;font-size:14px;line-height:1.6;">
+              Payments, renewals, access control, the archive and the delivery emails are
+              ours. You send a PDF; we do the rest.
+            </p>
+          </td></tr>
+        </table>
+
+        <!-- The commercial line sits on its own, in the accent, because it is the thing
+             being decided. Burying terms in a paragraph is how an invitation starts
+             looking like it has something to bury. -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;">
+          <tr><td style="background:#111111;border:1px solid #1F1F1F;border-radius:10px;padding:16px 18px;">
+            <div style="font-family:'IBM Plex Mono',Consolas,monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#D6FD3A;margin-bottom:8px;">Terms</div>
+            <p style="margin:0;color:#FFFFFF;font-size:15px;line-height:1.6;">{{REVENUE_TERMS}}</p>
+          </td></tr>
+        </table>
+
+        <p style="margin:22px 0 0;color:#A3A3A3;font-size:15px;line-height:1.65;">
+          If it is of interest, send a recent piece of your work and we will set up your
+          page — there is no application and no committee. If it is not, a one-line reply
+          saying so is genuinely useful and you will not hear from us again.
+        </p>
+
+        <!-- mailto rather than a form. This is a cold approach to a professional; asking
+             them to fill in a web form to express interest adds a step that costs replies
+             and buys nothing. -->
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 8px;"><tr><td style="background:#D6FD3A;border-radius:999px;">
+          <a href="mailto:{{REPLY_EMAIL}}?subject=Publishing%20on%20NordStar%20Pro" style="display:inline-block;padding:13px 24px;font-weight:600;font-size:14px;color:#000000;text-decoration:none;">Reply to start the conversation</a>
+        </td></tr></table>
+
+        <p style="margin:22px 0 0;color:#FFFFFF;font-size:15px;line-height:1.6;">
+          {{SENDER_NAME}}<br>
+          <span style="color:#A3A3A3;font-size:14px;">{{SENDER_ROLE}}, NordStar Pro</span>
+        </p>
+
+      </td></tr>
+
+      <tr><td style="padding:18px 28px 26px;border-top:1px solid #1F1F1F;color:#A3A3A3;font-size:11px;line-height:1.6;">
+        <p style="margin:0 0 10px;">You are receiving this because your published work covers markets NordStar Pro writes about. Reply with the word <em>remove</em> and we will not contact you again.</p>
+        <p style="margin:0 0 10px;">Research published on NordStar Pro is for educational and informational purposes only and is not financial advice. Trading involves substantial risk and past performance does not indicate future results.</p>
+        <p style="margin:0;">NordStar Pro will never contact you privately to request money or offer account management via WhatsApp, Telegram, Discord or social media DMs.</p>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
+
+</body>
+</html>
