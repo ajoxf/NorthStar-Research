@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { Check, X } from 'lucide-react'
+import { Check, SlidersHorizontal, X } from 'lucide-react'
 
 import {
   browseFilterActive,
@@ -24,6 +24,12 @@ import { cn } from '@/lib/utils'
  * subject, means a control whose every option returns the same list; showing it teaches a
  * visitor that the filters do nothing. This is also why `priceCeilings` derives its bands
  * from the real range rather than hard-coding them.
+ *
+ * Closed by default, behind a Filters button. Open, this is five rows of chips sitting
+ * above the thing somebody came to look at, and a visitor who wants to browse should not
+ * have to scroll past the machinery for narrowing a list they have not seen yet. What
+ * stays visible when closed is the count of active dimensions, how many rows survived and
+ * the way to clear — enough that a narrowed grid is never unexplained.
  */
 export function FilterBar({
   tone = 'light',
@@ -55,6 +61,27 @@ export function FilterBar({
   const light = tone === 'light'
   const active = browseFilterActive(value)
 
+  /*
+   * Closed until asked for.
+   *
+   * Every dimension open at once is a wall of chips above the thing somebody came to look
+   * at — on /coverage it pushed the first subject most of a screen down the page. A
+   * visitor who wants to browse should not have to scroll past the machinery for
+   * narrowing a list they have not seen yet.
+   *
+   * It opens on click rather than on hover, and stays open until closed: a panel that
+   * collapsed after each choice would make selecting three filters three round trips.
+   */
+  const [open, setOpen] = React.useState(false)
+  const panelId = React.useId()
+
+  /** How many dimensions are narrowing. Shown on the closed button, not the chip count. */
+  const activeCount =
+    (value.subjects.length > 0 ? 1 : 0) +
+    (value.authors.length > 0 ? 1 : 0) +
+    (value.maxPriceCents !== null ? 1 : 0) +
+    (value.trialOnly ? 1 : 0)
+
   // Nothing to narrow: one subject, one author, one price, no trials. Render nothing.
   const anyDimension =
     subjects.length > 1 || authors.length > 1 || ceilings.length > 0 || trialCount > 0
@@ -78,12 +105,87 @@ export function FilterBar({
   )
 
   return (
-    <div
-      className={cn(
-        'mt-8 rounded-2xl border p-5',
-        light ? 'border-ink-on-light/12 bg-paper-card' : 'border-line bg-panel-2',
-      )}
-    >
+    <div className="mt-8">
+      {/*
+        The control, and — when the list is narrowed — what it is narrowed to.
+
+        The summary stays visible while the panel is closed, because a grid showing four of
+        twelve with no visible reason reads as a page that has lost most of its content.
+      */}
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-controls={panelId}
+          onClick={() => setOpen((was) => !was)}
+          className={cn(
+            'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[13px] font-medium transition-colors',
+            light
+              ? 'border-ink-on-light/20 text-ink-on-light hover:border-ink-on-light/45'
+              : 'border-line text-ink hover:border-accent/45',
+          )}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
+          Filters
+          {activeCount > 0 && (
+            <span
+              className={cn(
+                'ml-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 font-mono text-[10px]',
+                light ? 'bg-ink-on-light text-paper' : 'bg-accent text-ink-on-light',
+              )}
+            >
+              {activeCount}
+            </span>
+          )}
+        </button>
+
+        {active && (
+          <>
+            <span className={cn('text-[13px]', light ? 'text-ink-on-light-dim' : 'text-ink-dim')}>
+              {resultCount === 0
+                ? 'Nothing matches all of those.'
+                : `Showing ${resultCount} of ${totalCount}.`}
+            </span>
+            <button
+              type="button"
+              className={cn(
+                'inline-flex items-center gap-1.5 text-[13px] underline underline-offset-4',
+                light ? 'text-ink-on-light' : 'text-ink',
+              )}
+              onClick={() =>
+                onChange({
+                  subjects: [],
+                  authors: [],
+                  maxPriceCents: null,
+                  trialOnly: false,
+                  // The sort is the visitor's, not the filter's: clearing what is hidden
+                  // should not also reorder what is left.
+                  sort: value.sort,
+                })
+              }
+            >
+              <X className="h-3.5 w-3.5" aria-hidden />
+              Clear
+            </button>
+          </>
+        )}
+      </div>
+
+      {/*
+        Unmounted rather than hidden while closed.
+
+        `display:none` would leave every chip in the accessibility tree and in the tab
+        order, so a keyboard or screen-reader visitor would walk through a panel that,
+        as far as anybody else is concerned, is not on the page.
+      */}
+      {!open ? null : (
+      <div
+        id={panelId}
+        className={cn(
+          'mt-3 rounded-2xl border p-5',
+          light ? 'border-ink-on-light/12 bg-paper-card' : 'border-line bg-panel-2',
+        )}
+      >
       <div className="flex flex-col gap-5">
         {subjects.length > 1 && (
           <div>
@@ -204,49 +306,9 @@ export function FilterBar({
           </div>
         </div>
 
-        {/*
-          The count, and the way out.
-
-          Shown only once something is narrowed. A result count on an untouched list is
-          just the length of a list somebody can see — and "Clear" with nothing to clear is
-          a button that does nothing, which is how a filter bar stops being trusted.
-        */}
-        {active && (
-          <div
-            className={cn(
-              'flex flex-wrap items-center justify-between gap-3 border-t pt-4',
-              light ? 'border-ink-on-light/12' : 'border-line',
-            )}
-          >
-            <p className={cn('text-[13px]', light ? 'text-ink-on-light-dim' : 'text-ink-dim')}>
-              {resultCount === 0
-                ? 'Nothing matches all of those.'
-                : `Showing ${resultCount} of ${totalCount}.`}
-            </p>
-            <button
-              type="button"
-              className={cn(
-                'inline-flex items-center gap-1.5 text-[13px] underline underline-offset-4',
-                light ? 'text-ink-on-light' : 'text-ink',
-              )}
-              onClick={() =>
-                onChange({
-                  subjects: [],
-                  authors: [],
-                  maxPriceCents: null,
-                  trialOnly: false,
-                  // The sort is the visitor's, not the filter's: clearing what is hidden
-                  // should not also reorder what is left.
-                  sort: value.sort,
-                })
-              }
-            >
-              <X className="h-3.5 w-3.5" aria-hidden />
-              Clear filters
-            </button>
-          </div>
-        )}
       </div>
+      </div>
+      )}
     </div>
   )
 }
