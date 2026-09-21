@@ -95,7 +95,7 @@ export const PLAN = {
    * new deployment displays was still promising three reports a week on behalf of experts
    * who set their own rate. Each subject states its own cadence on its own card now.
    */
-  description: 'Independent technical and macro research',
+  description: 'Independent technical and macro trends',
 } as const
 
 /** One billing period. Used to extend `subscriptionRenewsAt` on payment. */
