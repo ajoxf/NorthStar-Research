@@ -163,7 +163,7 @@ export default async function LandingPage() {
       />
       {/*
         The bands alternate, and the order is what makes them do so: dark hero, light
-        subjects, dark contributors, light prices, lime close. Two light bands in a row
+        subjects, dark contributors, light prices. Two light bands in a row
         would flatten the whole page, which is the one thing this rhythm exists to avoid —
         so the order here is load-bearing, not arrangement.
       */}
@@ -189,7 +189,18 @@ export default async function LandingPage() {
       ) : (
         <PricingSection plan={plan} trial={trial} cheapestSectionCents={cheapest} />
       )}
-      <LimeStrip trial={trial} />
+      {/*
+        No closing strip.
+
+        There was a full-width lime band here with one sentence and a button. It was
+        rewritten twice — the wording was never the fault. By the time a reader reaches
+        the foot of this page the same invitation has already been made three times: in
+        the hero, on every section card, and in the pricing block directly above. A
+        fourth, louder repetition of an offer somebody has declined three times adds
+        volume rather than an argument, and it was the last thing on the page.
+
+        Nothing becomes unreachable. Every route it offered is still on the page above it.
+      */}
     </>
   )
 }
@@ -436,24 +447,16 @@ function ContributorStrip({
                   {contributor.headline}
                 </p>
               )}
-              {/* What they write, under who they are: one pill on one row, plus a count
-                  of the rest — see the note on the experts listing for why a long topic
-                  name wrapping to three lines climbed over the photograph, and why two
-                  pills sharing the width is not the fix either. */}
+              {/* What they write, as a caption rather than badges — see the note on the
+                  experts listing for why a pill is the wrong container for a topic named
+                  "Price Forecasting - Precious Metals". */}
               {contributor.subjects.length > 0 && (
-                <div className="mt-2.5 flex gap-1.5">
-                  <span
-                    title={contributor.subjects.join(' · ')}
-                    className="min-w-0 truncate rounded-full border border-white/25 bg-black/40 px-2.5 py-1 text-[10px] uppercase tracking-[0.1em] text-white/85 backdrop-blur-sm"
-                  >
-                    {contributor.subjects[0]}
-                  </span>
-                  {contributor.subjects.length > 1 && (
-                    <span className="shrink-0 rounded-full border border-white/25 bg-black/40 px-2 py-1 text-[10px] uppercase tracking-[0.1em] text-white/85 backdrop-blur-sm">
-                      +{contributor.subjects.length - 1}
-                    </span>
-                  )}
-                </div>
+                <p
+                  title={contributor.subjects.join(' · ')}
+                  className="mt-1.5 truncate text-[11px] uppercase tracking-[0.1em] text-white/55"
+                >
+                  {contributor.subjects.slice(0, 2).join(' · ')}
+                </p>
               )}
               {/* The price belongs on the card — see the note on the experts listing. */}
               {!contributor.soon && contributor.fromCents !== null && (
@@ -785,43 +788,6 @@ function PackagePricing({
   )
 }
 
-/**
- * The closing strip, in the accent.
- *
- * The loudest thing on the page, and the last: one sentence about what arrives and one
- * button. It works because there is exactly one of it — a second lime band anywhere would
- * cost this one everything it has.
- */
-/**
- * The closing strip, arguing for the button beside it.
- *
- * It used to say "Independent technical and macro trends, from the experts who follow
- * them" — the hero's own headline, repeated at the foot of the page to somebody who has
- * just scrolled past everything it introduces. A closing line has one job, and restating
- * the opening one is not it.
- *
- * The line now depends on which button is actually shown. With a trial open, the argument
- * is that there is nothing to lose by reading first; without one, it is what a
- * subscription actually gets you. A fixed line could only ever be right for one of those,
- * and was right for neither.
- */
-function LimeStrip({ trial }: { trial: { days: number } | null }) {
-  return (
-    <Band tone="lime" innerClassName="py-14 sm:py-16">
-      <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
-        <p className="max-w-xl text-balance font-display text-[26px] font-medium leading-[1.15] tracking-[-0.03em] text-ink-on-light sm:text-[32px]">
-          {trial
-            ? `Evaluate the research for ${trial.days} days at no cost.`
-            : 'Subscribe to the coverage you follow.'}
-        </p>
-        <ButtonLink href={trial ? '/trial' : '/join'} size="lg" variant="on-light-solid" className="shrink-0">
-          {trial ? 'Start Trial' : 'Become a member'}
-          <ArrowRight className="h-4 w-4" aria-hidden />
-        </ButtonLink>
-      </div>
-    </Band>
-  )
-}
 
 function PricingSection({
   plan,
