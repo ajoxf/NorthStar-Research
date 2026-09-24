@@ -7,7 +7,10 @@ import { channelsFor } from '@/lib/contact-numbers'
 import { MemberFilters } from '@/app/admin/members/member-filters'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { isAllAccess } from '@/lib/entitlements'
 import {
+  ACCESS,
+  ACCESS_LABELS,
   ENGAGEMENT,
   ENGAGEMENT_LABELS,
   SOURCES,
@@ -40,7 +43,26 @@ export default async function AdminMembersPage({
       where,
       orderBy: { createdAt: 'desc' },
       take: 200,
-      include: { _count: { select: { reportViews: true, deliveryLogs: true } } },
+      include: {
+        _count: {
+          select: {
+            reportViews: true,
+            deliveryLogs: true,
+            /*
+             * Live sections only, so the column can tell "holds three subjects" from
+             * "held three, all lapsed". A bare relation count cannot: it counts the rows,
+             * and a lapsed entitlement is still a row.
+             */
+            entitlements: {
+              where: {
+                sectionId: { not: null },
+                status: 'active',
+                OR: [{ renewsAt: null }, { renewsAt: { gt: new Date() } }],
+              },
+            },
+          },
+        },
+      },
     }),
     db.member.count({ where }),
     db.member.findMany({ select: { tags: true }, take: 500 }),
@@ -64,9 +86,11 @@ export default async function AdminMembersPage({
         tag={segment.tag ?? ''}
         source={segment.source}
         engagement={segment.engagement}
+        access={segment.access}
         tagOptions={tagOptions}
         sourceOptions={SOURCES.map((value) => ({ value, label: SOURCE_LABELS[value] }))}
         engagementOptions={ENGAGEMENT.map((value) => ({ value, label: ENGAGEMENT_LABELS[value] }))}
+        accessOptions={ACCESS.map((value) => ({ value, label: ACCESS_LABELS[value] }))}
       />
 
       {isFiltered(segment) && (
@@ -97,6 +121,8 @@ export default async function AdminMembersPage({
             <tr className="border-b border-line font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
               <th className="px-5 py-3 font-medium">Member</th>
               <th className="px-5 py-3 font-medium">Status</th>
+              {/* What they can read, which Status does not answer — see member-filters. */}
+              <th className="px-5 py-3 font-medium">Reads</th>
               <th className="px-5 py-3 font-medium">Channels</th>
               <th className="px-5 py-3 font-medium">Joined</th>
               <th className="px-5 py-3 font-medium">Last login</th>
@@ -107,7 +133,7 @@ export default async function AdminMembersPage({
           <tbody>
             {members.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-5 py-12 text-center font-mono text-[13px] text-ink-dim">
+                <td colSpan={8} className="px-5 py-12 text-center font-mono text-[13px] text-ink-dim">
                   {total === 0 && !isFiltered(segment)
                     ? 'No members yet. They appear here as soon as a payment confirms.'
                     : 'No members match those filters.'}
@@ -140,6 +166,25 @@ export default async function AdminMembersPage({
                         <ActivateMemberButton memberId={member.id} email={member.email} />
                       )}
                     </div>
+                  </td>
+                  {/*
+                    The answer to "what can this person actually open", beside the status
+                    that looks like it answers that and does not. All-access is called
+                    "Everything" rather than shown as a tone, because it is the fact most
+                    worth noticing on this screen: those members read every subject on the
+                    site whatever they paid for.
+                  */}
+                  <td className="px-5 py-3.5">
+                    {isAllAccess(member) ? (
+                      <Badge tone="accent">Everything</Badge>
+                    ) : member._count.entitlements > 0 ? (
+                      <span className="font-mono text-[12px] text-ink-dim">
+                        {member._count.entitlements} section
+                        {member._count.entitlements === 1 ? '' : 's'}
+                      </span>
+                    ) : (
+                      <span className="font-mono text-[12px] text-ink-dim/60">Nothing</span>
+                    )}
                   </td>
                   {/*
                     Was hardcoded to "Email" for everyone, so a captured number was

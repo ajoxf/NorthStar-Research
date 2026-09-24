@@ -10,6 +10,7 @@ describe('parseSegment', () => {
       status: 'all',
       source: 'all',
       engagement: 'all',
+      access: 'all',
       tag: null,
       search: null,
     })
