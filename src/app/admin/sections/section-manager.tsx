@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Plus } from 'lucide-react'
 
@@ -329,7 +330,22 @@ export function SectionManager({
                 <p className="font-mono text-[11px] text-ink-dim">
                   {formatPrice(section.priceCents, section.currency)}/{section.interval} ·{' '}
                   {section.reportCount} report{section.reportCount === 1 ? '' : 's'} ·{' '}
-                  {section.subscriberCount} subscriber{section.subscriberCount === 1 ? '' : 's'}
+                  {/*
+                    A link, not a number.
+
+                    The count was the only view of entitlements anywhere in the admin, and
+                    a bare figure cannot answer any of the questions actually asked of it:
+                    who they are, whether the access is live, where it came from, and when
+                    it lapses. It counts everybody who has ever held this section, which is
+                    also why it needs somewhere to go — "5 subscribers" reads as five
+                    paying members when it may be five who lapsed last year.
+                  */}
+                  <Link
+                    href={`/admin/sections/${section.id}/subscribers`}
+                    className="underline underline-offset-4 hover:text-ink"
+                  >
+                    {section.subscriberCount} subscriber{section.subscriberCount === 1 ? '' : 's'}
+                  </Link>
                 </p>
               </div>
               {section.archived && <Badge tone="muted">off sale</Badge>}

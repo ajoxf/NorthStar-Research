@@ -3,7 +3,10 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 
+import { AccessPanel } from '@/app/admin/members/[id]/access-panel'
 import { MemberCrmPanel } from '@/app/admin/members/[id]/member-crm-panel'
+import { accessSource, accessState, accessSummary, daysUntil } from '@/lib/access-view'
+import { sectionName } from '@/lib/section-shape'
 import { Badge, statusTone } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
@@ -35,9 +38,42 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
         include: { report: { select: { title: true, type: true } } },
       },
       redemptionCodes: true,
+      /*
+       * What they can actually read.
+       *
+       * Ordered live-first by renewal date so the rows needing attention are at the top;
+       * an operator opening this page is usually answering "why can/can't they see X",
+       * and a lapsed grant from last year is not the answer.
+       */
+      entitlements: {
+        orderBy: [{ renewsAt: 'desc' }],
+        include: {
+          section: { select: { id: true, displayName: true, topic: true, author: true } },
+          item: { select: { name: true } },
+        },
+      },
     },
   })
   if (!member) notFound()
+
+  /*
+   * Sections they do not already hold, for the grant control.
+   *
+   * Archived ones are left out: granting access to something withdrawn from sale is not
+   * a thing an operator means to do, and offering it invites the mistake.
+   */
+  const held = new Set(member.entitlements.map((e) => e.sectionId).filter(Boolean))
+  const grantable = (
+    await db.section.findMany({
+      where: { archivedAt: null },
+      include: { topic: true, author: true },
+      orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
+    })
+  )
+    .filter((section) => !held.has(section.id))
+    .map((section) => ({ id: section.id, name: sectionName(section) }))
+
+  const summary = accessSummary(member, member.entitlements)
 
   // Distinct IPs are the signal behind the §7 sharing mitigations — many devices on one
   // account is what an admin would want to look at, not proof of anything on its own.
@@ -92,6 +128,28 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
           tags: member.tags,
           adminNotes: member.adminNotes,
         }}
+      />
+
+      {/*
+        What this member can read, and why — see the note in access-panel.tsx for why the
+        ACTIVE badge above is not that question's answer.
+      */}
+      <AccessPanel
+        memberId={member.id}
+        allAccess={summary.allAccess}
+        allAccessIsLoadBearing={summary.allAccessIsLoadBearing}
+        grantable={grantable}
+        rows={member.entitlements.map((entitlement) => ({
+          id: entitlement.id,
+          name: entitlement.section
+            ? sectionName(entitlement.section)
+            : (entitlement.item?.name ?? 'Unknown'),
+          isSection: entitlement.sectionId !== null,
+          source: accessSource(entitlement),
+          state: accessState(entitlement),
+          renewsAt: entitlement.renewsAt?.toISOString() ?? null,
+          daysLeft: daysUntil(entitlement.renewsAt),
+        }))}
       />
 
       {member.redemptionCodes.length > 0 && (
