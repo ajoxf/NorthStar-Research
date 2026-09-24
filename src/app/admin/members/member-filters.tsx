@@ -26,23 +26,34 @@ export function MemberFilters({
   tag,
   source,
   engagement,
+  access,
   tagOptions,
   sourceOptions,
   engagementOptions,
+  accessOptions,
 }: {
   status: string
   query: string
   tag: string
   source: string
   engagement: string
+  access: string
   tagOptions: string[]
   sourceOptions: { value: string; label: string }[]
   engagementOptions: { value: string; label: string }[]
+  accessOptions: { value: string; label: string }[]
 }) {
   const router = useRouter()
   const [search, setSearch] = React.useState(query)
 
-  function apply(next: { status?: string; q?: string; tag?: string; source?: string; engagement?: string }) {
+  function apply(next: {
+    status?: string
+    q?: string
+    tag?: string
+    source?: string
+    engagement?: string
+    access?: string
+  }) {
     const params = new URLSearchParams()
     const merged = { status, q: search, tag, source, engagement, ...next }
 
@@ -97,6 +108,26 @@ export function MemberFilters({
         className="sm:w-44"
       >
         {sourceOptions.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </Select>
+
+      {/*
+        What they can actually read, which the status column cannot answer.
+
+        `subscriptionStatus` is the legacy all-access membership; section access lives in
+        entitlements. An `active` member whose renewal has passed reads nothing while
+        still showing ACTIVE, and a member with no status at all may hold three sections.
+      */}
+      <Select
+        value={access}
+        onChange={(event) => apply({ access: event.target.value })}
+        aria-label="Filter by what they can read"
+        className="sm:w-48"
+      >
+        {accessOptions.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
