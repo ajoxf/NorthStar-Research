@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, X } from 'lucide-react'
+import { ArrowRightLeft, Plus, X } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button, Spinner } from '@/components/ui/button'
@@ -58,6 +58,16 @@ export function AccessPanel({
   const toast = useToast()
   const [busy, setBusy] = React.useState(false)
   const [adding, setAdding] = React.useState(false)
+  /*
+   * The conversion preview.
+   *
+   * Null until asked for, and shown before anything is written. What is being changed is
+   * somebody's paid-for access, so the outcome is named first rather than reported after.
+   */
+  const [preview, setPreview] = React.useState<
+    { sections: { id: string; name: string }[]; renewsAt: string | null } | null
+  >(null)
+  const [refusal, setRefusal] = React.useState<string | null>(null)
   const [sectionId, setSectionId] = React.useState('')
   const [months, setMonths] = React.useState('1')
 
@@ -136,6 +146,99 @@ export function AccessPanel({
           </>
         )}
       </div>
+
+      {/*
+        Moving them onto what they bought.
+
+        Offered only while all-access is on, because that is the only state it changes.
+        It reads the package recorded at redemption and grants its sections carrying the
+        member's own renewal date — a correction to how access is recorded, not a renewal.
+      */}
+      {allAccess && (
+        <div className="mt-4 rounded-lg border border-line bg-panel p-4">
+          {refusal ? (
+            <p className="text-[14px] leading-relaxed text-ink-dim">{refusal}</p>
+          ) : preview ? (
+            <>
+              <p className="text-[14px] leading-relaxed text-ink">
+                They keep{' '}
+                <strong>
+                  {preview.sections.length} section{preview.sections.length === 1 ? '' : 's'}
+                </strong>{' '}
+                and stop reading everything else
+                {preview.renewsAt
+                  ? `, until ${formatDate(new Date(preview.renewsAt))} as now.`
+                  : ', open-ended as now.'}
+              </p>
+              <ul className="mt-2 list-inside list-disc text-[13px] text-ink-dim">
+                {preview.sections.map((section) => (
+                  <li key={section.id}>{section.name}</li>
+                ))}
+              </ul>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  disabled={busy}
+                  onClick={async () => {
+                    const ok = await send(
+                      `/api/admin/members/${memberId}/access/convert`,
+                      'POST',
+                      { confirm: true },
+                      'Moved onto section access',
+                    )
+                    if (ok) setPreview(null)
+                  }}
+                >
+                  {busy ? <Spinner /> : null}
+                  Convert
+                </Button>
+                <Button size="sm" variant="secondary" disabled={busy} onClick={() => setPreview(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-[14px] leading-relaxed text-ink-dim">
+                Move them onto the sections they bought, keeping their current renewal date.
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="mt-3"
+                disabled={busy}
+                onClick={async () => {
+                  setRefusal(null)
+                  setBusy(true)
+                  try {
+                    const response = await fetch(
+                      `/api/admin/members/${memberId}/access/convert`,
+                      {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ confirm: false }),
+                      },
+                    )
+                    const data = await response.json().catch(() => null)
+                    // A refusal is the expected answer for most members right now, not an
+                    // error: it names what has to change upstream before this will work.
+                    if (!response.ok) {
+                      setRefusal(data?.error ?? `That did not work (HTTP ${response.status}).`)
+                      return
+                    }
+                    setPreview({ sections: data.sections, renewsAt: data.renewsAt })
+                  } finally {
+                    setBusy(false)
+                  }
+                }}
+              >
+                <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden />
+                Move to section access
+              </Button>
+            </>
+          )}
+        </div>
+      )}
 
       {rows.length > 0 && (
         <div className="mt-4 overflow-x-auto rounded-lg border border-line">
