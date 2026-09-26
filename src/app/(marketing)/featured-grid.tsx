@@ -13,6 +13,7 @@ import {
   type BrowseItem,
 } from '@/lib/browse-filter'
 import { formatPrice } from '@/lib/package-shape'
+import { UploadedImage } from '@/components/uploaded-image'
 
 export type FeaturedCard = {
   /** The topic name, which is also this card's identity in the grid. */
@@ -98,13 +99,11 @@ export function FeaturedGrid({
             className="group flex flex-col overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)] transition-shadow hover:shadow-[0_8px_24px_rgba(17,24,39,0.10)]"
           >
             {topic.image && (
-              <div className="aspect-[16/9] w-full overflow-hidden bg-paper">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+              <div className="relative aspect-[16/9] w-full overflow-hidden bg-paper">
+                <UploadedImage
                   src={topic.image}
-                  alt=""
+                  sizes="(min-width: 1024px) 352px, (min-width: 640px) 50vw, 100vw"
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  loading="lazy"
                 />
               </div>
             )}

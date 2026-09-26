@@ -15,6 +15,7 @@ import { trialOffers } from '@/lib/trial'
 import { comingSoonVisible, sectionName } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
 import { formatDate } from '@/lib/utils'
+import { UploadedImage } from '@/components/uploaded-image'
 
 export const dynamic = 'force-dynamic'
 
@@ -365,13 +366,11 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                     resolution.
                   */}
                   {pkg.imageUrl && (
-                    <div className="aspect-[16/10] w-full overflow-hidden bg-paper">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-paper">
+                      <UploadedImage
                         src={pkg.imageUrl}
-                        alt=""
+                        sizes="(min-width: 1024px) 352px, (min-width: 640px) 50vw, 100vw"
                         className="h-full w-full object-cover object-top"
-                        loading="lazy"
                       />
                     </div>
                   )}
@@ -493,13 +492,11 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                 */}
                 {section.imageUrl && (
                   <div className="shrink-0 self-start p-6 pb-0 sm:pr-0">
-                    <div className="aspect-[16/10] w-full overflow-hidden rounded-xl bg-panel-2 sm:w-[260px]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                    <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-panel-2 sm:w-[260px]">
+                      <UploadedImage
                         src={section.imageUrl}
-                        alt=""
+                        sizes="(min-width: 640px) 260px, 100vw"
                         className="h-full w-full object-cover object-top"
-                        loading="lazy"
                       />
                     </div>
                   </div>

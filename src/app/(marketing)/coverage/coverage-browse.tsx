@@ -15,6 +15,7 @@ import {
   type BrowseItem,
 } from '@/lib/browse-filter'
 import { formatPrice } from '@/lib/package-shape'
+import { UploadedImage } from '@/components/uploaded-image'
 
 export type CoverageRow = {
   id: string
@@ -160,13 +161,11 @@ function SubjectCard({ row, showTopic = false }: { row: CoverageRow; showTopic?:
         */}
         {row.imageUrl && (
           <div className="shrink-0 self-start p-6 pb-0 sm:pr-0">
-            <div className="aspect-[16/10] w-full overflow-hidden rounded-xl bg-paper sm:w-[260px]">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+            <div className="relative aspect-[16/10] w-full overflow-hidden rounded-xl bg-paper sm:w-[260px]">
+              <UploadedImage
                 src={row.imageUrl}
-                alt=""
+                sizes="(min-width: 640px) 260px, 100vw"
                 className="h-full w-full object-cover object-top"
-                loading="lazy"
               />
             </div>
           </div>
