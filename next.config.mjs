@@ -4,6 +4,27 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@prisma/client', 'bcryptjs', 'twilio'],
   },
+  /*
+   * Resizing for uploaded artwork.
+   *
+   * Every picture on this site was a plain <img> pointed at the full-size upload, so a
+   * 1390px photograph was downloaded whole and squeezed into a 330px card by the browser
+   * in a single pass. A one-shot downscale of that ratio aliases badly — high-contrast
+   * type on an image is where it shows first, which is why title cards with words on them
+   * looked pixelated while the photographs beside them looked fine. Nothing was wrong with
+   * the uploads.
+   *
+   * Only our own Blob store is allowed through. The uploader also accepts a pasted URL on
+   * any host, and an open optimiser is an open proxy — anyone could feed arbitrary images
+   * through this deployment's CPU and bandwidth. Those keep the plain <img> path; see
+   * components/uploaded-image.tsx.
+   */
+  images: {
+    remotePatterns: [{ protocol: 'https', hostname: '**.public.blob.vercel-storage.com' }],
+    // Every card width this site actually renders, so a request is served a variant near
+    // the size it will be drawn at rather than the nearest of Next's defaults.
+    imageSizes: [96, 160, 260, 320, 384, 448, 512],
+  },
   async headers() {
     return [
       {

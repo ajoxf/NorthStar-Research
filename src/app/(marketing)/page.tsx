@@ -15,6 +15,7 @@ import { trialOffers } from '@/lib/trial'
 import { sectionsPublic } from '@/lib/sections-mode'
 import { featuredTopics } from '@/lib/featured-topics'
 import { formatPrice, type PackageShape } from '@/lib/package-shape'
+import { UploadedImage } from '@/components/uploaded-image'
 
 /**
  * The price quoted here is the default package's, falling back to the built-in plan when
@@ -727,13 +728,11 @@ function PackagePricing({
                   and a card selling a subject wants both.
                 */}
                 {pkg.imageUrl && (
-                  <div className="aspect-[16/10] w-full overflow-hidden bg-paper">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                  <div className="relative aspect-[16/10] w-full overflow-hidden bg-paper">
+                    <UploadedImage
                       src={pkg.imageUrl}
-                      alt=""
+                      sizes="(min-width: 1024px) 352px, (min-width: 640px) 50vw, 100vw"
                       className="h-full w-full object-cover object-top"
-                      loading="lazy"
                     />
                   </div>
                 )}

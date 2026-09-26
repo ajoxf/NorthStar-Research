@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/toast'
 import { authorInitials } from '@/lib/section-shape'
 import { formatPrice } from '@/lib/package-shape'
 import { cn, isValidEmail } from '@/lib/utils'
+import { UploadedImage } from '@/components/uploaded-image'
 
 type Method = 'card' | 'crypto'
 
@@ -285,11 +286,10 @@ function OrderSummary({ chosen, price }: { chosen: JoinPackage; price: string })
         somebody starts wondering whether they clicked the right thing.
       */}
       {chosen.imageUrl && (
-        <div className="aspect-[16/10] w-full overflow-hidden bg-ink-on-light/5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+        <div className="relative aspect-[16/10] w-full overflow-hidden bg-ink-on-light/5">
+          <UploadedImage
             src={chosen.imageUrl}
-            alt=""
+            sizes="(min-width: 1024px) 512px, 100vw"
             className="h-full w-full object-cover object-top"
           />
         </div>
