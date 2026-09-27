@@ -79,9 +79,7 @@ export function FeaturedGrid({
   return (
     <>
       <FilterBar
-        // The band this sits in is on the dark ground, and the controls take their ink
-        // from it: a light filter bar on black is exactly the drift Band exists to stop.
-        tone="dark"
+        tone="light"
         subjects={cards.map((card) => card.name)}
         authors={authors}
         ceilings={priceCeilings(items)}
@@ -152,7 +150,7 @@ export function FeaturedGrid({
         reads as a page that broke rather than a search that found nothing.
       */}
       {shown.length === 0 && (
-        <p className="mt-8 text-[15px] text-ink-dim">
+        <p className="mt-8 text-[15px] text-ink-on-light-dim">
           No subject matches all of those filters. Clear one and try again.
         </p>
       )}
