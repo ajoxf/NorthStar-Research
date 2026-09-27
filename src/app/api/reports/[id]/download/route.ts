@@ -4,6 +4,7 @@ import { canReadReport, hasAnyAccess } from '@/lib/entitlements'
 import { db } from '@/lib/db'
 import { getCurrentMember, loadEntitlements, requestFingerprint } from '@/lib/auth'
 import { REPORT_TOKEN_TTL_SECONDS, mintReportToken } from '@/lib/report-access'
+import { DOWNLOADS_DISABLED_MESSAGE, DOWNLOADS_ENABLED } from '@/lib/downloads'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,6 +18,21 @@ export const dynamic = 'force-dynamic'
  * shared usefully.
  */
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
+  /*
+   * Checked before anything else, including the session.
+   *
+   * The button is gone from the reader, but a URL somebody already has — a bookmark, a
+   * history entry, a script — would otherwise still mint a token and hand over the file.
+   * Hiding a control is not disabling a feature.
+   *
+   * 403 rather than 404: the report exists and the member may well be entitled to read it.
+   * What is refused is taking a copy away, and saying so plainly is what stops somebody
+   * retrying and then writing in.
+   */
+  if (!DOWNLOADS_ENABLED) {
+    return NextResponse.json({ error: DOWNLOADS_DISABLED_MESSAGE }, { status: 403 })
+  }
+
   const member = await getCurrentMember()
   if (!member) {
     return NextResponse.json({ error: 'You must be signed in.' }, { status: 401 })

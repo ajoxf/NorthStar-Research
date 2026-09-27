@@ -9,6 +9,7 @@ import { Button, Spinner } from '@/components/ui/button'
 import { useToast } from '@/components/ui/toast'
 import { watermarkTile } from '@/lib/watermark'
 import type { ReportInstrument } from '@/lib/report-content'
+import { DOWNLOADS_ENABLED } from '@/lib/downloads'
 
 /**
  * In-app reading view.
@@ -124,7 +125,16 @@ export function ReportReader({
         </div>
       )}
 
-      {hasPdf && (
+      {/*
+        The whole strip goes when downloads are off — the notice as well as the button.
+
+        The notice only exists to set expectations about downloading ("watermarked with
+        your account and recorded"), so leaving it standing beside nothing to press would
+        warn a member about something they cannot do. See lib/downloads.ts; the API refuses
+        too, because hiding the button would leave the endpoint answering anybody who still
+        has the URL.
+      */}
+      {hasPdf && DOWNLOADS_ENABLED && (
         <div className="mt-8 flex flex-col gap-4 border-t border-line pt-7 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2.5">
             <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
