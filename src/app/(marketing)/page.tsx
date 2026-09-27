@@ -220,15 +220,17 @@ export default async function LandingPage() {
         arrive. The experts band closing the page also gives it somewhere to end now that
         the lime strip is gone.
 
-        The alternation survives the move, because the two bands swapped grounds with
-        it: Pricing is on the dark ground and the experts band on the light one, so the
-        page still runs dark, light, dark, light. Moving Pricing up without that swap put
-        Featured and Pricing together as two light bands, which is the one thing this
-        rhythm exists to avoid.
+        Every band below the hero is on the dark ground now, by request. The page used to
+        alternate — that is what the Band component was built around, and the note here
+        used to argue for it — so what separates one band from the next is no longer the
+        background but the cards standing on it: white package cards, photographic expert
+        cards. It is a different look rather than a broken one, but the rhythm is gone
+        deliberately and not by drift, which is worth knowing before anybody "fixes" it.
 
-        The package cards stay white on the dark ground, as the expert cards stay
-        photographs on the light one. A band's ground sets the ink around its content,
-        not the content itself.
+        A band's ground sets the ink around its content, not the content itself, so
+        flipping a tone means moving its headings, its body copy, its button variants and
+        any controls inside it with it. Missing one leaves white text on near-white, which
+        looks fine in review and is invisible on the page.
       */}
       {contributors.length > 0 ? (
         <>
@@ -462,7 +464,7 @@ function ContributorStrip({
   currency: string
 }) {
   return (
-    <Band tone="light">
+    <Band tone="dark">
       {/*
         Left, like every other band on the site.
 
@@ -472,9 +474,9 @@ function ContributorStrip({
         natural measure instead of a centred block that has to be width-capped by hand.
       */}
       <div className="max-w-2xl">
-        <Eyebrow tone="light">Subject matter experts</Eyebrow>
+        <Eyebrow tone="dark">Subject matter experts</Eyebrow>
         <BandHeading className="mt-4">Authored by industry practitioners.</BandHeading>
-        <p className="mt-4 text-[16px] leading-relaxed text-ink-on-light-dim">
+        <p className="mt-4 text-[16px] leading-relaxed text-ink-dim">
           Every report is attributed to a named analyst and published under their own
           coverage. Those currently publishing are listed below, with the markets each
           covers.
@@ -490,7 +492,7 @@ function ContributorStrip({
           <Link
             key={contributor.id}
             href={`/experts/${contributor.slug}`}
-            className="group relative block aspect-[3/4] overflow-hidden rounded-2xl bg-paper-card shadow-[0_1px_2px_rgba(17,24,39,0.06)] transition-shadow hover:shadow-[0_8px_24px_rgba(17,24,39,0.12)]"
+            className="group relative block aspect-[3/4] overflow-hidden rounded-2xl border border-line bg-panel-2 transition-colors hover:border-accent/45"
           >
             {contributor.photoUrl ? (
               /* eslint-disable-next-line @next/next/no-img-element -- an arbitrary host,
@@ -553,7 +555,7 @@ function ContributorStrip({
       </div>
 
       <div className="mt-10">
-        <ButtonLink href="/experts" size="lg" variant="on-light">
+        <ButtonLink href="/experts" size="lg" variant="secondary">
           View all experts
         </ButtonLink>
       </div>
@@ -600,11 +602,11 @@ function CoverageTable({
   })
 
   return (
-    <Band tone="light">
+    <Band tone="dark">
       <div className="max-w-2xl">
-        <Eyebrow tone="light">Featured</Eyebrow>
+        <Eyebrow tone="dark">Featured</Eyebrow>
         <BandHeading className="mt-4">Research coverage.</BandHeading>
-        <p className="mt-4 text-[16px] leading-[1.7] text-ink-on-light-dim">
+        <p className="mt-4 text-[16px] leading-[1.7] text-ink-dim">
           Subscribe to an individual subject, or to a package spanning several. Every
           subscription includes the complete archive of previously published editions.
         </p>
@@ -615,7 +617,7 @@ function CoverageTable({
       <FeaturedGrid cards={byTopic} currency={currency} />
 
       <div className="mt-10">
-        <ButtonLink href="/coverage" size="lg" variant="on-light">
+        <ButtonLink href="/coverage" size="lg" variant="secondary">
           See every subject
         </ButtonLink>
       </div>
