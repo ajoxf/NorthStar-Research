@@ -2,11 +2,11 @@
 
 import * as React from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus } from 'lucide-react'
+import { FileDown, Plus } from 'lucide-react'
 
 import { AuthorAvatar } from '@/components/author-avatar'
 import { Badge } from '@/components/ui/badge'
-import { Button, Spinner } from '@/components/ui/button'
+import { Button, ButtonLink, Spinner } from '@/components/ui/button'
 import { Hint, Input, Label, Textarea } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 import { PhotoField } from '@/app/admin/sections/photo-field'
@@ -305,6 +305,27 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
               </div>
               {author.archived && <Badge tone="muted">retired</Badge>}
               <div className="flex gap-2">
+                {/*
+                  The week's subscriber figures, to send on to the author.
+
+                  A link rather than a fetch: the response is a PDF with a
+                  Content-Disposition filename, and letting the browser handle it means no
+                  blob URL to build and revoke, and a working right-click "save as".
+
+                  Offered only where there is something to count. An author with no
+                  subjects on sale would get a report of three zeroes, which is a worse
+                  answer than not offering one.
+                */}
+                {author.sectionCount > 0 && (
+                  <ButtonLink
+                    size="sm"
+                    variant="secondary"
+                    href={`/api/admin/authors/${author.id}/weekly-report`}
+                  >
+                    <FileDown className="h-3.5 w-3.5" aria-hidden />
+                    Weekly report
+                  </ButtonLink>
+                )}
                 <Button size="sm" variant="secondary" onClick={() => startEdit(author)}>
                   Edit
                 </Button>
