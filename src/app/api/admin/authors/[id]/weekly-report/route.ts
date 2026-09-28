@@ -12,6 +12,9 @@ export const dynamic = 'force-dynamic'
 /** Seven days, ending at the start of today. A part-week would be compared with full ones. */
 const WINDOW_DAYS = 7
 
+/** How many weeks of trend to draw. Two months reads as a trend; four weeks reads as noise. */
+const HISTORY_WEEKS = 8
+
 /**
  * One author's weekly subscriber figures, as a PDF the desk downloads and sends on.
  *
@@ -59,24 +62,45 @@ export async function GET(_request: Request, { params }: { params: { id: string 
 
   const sectionIds = author.sections.map((section) => section.id)
 
-  const [entitlements, reportsPublished, reads, members] = await Promise.all([
+  const [entitlements, published, reads, members] = await Promise.all([
     sectionIds.length
       ? db.entitlement.findMany({
           where: { sectionId: { in: sectionIds } },
           // Counts and dates only: no member relation is loaded, so no personal data is
           // read to produce a document that leaves the building.
-          select: { sectionId: true, status: true, createdAt: true, renewsAt: true },
+          select: {
+            sectionId: true,
+            status: true,
+            createdAt: true,
+            renewsAt: true,
+            // For the composition breakdown. Still no member relation: these are columns
+            // about the subscription, not about the person holding it.
+            billingProvider: true,
+            stripeSubscriptionId: true,
+          },
         })
       : Promise.resolve([]),
+    /*
+     * Their editions from this week, each with its own open count.
+     *
+     * `_count` on the relation rather than a second pass: one query, and the number
+     * cannot drift from the row it is printed beside.
+     */
     sectionIds.length
-      ? db.report.count({
+      ? db.report.findMany({
           where: {
             sectionId: { in: sectionIds },
             published: true,
             publishedAt: { gte: from, lt: to },
           },
+          select: {
+            title: true,
+            publishedAt: true,
+            _count: { select: { views: true } },
+          },
+          orderBy: { publishedAt: 'desc' },
         })
-      : Promise.resolve(0),
+      : Promise.resolve([]),
     sectionIds.length
       ? db.reportView.count({
           where: { report: { sectionId: { in: sectionIds } }, viewedAt: { gte: from, lt: to } },
@@ -105,8 +129,15 @@ export async function GET(_request: Request, { params }: { params: { id: string 
     })),
     entitlements,
     allAccessReaders: members.filter((member) => isAllAccess(member, to)).length,
-    reportsPublished,
+    reports: published.map((report) => ({
+      title: report.title,
+      // Published reports always carry a date; the fallback keeps the type honest rather
+      // than asserting one that the column says is optional.
+      publishedAt: report.publishedAt ?? from,
+      opens: report._count.views,
+    })),
     reads,
+    historyWeeks: HISTORY_WEEKS,
   })
 
   // Loaded here rather than at module scope: pdf-lib is large and every other admin

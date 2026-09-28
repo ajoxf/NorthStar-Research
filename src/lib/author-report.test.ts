@@ -16,7 +16,7 @@ const input = (over: Partial<AuthorWeekInput> = {}): AuthorWeekInput => ({
   sections: [{ id: 'sec_1', name: 'Crude Oil' }],
   entitlements: [],
   allAccessReaders: 0,
-  reportsPublished: 0,
+  reports: [],
   reads: 0,
   ...over,
 })
@@ -26,6 +26,8 @@ const ent = (over: Partial<AuthorWeekInput['entitlements'][number]> = {}) => ({
   status: 'active',
   createdAt: beforeWindow,
   renewsAt: afterWindow,
+  billingProvider: null,
+  stripeSubscriptionId: null,
   ...over,
 })
 
@@ -170,5 +172,116 @@ describe('net', () => {
 
   it('is zero for a week with no movement', () => {
     assert.equal(summariseAuthorWeek(input({ entitlements: [ent()] })).net, 0)
+  })
+})
+
+describe('history', () => {
+  it('ends with the current week and runs oldest first', () => {
+    const week = summariseAuthorWeek(input({ entitlements: [ent()], historyWeeks: 4 }))
+    assert.equal(week.history.length, 4)
+    assert.equal(week.history[3].to.toISOString(), to.toISOString())
+    assert.ok(week.history[0].to < week.history[3].to)
+  })
+
+  it('recounts each week from the rows, so a lapse shows in the right week', () => {
+    /*
+       Live for the first two weeks of a four-week history, gone by the last.
+
+       Mid-week on purpose. A renewal falling exactly on a week boundary is not live at
+       that boundary — `live` is measured at the instant the week closes and the
+       comparison is strict — so a date chosen on the boundary would be testing that edge
+       rather than the trend.
+    */
+    const lapsedMidway = new Date('2026-09-16T00:00:00Z')
+    const week = summariseAuthorWeek(
+      input({ entitlements: [ent({ renewsAt: lapsedMidway })], historyWeeks: 4 }),
+    )
+    assert.deepEqual(
+      week.history.map((p) => p.live),
+      [1, 1, 0, 0],
+    )
+  })
+
+  it('does not count a subscription as live before it existed', () => {
+    /*
+     * The bug that flattens the whole chart. A row created this week satisfies both other
+     * tests — active, renewal in the future — at every earlier point as well, so without
+     * an existence check eight weeks of history all report today's total and an author
+     * who has doubled their readership is shown a straight line.
+     */
+    const week = summariseAuthorWeek(
+      input({ entitlements: [ent({ createdAt: insideWindow })], historyWeeks: 3 }),
+    )
+    assert.deepEqual(
+      week.history.map((p) => p.live),
+      [0, 0, 1],
+    )
+  })
+
+  it('has no week-on-week figure when there is no prior week', () => {
+    assert.equal(summariseAuthorWeek(input({ historyWeeks: 1 })).weekOnWeek, null)
+  })
+
+  it('reports week-on-week movement in live subscribers', () => {
+    const lapsedThisWeek = new Date('2026-09-24T00:00:00Z')
+    const week = summariseAuthorWeek(
+      input({ entitlements: [ent({ renewsAt: lapsedThisWeek })], historyWeeks: 2 }),
+    )
+    // Live last week, gone this week.
+    assert.equal(week.weekOnWeek, -1)
+  })
+})
+
+describe('composition', () => {
+  it('reads each route back from the columns its granting path fills', () => {
+    const week = summariseAuthorWeek(
+      input({
+        entitlements: [
+          ent({ stripeSubscriptionId: 'sub_1' }),
+          ent({ billingProvider: 'cregis' }),
+          ent(),
+          ent({ renewsAt: null }),
+        ],
+      }),
+    )
+    assert.deepEqual(week.composition, { card: 1, crypto: 1, code: 1, comp: 1 })
+  })
+
+  it('counts only what is live, not what was ever held', () => {
+    // An author wants to know what their current book is made of.
+    const week = summariseAuthorWeek(
+      input({ entitlements: [ent(), ent({ renewsAt: beforeWindow })] }),
+    )
+    assert.equal(week.composition.code, 1)
+  })
+})
+
+describe('renewals due', () => {
+  it('counts live subscriptions renewing inside thirty days', () => {
+    const soon = new Date(to.getTime() + 10 * 86_400_000)
+    const later = new Date(to.getTime() + 90 * 86_400_000)
+    const week = summariseAuthorWeek(
+      input({ entitlements: [ent({ renewsAt: soon }), ent({ renewsAt: later })] }),
+    )
+    assert.equal(week.renewalsDue, 1)
+  })
+
+  it('never counts an open-ended comp, which has no renewal to come due', () => {
+    const week = summariseAuthorWeek(input({ entitlements: [ent({ renewsAt: null })] }))
+    assert.equal(week.renewalsDue, 0)
+  })
+})
+
+describe('reports', () => {
+  it('orders them by opens, so the best-read is first', () => {
+    const week = summariseAuthorWeek(
+      input({
+        reports: [
+          { title: 'Quiet one', publishedAt: insideWindow, opens: 2 },
+          { title: 'Best read', publishedAt: insideWindow, opens: 30 },
+        ],
+      }),
+    )
+    assert.equal(week.reports[0].title, 'Best read')
   })
 })

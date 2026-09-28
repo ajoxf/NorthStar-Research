@@ -37,6 +37,9 @@ export type AuthorWeekInput = {
      */
     createdAt: Date
     renewsAt: Date | null
+    /** Which route it came in by, for the composition breakdown. */
+    billingProvider: string | null
+    stripeSubscriptionId: string | null
   }[]
   /**
    * How many members read this author's work on the all-access membership without holding
@@ -44,10 +47,12 @@ export type AuthorWeekInput = {
    * folded into the subscriber numbers.
    */
   allAccessReaders: number
-  /** Reports of theirs published inside the window. */
-  reportsPublished: number
-  /** Opens of their reports inside the window, by anyone who could read them. */
+  /** Their reports published inside the window, with how often each was opened. */
+  reports: { title: string; publishedAt: Date; opens: number }[]
+  /** Opens of any of their reports inside the window, including older editions. */
   reads: number
+  /** How many weeks of history to draw, the current one included. */
+  historyWeeks?: number
 }
 
 export type AuthorWeekSection = {
@@ -60,6 +65,29 @@ export type AuthorWeekSection = {
   lapsed: number
 }
 
+/** One earlier week, for the trend. */
+export type AuthorWeekPoint = {
+  to: Date
+  live: number
+  started: number
+  lapsed: number
+}
+
+/**
+ * Where this author's subscribers came in by.
+ *
+ * Read back from the columns each granting path fills rather than stored, exactly as the
+ * admin does it — see `accessSource` in access-view.ts. Told to an author because "eleven
+ * of your fourteen came in on a code" is a different business from eleven card
+ * subscriptions, and only one of them renews by itself.
+ */
+export type AuthorComposition = {
+  card: number
+  crypto: number
+  code: number
+  comp: number
+}
+
 export type AuthorWeek = {
   authorName: string
   from: Date
@@ -67,17 +95,34 @@ export type AuthorWeek = {
   sections: AuthorWeekSection[]
   totals: { live: number; started: number; lapsed: number }
   allAccessReaders: number
-  reportsPublished: number
+  reports: { title: string; publishedAt: Date; opens: number }[]
   reads: number
   /** Net movement across the week. Negative is a losing week, and is shown as one. */
   net: number
+  /** Oldest first, the current week last. */
+  history: AuthorWeekPoint[]
+  /** Change in live subscribers against the week before. Null with no prior week. */
+  weekOnWeek: number | null
+  composition: AuthorComposition
+  /** Live subscriptions whose renewal falls in the next 30 days. */
+  renewalsDue: number
 }
 
-/** Live at a moment: active, and either open-ended or not yet run out. */
+/**
+ * Live at a moment: it existed by then, is active, and had not run out.
+ *
+ * **The existence check is not redundant.** Without it a subscription bought yesterday
+ * counts as live at every earlier point too, because the only other tests are a status
+ * and a future renewal date — both of which a new row satisfies. That is invisible in the
+ * current week's figure, where everything has been created by now, and it flattens the
+ * trend completely: eight weeks of history all report today's total, so an author who has
+ * doubled their readership is shown a straight line.
+ */
 function liveAt(
-  entitlement: { status: string; renewsAt: Date | null },
+  entitlement: { status: string; createdAt: Date; renewsAt: Date | null },
   at: Date,
 ): boolean {
+  if (entitlement.createdAt.getTime() > at.getTime()) return false
   if (entitlement.status !== 'active') return false
   if (entitlement.renewsAt === null) return true
   return entitlement.renewsAt.getTime() > at.getTime()
@@ -125,10 +170,6 @@ export function summariseAuthorWeek(input: AuthorWeekInput): AuthorWeek {
     }
   })
 
-  // Rows pointing at a section this author no longer owns are ignored rather than
-  // silently attributed: `byId` is the author's own list and nothing else is counted.
-  void byId
-
   const totals = sections.reduce(
     (sum, section) => ({
       live: sum.live + section.live,
@@ -137,6 +178,64 @@ export function summariseAuthorWeek(input: AuthorWeekInput): AuthorWeek {
     }),
     { live: 0, started: 0, lapsed: 0 },
   )
+
+  /*
+   * The trend, computed from the same rows rather than from stored snapshots.
+   *
+   * Every week is recounted from the entitlement table each time the report is made, so a
+   * correction — a refund, an entitlement stopped by hand — shows up in the history
+   * instead of being frozen into a figure nobody can revise. The cost is that an old
+   * report and a new one can disagree about the same week; the alternative is a stored
+   * number that is wrong for ever.
+   */
+  const weeks = Math.max(1, input.historyWeeks ?? 8)
+  const span = input.to.getTime() - input.from.getTime()
+  const history: AuthorWeekPoint[] = []
+  for (let i = weeks - 1; i >= 0; i--) {
+    const to = new Date(input.to.getTime() - i * span)
+    const from = new Date(to.getTime() - span)
+    const rows = input.entitlements.filter((e) => e.sectionId !== null && byId.has(e.sectionId))
+    history.push({
+      to,
+      live: rows.filter((e) => liveAt(e, to)).length,
+      started: rows.filter((e) => inWindow(e.createdAt, from, to)).length,
+      lapsed: rows.filter((e) => inWindow(e.renewsAt, from, to) && !liveAt(e, to)).length,
+    })
+  }
+
+  const previous = history.length > 1 ? history[history.length - 2] : null
+
+  /*
+   * Composition, read back from the columns each granting path fills.
+   *
+   * The same reading the admin does — a Stripe subscription id is proof, a provider alone
+   * means crypto, and a row with neither is a code or a comp told apart by whether
+   * anything is owed. Only live rows are counted: an author wants to know what their
+   * current book is made of, not what it was ever made of.
+   */
+  const liveRows = input.entitlements.filter(
+    (e) => e.sectionId !== null && byId.has(e.sectionId) && liveAt(e, input.to),
+  )
+  const composition: AuthorComposition = { card: 0, crypto: 0, code: 0, comp: 0 }
+  for (const row of liveRows) {
+    if (row.stripeSubscriptionId || row.billingProvider === 'stripe') composition.card += 1
+    else if (row.billingProvider === 'cregis') composition.crypto += 1
+    else if (row.renewsAt === null) composition.comp += 1
+    else composition.code += 1
+  }
+
+  /*
+   * What is up for renewal soon.
+   *
+   * The most actionable number in the report: these are the subscriptions that will
+   * either renew or lapse in the next month, and the weeks before that is when an author
+   * can do anything about it. Thirty days rather than the report's own window, because a
+   * week's notice is not enough to act on.
+   */
+  const soon = new Date(input.to.getTime() + 30 * 86_400_000)
+  const renewalsDue = liveRows.filter(
+    (e) => e.renewsAt !== null && e.renewsAt.getTime() <= soon.getTime(),
+  ).length
 
   return {
     authorName: input.authorName,
@@ -153,8 +252,12 @@ export function summariseAuthorWeek(input: AuthorWeekInput): AuthorWeek {
      * them. Both are wrong, so the report says both numbers and labels them.
      */
     allAccessReaders: input.allAccessReaders,
-    reportsPublished: input.reportsPublished,
+    reports: [...input.reports].sort((a, b) => b.opens - a.opens),
     reads: input.reads,
     net: totals.started - totals.lapsed,
+    history,
+    weekOnWeek: previous === null ? null : totals.live - previous.live,
+    composition,
+    renewalsDue,
   }
 }
