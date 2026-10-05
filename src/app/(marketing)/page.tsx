@@ -361,7 +361,10 @@ function Hero({
               // "Full archive" read as the whole site's. What a subscriber gets is every
               // past edition of what they bought, which is what this now says.
               { icon: Archive, label: 'Full archive included' },
-              { icon: CreditCard, label: 'Cancel any time' },
+              // "No lock-in" rather than "Cancel any time": true of both ways to pay. A card
+              // plan cancels from the account; crypto has nothing to cancel and simply is
+              // not renewed — the distinction the pricing card's note below is careful about.
+              { icon: CreditCard, label: 'No lock-in' },
             ].map((item) => (
               <li key={item.label} className="flex items-center gap-2">
                 <item.icon className="h-3.5 w-3.5 text-accent" aria-hidden />

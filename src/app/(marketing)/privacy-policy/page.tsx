@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { SITE_DOMAIN } from '@/components/disclaimer'
+import { companyDetails } from '@/lib/company'
 
 export const metadata: Metadata = { title: 'Privacy Policy' }
 
@@ -13,6 +14,8 @@ export const metadata: Metadata = { title: 'Privacy Policy' }
  * must be replaced with the client's approved policy before launch.
  */
 export default function PrivacyPolicyPage() {
+  const { supportEmail } = companyDetails()
+
   return (
     <div className="mx-auto max-w-3xl px-5 py-20">
       <span className="eyebrow">Legal</span>
@@ -63,7 +66,17 @@ export default function PrivacyPolicyPage() {
           <p>
             You can update or remove your contact details at any time in your account settings. You
             can request a copy of your data, correction of it, or deletion of your account by contacting us
-            through {SITE_DOMAIN}. Deleting your account ends your access to the archive.
+            {supportEmail ? <> at {supportEmail}</> : <> through {SITE_DOMAIN}</>}. Deleting your account
+            ends your access to the archive.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="mb-3 text-2xl text-ink">Site analytics</h2>
+          <p>
+            We measure visits to the public site — pages viewed, referring sites and campaign links —
+            with Vercel Web Analytics, which does not use cookies and does not identify you across
+            other websites. We use this only to understand which pages and channels bring visitors.
           </p>
         </section>
 

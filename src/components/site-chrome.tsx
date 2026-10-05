@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { DisclaimerText } from '@/components/disclaimer'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember } from '@/lib/auth'
+import { companyDetails } from '@/lib/company'
 import { formatPrice } from '@/lib/package-shape'
 import { defaultPackage, sellablePackages } from '@/lib/packages'
 import { sectionsPublic } from '@/lib/sections-mode'
@@ -101,6 +102,9 @@ export async function SiteFooter() {
   // Hidden entirely until the desk turns the surface on, so a half-configured
   // contributors page is never one click from the footer of every page.
   const showSections = await sectionsPublic()
+  // Shown only once set in the environment — see src/lib/company.ts. A research service
+  // taking payment should say who it is, but never with a guessed name or address.
+  const company = companyDetails()
 
   return (
     <footer className="border-t border-line bg-panel-2">
@@ -139,6 +143,9 @@ export async function SiteFooter() {
             </div>
             <div className="flex flex-col gap-2.5">
               <span className="eyebrow">Legal</span>
+              <Link href="/terms" className="text-ink-dim hover:text-ink">
+                Terms of Service
+              </Link>
               <Link href="/disclaimer" className="text-ink-dim hover:text-ink">
                 Disclaimer
               </Link>
@@ -148,6 +155,11 @@ export async function SiteFooter() {
               <Link href="/faqs" className="text-ink-dim hover:text-ink">
                 FAQs
               </Link>
+              {company.supportEmail && (
+                <a href={`mailto:${company.supportEmail}`} className="text-ink-dim hover:text-ink">
+                  {company.supportEmail}
+                </a>
+              )}
             </div>
           </nav>
         </div>
@@ -158,7 +170,8 @@ export async function SiteFooter() {
           <h2 className="eyebrow mb-4">Disclaimer</h2>
           <DisclaimerText className="space-y-3 text-[12px] leading-relaxed text-ink-dim/85" />
           <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim/60">
-            © {new Date().getFullYear()} NordStar Pro
+            © {new Date().getFullYear()} {company.legalName ?? 'NordStar Pro'}
+            {company.address && <> · {company.address}</>}
           </p>
         </div>
       </div>

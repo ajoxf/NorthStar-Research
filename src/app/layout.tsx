@@ -1,17 +1,38 @@
 import type { Metadata, Viewport } from 'next'
+import { Analytics } from '@vercel/analytics/react'
 
 import { ReferralTracker } from '@/components/referral-tracker'
+import { appBaseUrl } from '@/lib/env'
 import './globals.css'
 
+const DESCRIPTION =
+  'Insight on commodities, FX, global indices, AI and related financial markets, supported by technical and macro research from experienced industry practitioners. Educational and informational only.'
+
 export const metadata: Metadata = {
+  /*
+   * Every relative URL in metadata — the social preview image above all — resolves against
+   * this. Without it, links shared on LinkedIn or X carry no preview, and those are the
+   * channels the experts actually market through.
+   */
+  metadataBase: new URL(appBaseUrl()),
   title: {
     default: 'NordStar Pro — Technical and macro market research',
     // Sub-pages read "Payments · NordStar Pro", so the name travels with every tab title
     // rather than only appearing on the home page.
     template: '%s · NordStar Pro',
   },
-  description:
-    'Insight on commodities, FX, global indices, AI and related financial markets, supported by technical and macro research from experienced industry practitioners. Educational and informational only.',
+  description: DESCRIPTION,
+  openGraph: {
+    type: 'website',
+    siteName: 'NordStar Pro',
+    title: 'NordStar Pro — Technical and macro market research',
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'NordStar Pro — Technical and macro market research',
+    description: DESCRIPTION,
+  },
   robots: {
     // Member and admin areas are additionally blocked in robots.ts.
     index: true,
@@ -54,6 +75,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Records an affiliate click once per visit, wherever the link landed. Renders
             nothing and never blocks the page. */}
         <ReferralTracker />
+        {/* Cookieless page analytics, so the funnel can be measured without a consent
+            banner. Reports in the Vercel dashboard once Web Analytics is enabled on the
+            project; until then it does nothing. */}
+        <Analytics />
       </body>
     </html>
   )
