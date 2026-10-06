@@ -44,8 +44,9 @@ export async function resolveStripePrice(input: {
     return {
       ok: false,
       error:
-        'Stripe is not configured on this deployment, so a card price cannot be created. Set ' +
-        'STRIPE_SECRET_KEY in Vercel, or save this package as crypto-only for now.',
+        'STRIPE_SECRET_KEY is not set on this deployment, so a card price cannot be created. ' +
+        'Add it in Vercel → Settings → Environment Variables and redeploy, or save this ' +
+        'package as crypto-only for now.',
     }
   }
 

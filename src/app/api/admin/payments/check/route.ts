@@ -1,11 +1,17 @@
 import { NextResponse } from 'next/server'
 
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
+import { isConfigured } from '@/lib/env'
 import { REQUIRED_STRIPE_EVENTS, processorUrls } from '@/lib/payment-settings'
 import { priceLine, stripePriceMismatch } from '@/lib/package-shape'
 import { sellablePackages } from '@/lib/packages'
 import { cregisConfigured } from '@/lib/cregis'
-import { stripeClient, stripeConfigured, stripePriceFacts } from '@/lib/stripe'
+import {
+  stripeClient,
+  stripeConfigured,
+  stripeFallbackPriceConfigured,
+  stripePriceFacts,
+} from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -49,43 +55,82 @@ export async function POST() {
     stripe.push({
       label: 'Credentials',
       status: 'fail',
-      detail: 'Stripe is not configured, so card payments cannot be taken.',
+      detail:
+        'STRIPE_SECRET_KEY is not set, so card payments cannot be taken. Add it in Vercel → ' +
+        'Settings → Environment Variables and redeploy.',
     })
   } else {
     try {
       const client = stripeClient()
-      const price = await client.prices.retrieve(process.env.STRIPE_PRICE_ID as string)
 
-      stripe.push({
-        label: 'Secret key',
-        status: 'ok',
-        detail: 'Stripe accepted the key.',
-      })
+      /*
+       * The key is proved by a call Stripe has to authorise, not by the string looking
+       * right. A revoked or wrong-mode key is indistinguishable from a good one until
+       * something is actually asked of it, and the point of this page is to find that out
+       * here rather than at somebody's checkout.
+       */
+      await client.balance.retrieve()
+      stripe.push({ label: 'Secret key', status: 'ok', detail: 'Stripe accepted the key.' })
 
-      if (!price.active) {
+      /*
+       * The fallback price is checked only if one is set, and its absence is not a failure.
+       *
+       * It is used by the built-in plan alone, which appears only when no package exists.
+       * Treating it as required is what used to refuse card payment on a deployment that
+       * could take one perfectly well.
+       */
+      if (!stripeFallbackPriceConfigured()) {
         stripe.push({
-          label: 'Price',
-          status: 'fail',
-          detail: 'That price is archived in Stripe. Checkout will fail for every buyer.',
-        })
-      } else if (price.type !== 'recurring' || price.recurring?.interval !== 'month') {
-        stripe.push({
-          label: 'Price',
-          status: 'fail',
-          detail:
-            `That price is ${price.type === 'recurring' ? `recurring every ${price.recurring?.interval}` : 'one-off'}. ` +
-            'It must be a monthly recurring price, or nobody is actually subscribed and no renewal is ever charged.',
-        })
-      } else {
-        const amount = (price.unit_amount ?? 0) / 100
-        const currency = (price.currency ?? '').toUpperCase()
-
-        stripe.push({
-          label: 'Price',
+          label: 'Fallback price',
           status: 'ok',
           detail:
-            `${currency} ${amount.toFixed(2)} per month, recurring. This is the fallback price, ` +
-            `used only by packages with no Stripe price of their own.`,
+            'Not set, and not needed: every package and section carries its own Stripe price. ' +
+            'It is only used by the built-in plan, which appears when no package exists.',
+        })
+      } else {
+        const price = await client.prices.retrieve(process.env.STRIPE_PRICE_ID as string)
+        if (!price.active) {
+          stripe.push({
+            label: 'Fallback price',
+            status: 'fail',
+            detail: 'That price is archived in Stripe. Checkout will fail for every buyer.',
+          })
+        } else if (price.type !== 'recurring' || price.recurring?.interval !== 'month') {
+          stripe.push({
+            label: 'Fallback price',
+            status: 'fail',
+            detail:
+              `That price is ${price.type === 'recurring' ? `recurring every ${price.recurring?.interval}` : 'one-off'}. ` +
+              'It must be a monthly recurring price, or nobody is actually subscribed and no renewal is ever charged.',
+          })
+        } else {
+          const amount = (price.unit_amount ?? 0) / 100
+          const currency = (price.currency ?? '').toUpperCase()
+          stripe.push({
+            label: 'Fallback price',
+            status: 'ok',
+            detail:
+              `${currency} ${amount.toFixed(2)} per month, recurring. Used only by packages with ` +
+              `no Stripe price of their own.`,
+          })
+        }
+      }
+
+      /*
+       * The one that silently loses money.
+       *
+       * Without a signing secret the webhook cannot be verified, so every payment is
+       * refused at our end: the buyer is charged, Stripe reports success, and no
+       * membership is ever created. Every other row here can be wrong and somebody
+       * notices; this one is wrong and everything looks fine.
+       */
+      if (!isConfigured('STRIPE_WEBHOOK_SECRET')) {
+        stripe.push({
+          label: 'Webhook signing secret',
+          status: 'fail',
+          detail:
+            'STRIPE_WEBHOOK_SECRET is not set. Payments will succeed and no membership will ever ' +
+            'be created, because the confirmation from Stripe cannot be verified.',
         })
       }
 

@@ -16,10 +16,40 @@ import type { StripePriceFacts } from '@/lib/package-shape'
  * As with Cregis, placeholder credentials fail loudly rather than silently.
  */
 
-export const STRIPE_ENV_KEYS = ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID'] as const
+/**
+ * What card payment actually needs: the key, and nothing else.
+ *
+ * **`STRIPE_PRICE_ID` used to be in this list, and that was wrong.** It is the fallback
+ * price for the built-in plan — the one the site sold before packages existed, which only
+ * appears when no package has been created at all. Every package and every section now
+ * carries its own Stripe Price, created by this app when the price is set.
+ *
+ * Having it here meant a deployment with a perfectly good secret key and no fallback price
+ * had card payment refused everywhere: the join page hid the card option, section checkout
+ * answered "card payment is not available yet", and saving a package as card-sellable was
+ * rejected with a message naming the key that *was* set. Nothing said which variable was
+ * actually missing, and the one it named was the one already there.
+ *
+ * The fallback path keeps its own requirement, at its own call site, where it is the only
+ * thing that needs it — see `createStripeCheckout`.
+ */
+export const STRIPE_ENV_KEYS = ['STRIPE_SECRET_KEY'] as const
+
+/** The legacy fallback price. Needed only by the built-in plan; see the note above. */
+export const STRIPE_FALLBACK_PRICE_KEY = 'STRIPE_PRICE_ID'
 
 export function stripeConfigured(): boolean {
   return isConfigured(...STRIPE_ENV_KEYS)
+}
+
+/**
+ * Can the built-in plan be sold by card?
+ *
+ * Separate from `stripeConfigured` because it is a separate question, and only ever asked
+ * about a deployment with no packages at all.
+ */
+export function stripeFallbackPriceConfigured(): boolean {
+  return isConfigured(STRIPE_FALLBACK_PRICE_KEY)
 }
 
 export function stripeClient(): Stripe {

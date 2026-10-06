@@ -36,6 +36,14 @@ export type SettingRow = {
   /** Safe to display: never the value itself, only a shape or a mode. */
   detail: string | null
   secret: boolean
+  /**
+   * Not needed for the site to take money.
+   *
+   * Without this flag an unset-but-unnecessary variable shows a red "Missing" badge beside
+   * the ones that genuinely stop payments, which is how an owner comes to believe card
+   * payment is unconfigured when it is working — or chases a variable nothing reads.
+   */
+  optional?: boolean
 }
 
 function statusOf(key: string): SettingStatus {
@@ -78,11 +86,14 @@ export function stripeSettings(): SettingRow[] {
     },
     {
       key: 'STRIPE_PRICE_ID',
-      label: 'Price',
+      label: 'Fallback price',
       what:
-        'The fallback recurring price, used only by packages that carry no Stripe price of ' +
-        'their own. A one-off price will not subscribe anyone.',
+        'Optional. Used only by the built-in plan, which appears when no package exists — ' +
+        'every package and section carries its own Stripe price, created here when you set ' +
+        'one. If you do set this, it must be a recurring price: a one-off will not subscribe ' +
+        'anyone.',
       status: statusOf('STRIPE_PRICE_ID'),
+      optional: true,
       // A price id is not a credential — it appears in the checkout call itself — so
       // showing it in full is what makes it checkable against the Stripe dashboard.
       detail: price && !isPlaceholder(price) ? price : null,
