@@ -4,9 +4,10 @@ import type { Report } from '@prisma/client'
 
 import { db } from '@/lib/db'
 import { appBaseUrl } from '@/lib/env'
-import { wasReallyDelivered } from '@/lib/delivery-retry'
+import { PLACEHOLDER_PROVIDERS, wasReallyDelivered } from '@/lib/delivery-retry'
 import { getNotificationProvider } from '@/lib/notifications'
 import type { Recipient } from '@/lib/notifications/types'
+import { sendPacer, type Pacer } from '@/lib/send-rate'
 
 /**
  * Report delivery orchestration.
@@ -61,10 +62,27 @@ export async function deliverReportToActiveMembers(
    * the whole list. Everyone still gets one row per member per channel, and the
    * idempotency rules below are unchanged.
    */
-  options: { onlyMemberIds?: string[] } = {},
+  options: {
+    onlyMemberIds?: string[]
+    /**
+     * Overridable only so tests do not have to wait out real pacing. Production always
+     * uses the process-wide pacer, which is what makes the cron's back-to-back reports
+     * pace against each other rather than each starting afresh.
+     */
+    pacer?: Pacer
+  } = {},
 ): Promise<DeliverySummary> {
+  const pacer = options.pacer ?? sendPacer
   const provider = getNotificationProvider()
   const url = reportPortalUrl(report.id)
+
+  /*
+   * A provider that makes no network call has no rate limit to respect.
+   *
+   * Pacing the console provider would spend a second per eight members waiting for an
+   * API that was never called — slowing local work and the demo seed for nothing.
+   */
+  const needsPacing = !PLACEHOLDER_PROVIDERS.has(provider.name)
 
   /*
    * Who this edition is owed to.
@@ -137,6 +155,15 @@ export async function deliverReportToActiveMembers(
       }
 
       summary.attempted += 1
+      /*
+       * Wait for a slot before calling the provider.
+       *
+       * After the skip check, not before it: a member who is skipped costs no provider
+       * request, and pacing them would make every re-publish wait out an interval per
+       * member already delivered to. See src/lib/send-rate.ts for why this is here at all
+       * — a sequential loop bounds concurrency, not rate, and Resend limits the rate.
+       */
+      if (needsPacing) await pacer.wait()
       const result = await provider.sendReportEmail(member as Recipient, reportSummary, url)
 
       const data = {

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  NordStar Pro wordmark — for dark grounds.
+
+  Vector and resolution-independent: this is the logo at any size, so there is no
+  "high-res export" to keep in step with it.
+
+  It carries live text rather than outlined paths, which is the one thing to know before
+  using it. On a machine with Satoshi installed it renders exactly as the site does; with
+  only Inter it renders as the site's own designed fallback; with neither it falls back
+  further and the letterforms will not match. Before sending this anywhere it matters —
+  a printer, an agency, a partner's site — open it and check, or outline the text first.
+
+  Taken from src/components/site-chrome.tsx and src/app/globals.css. The ratios are the
+  header's: "Pro" is 0.565x the size of "NordStar" (13/23) and the gap is 0.348em (8/23).
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1196 260" width="1196" height="260" role="img" aria-label="NordStar Pro">
+  <title>NordStar Pro</title>
+  <text x="0" y="200" font-family="Satoshi, Inter, system-ui, sans-serif" font-size="200" font-weight="500" letter-spacing="-5" fill="#FFFFFF">NordStar<tspan dx="70" font-family="IBM Plex Mono, ui-monospace, monospace" font-size="113" font-weight="400" letter-spacing="24.9" fill="#D6FD3A">PRO</tspan></text>
+</svg>

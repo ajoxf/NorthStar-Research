@@ -2,6 +2,7 @@ import { Resend } from 'resend'
 
 import { optionalEnv, requireEnv } from '@/lib/env'
 import { DEFAULT_EMAIL_FROM } from '@/lib/notifications/from'
+import { withRateLimitRetry } from '@/lib/notifications/retry'
 import {
   codeExpiringEmail,
   magicLinkEmail,
@@ -39,7 +40,23 @@ export class ResendProvider implements NotificationProvider {
     return optionalEnv('EMAIL_FROM', DEFAULT_EMAIL_FROM)
   }
 
+  /**
+   * One message, retried while Resend says it is being asked too fast.
+   *
+   * Every method on this class goes through here, transactional mail included — a receipt
+   * or a magic link issued during a bulk send competes for the same account-wide limit,
+   * and those are the sends it hurts most to lose.
+   */
   private async send(to: string, subject: string, html: string, text: string): Promise<DeliveryResult> {
+    return withRateLimitRetry(() => this.sendOnce(to, subject, html, text))
+  }
+
+  private async sendOnce(
+    to: string,
+    subject: string,
+    html: string,
+    text: string,
+  ): Promise<DeliveryResult> {
     try {
       const { data, error } = await this.client().emails.send({
         from: this.from(),
