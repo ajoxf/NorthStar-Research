@@ -7,6 +7,8 @@ import { EmptyPreview } from '@/components/empty-preview'
 import { PreviewBanner } from '@/components/preview-banner'
 import { ToastProvider } from '@/components/ui/toast'
 import { db } from '@/lib/db'
+import { priceWithOffer, publicOfferFor } from '@/lib/offer'
+import { liveOffers } from '@/lib/offers'
 import { sectionName } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
 import { trialOffers } from '@/lib/trial'
@@ -59,6 +61,25 @@ export default async function CoveragePage() {
     notFound()
   }
 
+  /*
+   * Every live offer, loaded once for the whole page.
+   *
+   * One small query the pure rules then filter, rather than a lookup per section: there
+   * are tens of offers at most, and a where-clause encoding the same window and scope
+   * rules a second time is exactly how the catalogue and the checkout come to disagree.
+   */
+  const sectionsById = new Map(
+    covered.flatMap((topic) => topic.sections).map((section) => [section.id, section]),
+  )
+  const offers = await liveOffers()
+  const now = new Date()
+  const saleFor = (sectionId: string) => {
+    const section = sectionsById.get(sectionId)
+    if (!section) return null
+    const offer = publicOfferFor(offers, { sectionId }, now)
+    return offer === null ? null : priceWithOffer(section.priceCents, offer)
+  }
+
   return (
     <ToastProvider>
       {preview && <PreviewBanner />}
@@ -95,6 +116,15 @@ export default async function CoveragePage() {
               cadence: section.cadence,
               description: section.description,
               priceCents: section.priceCents,
+              /*
+               * Resolved here, with the live offers loaded once above rather than queried
+               * per row. A sale's scope and window are not public data, so this has to be
+               * a server answer — and it is the same pure rule the checkout applies, so
+               * the price on the card cannot disagree with the price at the till.
+               */
+              saleCents: saleFor(section.id)?.chargeCents ?? null,
+              salePercentOff: saleFor(section.id)?.percentOff ?? null,
+              audience: section.audience,
               currency: section.currency,
               interval: section.interval,
               imageUrl: section.imageUrl,

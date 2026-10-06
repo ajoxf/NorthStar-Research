@@ -37,6 +37,7 @@ export function FilterBar({
   authors,
   ceilings,
   trialCount,
+  audiences = [],
   currency,
   value,
   onChange,
@@ -52,6 +53,14 @@ export function FilterBar({
   ceilings: number[]
   /** How many rows have a trial open. Zero hides the control entirely. */
   trialCount: number
+  /**
+   * Which audiences are actually present in the unfiltered list.
+   *
+   * Passed in rather than hard-coded to the two enum values, so the control appears only
+   * once something carries one. A surface with nothing classified gets no chips, which is
+   * the same rule the trial and price controls already follow.
+   */
+  audiences?: string[]
   currency: string
   value: BrowseFilterState
   onChange: (next: BrowseFilterState) => void
@@ -80,11 +89,16 @@ export function FilterBar({
     (value.subjects.length > 0 ? 1 : 0) +
     (value.authors.length > 0 ? 1 : 0) +
     (value.maxPriceCents !== null ? 1 : 0) +
-    (value.trialOnly ? 1 : 0)
+    (value.trialOnly ? 1 : 0) +
+    (value.audiences.length > 0 ? 1 : 0)
 
-  // Nothing to narrow: one subject, one author, one price, no trials. Render nothing.
+  // Nothing to narrow: one subject, one author, one price, no trials, nothing classified.
   const anyDimension =
-    subjects.length > 1 || authors.length > 1 || ceilings.length > 0 || trialCount > 0
+    subjects.length > 1 ||
+    authors.length > 1 ||
+    ceilings.length > 0 ||
+    trialCount > 0 ||
+    audiences.length > 0
   if (!anyDimension) return null
 
   const chip = (selected: boolean) =>
@@ -158,6 +172,7 @@ export function FilterBar({
                   authors: [],
                   maxPriceCents: null,
                   trialOnly: false,
+                  audiences: [],
                   // The sort is the visitor's, not the filter's: clearing what is hidden
                   // should not also reorder what is left.
                   sort: value.sort,
@@ -256,6 +271,39 @@ export function FilterBar({
                     >
                       {on && <Check className="h-3.5 w-3.5" aria-hidden />}
                       Under {formatPrice(ceiling, currency)}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Offered only once something has actually been classified. Unclassified
+              sections cannot satisfy either chip, so showing the control before anybody
+              has set an audience would be two buttons that only ever empty the list. */}
+          {audiences.length > 0 && (
+            <div>
+              <p className={groupLabel}>Priced for</p>
+              <div className="mt-2.5 flex flex-wrap gap-2">
+                {audiences.map((audience) => {
+                  const selected = value.audiences.includes(audience)
+                  return (
+                    <button
+                      key={audience}
+                      type="button"
+                      aria-pressed={selected}
+                      className={chip(selected)}
+                      onClick={() =>
+                        onChange({
+                          ...value,
+                          audiences: selected
+                            ? value.audiences.filter((a) => a !== audience)
+                            : [...value.audiences, audience],
+                        })
+                      }
+                    >
+                      {selected && <Check className="h-3.5 w-3.5" aria-hidden />}
+                      {audience === 'retail' ? 'Retail' : 'Institutional'}
                     </button>
                   )
                 })}

@@ -174,3 +174,46 @@ describe('toggleValue', () => {
     assert.deepEqual(toggleValue(['fx'], 'oil'), ['fx', 'oil'])
   })
 })
+
+describe('audience', () => {
+  it('keeps everything when no audience is chosen', () => {
+    // The default state of the bar. Any other reading renders an empty page on arrival.
+    assert.equal(
+      matchesBrowseFilter(item({ audience: 'institutional' }), EMPTY_BROWSE_FILTER),
+      true,
+    )
+    assert.equal(matchesBrowseFilter(item({ audience: null }), EMPTY_BROWSE_FILTER), true)
+  })
+
+  it('keeps only what is priced for the audience asked for', () => {
+    const filter = { ...EMPTY_BROWSE_FILTER, audiences: ['retail'] }
+    assert.equal(matchesBrowseFilter(item({ audience: 'retail' }), filter), true)
+    assert.equal(matchesBrowseFilter(item({ audience: 'institutional' }), filter), false)
+  })
+
+  it('keeps both when both are chosen', () => {
+    const filter = { ...EMPTY_BROWSE_FILTER, audiences: ['retail', 'institutional'] }
+    assert.equal(matchesBrowseFilter(item({ audience: 'institutional' }), filter), true)
+  })
+
+  it('drops an unclassified row once an audience is asked for', () => {
+    /*
+     * Unclassified is genuinely not an answer to "is this retail or institutional".
+     * Surviving the filter would tell somebody shopping for retail that a section is
+     * priced for them when nobody has said so — which is the one claim this label exists
+     * to make, so it must not be made by default.
+     */
+    const filter = { ...EMPTY_BROWSE_FILTER, audiences: ['retail'] }
+    assert.equal(matchesBrowseFilter(item({ audience: null }), filter), false)
+    assert.equal(matchesBrowseFilter(item({ audience: undefined }), filter), false)
+  })
+
+  it('composes with the other dimensions rather than replacing them', () => {
+    // Across dimensions the filter is AND, and this one must not be the exception.
+    const filter = { ...EMPTY_BROWSE_FILTER, audiences: ['retail'], authors: ['maya'] }
+    assert.equal(
+      matchesBrowseFilter(item({ audience: 'retail', authors: ['dean'] }), filter),
+      false,
+    )
+  })
+})
