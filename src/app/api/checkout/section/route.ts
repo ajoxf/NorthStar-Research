@@ -7,6 +7,8 @@ import { amountString } from '@/lib/package-shape'
 import { sectionName } from '@/lib/section-shape'
 import { createStripeCheckout, createStripePrice, stripeConfigured } from '@/lib/stripe'
 import { createCheckout } from '@/lib/cregis'
+import { priceWithOffer } from '@/lib/offer'
+import { offerForCheckout, stripeCouponForOffer } from '@/lib/offers'
 import { emailSchema } from '@/lib/validation'
 
 export const runtime = 'nodejs'
@@ -16,6 +18,8 @@ const schema = z.object({
   email: emailSchema,
   sectionId: z.string().trim().min(1).max(64),
   method: z.enum(['card', 'crypto']).default('card'),
+  /** A discount code, if the buyer typed one. Blank and wrong are the same thing here. */
+  offerCode: z.string().trim().max(64).optional(),
 })
 
 /**
@@ -51,6 +55,17 @@ export async function POST(request: Request) {
 
   const name = sectionName(section)
 
+  /*
+   * What this buyer actually pays.
+   *
+   * `section.priceCents` stays the list price and is never edited by a campaign — the
+   * charge is derived here, every time, from the list price and whichever offer applies.
+   * That is what lets a sale end by itself, and why no campaign can leave a permanently
+   * altered price behind it.
+   */
+  const offer = await offerForCheckout({ sectionId: section.id }, parsed.data.offerCode)
+  const priced = priceWithOffer(section.priceCents, offer)
+
   // Already holds it, and it has not lapsed — say so rather than taking money for a
   // second copy of something they can already read.
   const member = await db.member.findUnique({ where: { email }, select: { id: true } })
@@ -77,9 +92,10 @@ export async function POST(request: Request) {
           cregisOrderId: `pending-${crypto.randomUUID()}`,
           provider: 'cregis',
           email,
-          amount: amountString(section.priceCents),
+          amount: amountString(priced.chargeCents),
           currency: section.currency,
           sectionId: section.id,
+          offerId: priced.offerId,
           status: 'pending',
         },
       })
@@ -87,7 +103,7 @@ export async function POST(request: Request) {
       const result = await createCheckout({
         orderId: order.id,
         email,
-        amount: amountString(section.priceCents),
+        amount: amountString(priced.chargeCents),
         currency: section.currency,
         remark: name,
       })
@@ -135,10 +151,23 @@ export async function POST(request: Request) {
       })
     }
 
+    /*
+     * The discount rides as a coupon, not as a different price.
+     *
+     * Minting a second Price at the sale amount would leave whoever bought during the sale
+     * billed at it for ever, with nothing recording that a campaign was the reason. A
+     * coupon keeps the list Price as the thing being sold and carries its own duration, so
+     * "first month" and "for as long as you stay" are a property of the offer rather than
+     * an accident of which Price object somebody landed on.
+     */
+    const couponId = offer ? await stripeCouponForOffer(offer) : null
+
     const { url, sessionId } = await createStripeCheckout(email, {
       priceId,
       planName: name,
       sectionId: section.id,
+      couponId,
+      offerId: priced.offerId,
     })
 
     await db.checkoutOrder.create({
@@ -148,9 +177,10 @@ export async function POST(request: Request) {
         email,
         // What we believe is being charged. Stripe is the authority on the real amount;
         // this row is what makes a divergence visible rather than invisible.
-        amount: amountString(section.priceCents),
+        amount: amountString(priced.chargeCents),
         currency: section.currency,
         sectionId: section.id,
+        offerId: priced.offerId,
         status: 'pending',
       },
     })

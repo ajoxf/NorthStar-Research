@@ -75,6 +75,7 @@ export async function POST(request: Request) {
         priceCents: input.data.priceCents,
         currency: input.data.currency,
         interval: input.data.interval,
+        audience: input.data.audience ?? null,
         sortOrder: input.data.sortOrder,
       },
       include: { topic: true, author: true },

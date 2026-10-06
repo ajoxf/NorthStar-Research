@@ -15,8 +15,11 @@
  * leave a permanently altered price behind it — which matters on a site where a price is a
  * thing the owner sets by hand and expects to stay set.
  *
+
  * No `server-only` guard: imported by client components and by `node --test`.
  */
+
+import { z } from 'zod'
 
 /** The smallest and largest discount an offer may carry. See `percentOff` on the model. */
 export const MIN_PERCENT_OFF = 1
@@ -35,6 +38,7 @@ export type OfferShape = {
   startsAt: Date | null
   endsAt: Date | null
   maxRedemptions: number | null
+  /** Paid orders carrying this offer. Derived, not stored — see offers.ts. */
   redeemedCount: number
   appliesToEverything: boolean
   archivedAt: Date | null
@@ -200,3 +204,61 @@ export function priceWithOffer(listCents: number, offer: OfferShape | null): Pri
     duration: offer.duration,
   }
 }
+
+/* ------------------------------------------------------------------------- *
+ * What the admin form may send.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Validation for creating and editing an offer.
+ *
+ * Here rather than in the route so the rules are testable and so the create and edit
+ * endpoints cannot drift apart about what a legal offer is — the same arrangement
+ * packageInputSchema and sectionInputSchema already have.
+ */
+export const offerInputSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Give the campaign a name.').max(80),
+    /**
+     * Empty means a public sale. Not null, because an HTML form sends '' for a box
+     * somebody left alone and making the operator understand the difference would be
+     * making them do the form's job.
+     */
+    code: z
+      .string()
+      .trim()
+      .max(64)
+      .transform((value) => (value === '' ? null : normaliseOfferCode(value)))
+      .nullable()
+      .default(null),
+    percentOff: z
+      .number()
+      .int()
+      .min(MIN_PERCENT_OFF, 'A discount has to be at least 1%.')
+      .max(
+        MAX_PERCENT_OFF,
+        'The most an offer can take off is 99%. A free subscription is a comp — issue a gifted code instead.',
+      ),
+    duration: z.enum(['first_payment', 'forever']).default('first_payment'),
+    startsAt: z.coerce.date().nullable().default(null),
+    endsAt: z.coerce.date().nullable().default(null),
+    maxRedemptions: z.number().int().min(1).max(100_000).nullable().default(null),
+    appliesToEverything: z.boolean().default(false),
+    sectionIds: z.array(z.string().min(1)).max(200).default([]),
+    packageIds: z.array(z.string().min(1)).max(200).default([]),
+  })
+  .refine(
+    (input) =>
+      input.appliesToEverything || input.sectionIds.length > 0 || input.packageIds.length > 0,
+    {
+      message:
+        'Choose what this applies to, or tick “everything on sale”. An offer with nothing selected discounts nothing.',
+      path: ['sectionIds'],
+    },
+  )
+  .refine((input) => !input.startsAt || !input.endsAt || input.endsAt > input.startsAt, {
+    message: 'The end has to come after the start.',
+    path: ['endsAt'],
+  })
+
+export type OfferInput = z.infer<typeof offerInputSchema>

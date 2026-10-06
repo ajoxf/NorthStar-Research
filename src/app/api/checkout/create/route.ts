@@ -7,6 +7,8 @@ import { db } from '@/lib/db'
 import { MissingConfigError } from '@/lib/env'
 import { CregisError, createCheckout } from '@/lib/cregis'
 import { amountString, isFallbackPackage } from '@/lib/package-shape'
+import { priceWithOffer } from '@/lib/offer'
+import { offerForCheckout } from '@/lib/offers'
 import { packageForCheckout } from '@/lib/packages'
 import { normalisePhone } from '@/lib/utils'
 
@@ -16,6 +18,8 @@ const schema = z.object({
   email: emailSchema,
   phoneNumber: z.string().trim().optional(),
   packageId: z.string().trim().max(64).optional(),
+  /** A discount code, if the buyer typed one. Blank and wrong are the same thing here. */
+  offerCode: z.string().trim().max(64).optional(),
 })
 
 export async function POST(request: Request) {
@@ -31,6 +35,18 @@ export async function POST(request: Request) {
 
   const pkg = await packageForCheckout(parsed.data.packageId)
 
+  /*
+   * The built-in fallback plan corresponds to no row, so nothing can be scoped to it and
+   * an offer covering "everything" has no package id to record against the order. It is
+   * priced at the list price, which is the honest answer for a plan that exists only when
+   * no package has been created at all.
+   */
+  const packageId = isFallbackPackage(pkg) ? null : pkg.id
+  const offer = packageId
+    ? await offerForCheckout({ packageId }, parsed.data.offerCode)
+    : null
+  const priced = priceWithOffer(pkg.priceCents, offer)
+
   // Recorded before contacting Cregis so an order exists to reconcile the callback
   // against even if the call or the browser session dies part-way through.
   const order = await db.checkoutOrder.create({
@@ -38,9 +54,10 @@ export async function POST(request: Request) {
       cregisOrderId: `pending_${crypto.randomUUID()}`,
       email,
       phoneNumber,
-      amount: amountString(pkg.priceCents),
+      amount: amountString(priced.chargeCents),
       currency: pkg.currency,
-      packageId: isFallbackPackage(pkg) ? null : pkg.id,
+      packageId,
+      offerId: priced.offerId,
       status: 'pending',
     },
   })
@@ -49,7 +66,7 @@ export async function POST(request: Request) {
     const result = await createCheckout({
       orderId: order.id,
       email,
-      amount: amountString(pkg.priceCents),
+      amount: amountString(priced.chargeCents),
       currency: pkg.currency,
       remark: pkg.name,
     })

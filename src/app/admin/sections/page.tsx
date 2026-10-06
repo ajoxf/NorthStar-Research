@@ -118,6 +118,7 @@ export default async function AdminSectionsPage() {
             priceCents: section.priceCents,
             currency: section.currency,
             interval: section.interval,
+            audience: section.audience,
             sortOrder: section.sortOrder,
             imageUrl: section.imageUrl,
             itemSlug: section.item?.slug ?? null,

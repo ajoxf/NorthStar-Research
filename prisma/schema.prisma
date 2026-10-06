@@ -772,9 +772,15 @@ model Offer {
   startsAt DateTime?
   endsAt   DateTime?
 
-  /// A ceiling on uses, and the running count. Null is uncapped.
+  /// A ceiling on uses. Null is uncapped.
+  ///
+  /// **The count it is compared against is not stored here.** It is derived from paid
+  /// CheckoutOrder rows carrying this offer, because a stored counter has to be
+  /// incremented by a webhook — and webhooks are delivered more than once, so the counter
+  /// would drift up on every retry and quietly close a campaign that had not sold out.
+  /// Counting the orders is idempotent, is right even if a webhook is missed entirely,
+  /// and is the same number anyone reconciling the books would arrive at.
   maxRedemptions Int?
-  redeemedCount  Int  @default(0)
 
   /// Does this apply to everything on sale?
   ///

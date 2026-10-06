@@ -64,6 +64,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       ...(f.priceCents !== undefined ? { priceCents: f.priceCents } : {}),
       ...(f.currency !== undefined ? { currency: f.currency } : {}),
       ...(f.interval !== undefined ? { interval: f.interval } : {}),
+      // Same rule again: null is "unclassify this", undefined is "I said nothing about it".
+      ...(f.audience !== undefined ? { audience: f.audience } : {}),
       ...(f.sortOrder !== undefined ? { sortOrder: f.sortOrder } : {}),
       ...(archived === undefined ? {} : { archivedAt: archived ? new Date() : null }),
     },

@@ -225,6 +225,14 @@ export const sectionInputSchema = z.object({
     .max(MAX_PRICE_CENTS, 'That price is too high.'),
   currency: z.string().trim().length(3).default('USD'),
   interval: z.enum(['month', 'year']).default('month'),
+  /**
+   * Who this section is priced for — see the Audience enum.
+   *
+   * Nullable all the way through the form, not just in the database. An operator editing a
+   * section's cadence should not be made to classify it on the way past, and a required
+   * field would make "retail" the answer to a question nobody was actually asked.
+   */
+  audience: z.enum(['retail', 'institutional']).nullable().optional(),
   sortOrder: z.number().int().min(0).max(999).default(0),
 })
 

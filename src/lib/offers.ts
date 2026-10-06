@@ -37,14 +37,13 @@ type OfferRow = {
   startsAt: Date | null
   endsAt: Date | null
   maxRedemptions: number | null
-  redeemedCount: number
   appliesToEverything: boolean
   archivedAt: Date | null
   sections: { sectionId: string }[]
   packages: { packageId: string }[]
 }
 
-export function toOfferShape(row: OfferRow): OfferShape {
+export function toOfferShape(row: OfferRow, redeemedCount = 0): OfferShape {
   return {
     id: row.id,
     name: row.name,
@@ -54,7 +53,7 @@ export function toOfferShape(row: OfferRow): OfferShape {
     startsAt: row.startsAt,
     endsAt: row.endsAt,
     maxRedemptions: row.maxRedemptions,
-    redeemedCount: row.redeemedCount,
+    redeemedCount,
     appliesToEverything: row.appliesToEverything,
     archivedAt: row.archivedAt,
     sectionIds: row.sections.map((scope) => scope.sectionId),
@@ -70,18 +69,46 @@ export function toOfferShape(row: OfferRow): OfferShape {
  * today" means.
  */
 export async function liveOffers(): Promise<OfferShape[]> {
-  const rows = await db.offer.findMany({
-    where: { archivedAt: null },
-    include: WITH_SCOPE,
-    orderBy: { createdAt: 'desc' },
-  })
-  return rows.map(toOfferShape)
+  const [rows, used] = await Promise.all([
+    db.offer.findMany({ where: { archivedAt: null }, include: WITH_SCOPE, orderBy: { createdAt: 'desc' } }),
+    redemptionCounts(),
+  ])
+  return rows.map((row) => toOfferShape(row, used[row.id] ?? 0))
 }
 
 /** Everything, archived included, for the admin list. */
 export async function allOffers(): Promise<OfferShape[]> {
-  const rows = await db.offer.findMany({ include: WITH_SCOPE, orderBy: { createdAt: 'desc' } })
-  return rows.map(toOfferShape)
+  const [rows, used] = await Promise.all([
+    db.offer.findMany({ include: WITH_SCOPE, orderBy: { createdAt: 'desc' } }),
+    redemptionCounts(),
+  ])
+  return rows.map((row) => toOfferShape(row, used[row.id] ?? 0))
+}
+
+/**
+ * How many times each offer has actually been paid for.
+ *
+ * Counted from the orders rather than kept as a column somebody has to remember to
+ * increment. A stored counter would have to be bumped from the payment webhooks, which are
+ * delivered more than once by both providers — so it would drift upwards on every retry and
+ * close a capped campaign that had not sold out, with nothing to say why. Counting is
+ * idempotent, survives a webhook being missed entirely, and gives the same figure anybody
+ * reconciling the books would arrive at.
+ *
+ * Only paid orders count. A pending order is somebody who opened a checkout page, and
+ * holding a discount against them would let a handful of abandoned tabs exhaust a campaign.
+ */
+async function redemptionCounts(): Promise<Record<string, number>> {
+  const rows = await db.checkoutOrder.groupBy({
+    by: ['offerId'],
+    where: { offerId: { not: null }, status: 'paid' },
+    _count: { _all: true },
+  })
+  const counts: Record<string, number> = {}
+  for (const row of rows) {
+    if (row.offerId) counts[row.offerId] = row._count._all
+  }
+  return counts
 }
 
 /** The public sale on one thing, or null. One query, for a page that prices one item. */
@@ -102,22 +129,56 @@ export async function offerByCode(
 }
 
 /**
- * Count one use of an offer.
+ * Which offer a checkout should actually apply.
  *
- * An atomic `increment` rather than read-modify-write: two checkouts completing at the same
- * instant would otherwise both read the same count and both write one more than it, so the
- * count would drift below the truth and a capped campaign would run past its cap for ever.
+ * A code is tried first, and whatever public sale is running is tried alongside it — then
+ * the deeper of the two wins. Three failures fold into the same answer on purpose:
  *
- * **The cap itself is soft, and deliberately so.** It is checked when the offer is applied,
- * not held under a lock, so two buyers arriving together on the fiftieth of fifty can both
- * be told yes. Closing that window means a transaction around the whole checkout including
- * a call to a payment provider, which is a much worse thing to own than occasionally
- * honouring one discount more than intended. `CheckoutOrder.offerId` records every use, so
- * the real figure can always be recovered from the orders.
+ * - **No code typed.** The public sale applies, as it does on the page they came from.
+ * - **A code that does not work** (unknown, expired, for something else). They still get
+ *   the public sale, which they would have had without typing anything. A bad code must
+ *   never cost somebody a discount they already qualified for.
+ * - **A code worth less than the sale already running.** The sale wins. Honouring a 10%
+ *   code during a 25% sale would charge more *because* they typed something, which is
+ *   indefensible however it is explained afterwards.
+ *
+ * Whether the code was recognised is a separate question, and the caller asks it with
+ * {@link offerByCode} if it wants to say so.
  */
-export async function recordOfferRedemption(offerId: string): Promise<void> {
-  await db.offer.update({
-    where: { id: offerId },
-    data: { redeemedCount: { increment: 1 } },
+export async function offerForCheckout(
+  target: OfferTarget,
+  code?: string | null,
+  now: Date = new Date(),
+): Promise<OfferShape | null> {
+  const offers = await liveOffers()
+  const sale = publicOfferFor(offers, target, now)
+  const typed = code ? offerForCode(offers, code, target, now) : null
+  if (typed === null) return sale
+  if (sale === null) return typed
+  return typed.percentOff >= sale.percentOff ? typed : sale
+}
+
+/**
+ * The Stripe Coupon for an offer, minted on first card use and reused after.
+ *
+ * Lazy for the same reason a section's Stripe Price is: an offer can be set up, scoped and
+ * scheduled long before anybody pays by card for something it covers, and minting a coupon
+ * for every campaign the desk sketches out leaves a trail of unused objects in an account
+ * somebody has to read.
+ */
+export async function stripeCouponForOffer(offer: OfferShape): Promise<string> {
+  const row = await db.offer.findUnique({
+    where: { id: offer.id },
+    select: { stripeCouponId: true },
   })
+  if (row?.stripeCouponId) return row.stripeCouponId
+
+  const { createStripeCoupon } = await import('@/lib/stripe')
+  const couponId = await createStripeCoupon({
+    percentOff: offer.percentOff,
+    duration: offer.duration,
+    name: offer.name,
+  })
+  await db.offer.update({ where: { id: offer.id }, data: { stripeCouponId: couponId } })
+  return couponId
 }
