@@ -6,13 +6,20 @@ import { emailSchema } from '@/lib/validation'
 import { db } from '@/lib/db'
 import { MissingConfigError } from '@/lib/env'
 import { amountString, isFallbackPackage } from '@/lib/package-shape'
+import { priceWithOffer } from '@/lib/offer'
+import { offerForCheckout, stripeCouponForOffer } from '@/lib/offers'
 import { packageForCheckout } from '@/lib/packages'
 import { createStripeCheckout } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const schema = z.object({ email: emailSchema, packageId: z.string().trim().max(64).optional() })
+const schema = z.object({
+  email: emailSchema,
+  packageId: z.string().trim().max(64).optional(),
+  /** A discount code, if the buyer typed one. Blank and wrong are the same thing here. */
+  offerCode: z.string().trim().max(64).optional(),
+})
 
 /**
  * Start a card subscription. Access is granted by the webhook, not here.
@@ -50,11 +57,27 @@ export async function POST(request: Request) {
     )
   }
 
+  // The built-in fallback plan corresponds to no row, so nothing can be scoped to it.
+  const packageId = isFallbackPackage(pkg) ? null : pkg.id
+  const offer = packageId
+    ? await offerForCheckout({ packageId }, parsed.data.offerCode)
+    : null
+  const priced = priceWithOffer(pkg.priceCents, offer)
+
   try {
+    /*
+     * The discount rides as a coupon, not as a second Price at the sale amount — which
+     * would leave whoever bought during a campaign billed at it for ever, with nothing
+     * recording why.
+     */
+    const couponId = offer ? await stripeCouponForOffer(offer) : null
+
     const { url, sessionId } = await createStripeCheckout(email, {
       priceId: pkg.stripePriceId,
       planName: pkg.name,
-      packageId: isFallbackPackage(pkg) ? undefined : pkg.id,
+      packageId: packageId ?? undefined,
+      couponId,
+      offerId: priced.offerId,
     })
 
     await db.checkoutOrder.create({
@@ -65,9 +88,10 @@ export async function POST(request: Request) {
         // What we believe is being charged, recorded at the moment of the order. Stripe
         // is the authority on the actual amount; this is the row that makes a divergence
         // visible afterwards rather than invisible.
-        amount: amountString(pkg.priceCents),
+        amount: amountString(priced.chargeCents),
         currency: pkg.currency,
-        packageId: isFallbackPackage(pkg) ? null : pkg.id,
+        packageId,
+        offerId: priced.offerId,
         status: 'pending',
       },
     })

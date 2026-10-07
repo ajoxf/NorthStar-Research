@@ -13,6 +13,18 @@ import { UploadedImage } from '@/components/uploaded-image'
 
 type Method = 'card' | 'crypto'
 
+/** What /api/checkout/quote answers. The server is the only thing that knows. */
+type Quote = {
+  listCents: number
+  chargeCents: number
+  percentOff: number
+  /** Null when nothing applied. 'forever' is a standing cut; the other is introductory. */
+  duration: 'first_payment' | 'forever' | null
+  currency: string
+  codeApplied: boolean
+  codeRejected: boolean
+}
+
 export type JoinPackage = {
   id: string
   name: string
@@ -63,9 +75,51 @@ export function JoinForm({
   const [phone, setPhone] = React.useState('')
   const [error, setError] = React.useState<string | null>(null)
   const [pending, setPending] = React.useState(false)
+  const [code, setCode] = React.useState('')
+  const [quote, setQuote] = React.useState<Quote | null>(null)
+  const [quoting, setQuoting] = React.useState(false)
 
   const chosen = packages.find((pkg) => pkg.id === packageId) ?? packages[0]
-  const price = formatPrice(chosen.priceCents, chosen.currency)
+
+  /*
+   * The price comes from the server, not from arithmetic done here.
+   *
+   * Offers are not public data — a code's existence, scope and expiry stay in the admin —
+   * so the browser cannot work out what a code is worth, and a price computed here could
+   * disagree with the one actually charged. The quote endpoint is the only thing that
+   * knows, and it is also what the checkout will use.
+   */
+  React.useEffect(() => {
+    let cancelled = false
+    setQuoting(true)
+    // Debounced: this fires on every keystroke in the code box otherwise.
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch('/api/checkout/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ packageId: chosen.id, code: code || undefined }),
+        })
+        const data = await response.json()
+        if (!cancelled && response.ok) setQuote(data as Quote)
+      } catch {
+        // A quote that cannot be fetched falls back to the list price below, which is the
+        // safe direction: the buyer is never shown less than they will be charged.
+        if (!cancelled) setQuote(null)
+      } finally {
+        if (!cancelled) setQuoting(false)
+      }
+    }, 350)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [chosen.id, code])
+
+  const chargeCents = quote?.chargeCents ?? chosen.priceCents
+  const discounted = chargeCents < chosen.priceCents
+  const price = formatPrice(chargeCents, chosen.currency)
+  const listPrice = formatPrice(chosen.priceCents, chosen.currency)
 
   // A package with no Stripe price cannot be billed by card, whatever Stripe's own
   // configuration says. Disabling the option here is the honest version of a checkout
@@ -87,7 +141,12 @@ export function JoinForm({
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, phoneNumber: phone || undefined, packageId: chosen.id }),
+        body: JSON.stringify({
+          email,
+          phoneNumber: phone || undefined,
+          packageId: chosen.id,
+          offerCode: code || undefined,
+        }),
       })
       const data = await response.json()
 
@@ -234,6 +293,51 @@ export function JoinForm({
           )}
         </Step>
 
+        <div className="mt-6">
+          <Label htmlFor="offer-code" tone="light">
+            Discount code — optional
+          </Label>
+          <Input
+            id="offer-code"
+            tone="light"
+            value={code}
+            autoComplete="off"
+            placeholder="If you were given one"
+            onChange={(event) => setCode(event.target.value.toUpperCase())}
+          />
+          {/*
+            Three states, and the middle one is the reason this is not just a box.
+
+            A rejected code during a public sale would otherwise show a reduced price and
+            read as accepted — the sale was doing that, not the code. So what the code did
+            is said separately from what the price is.
+          */}
+          {quote?.codeRejected ? (
+            <Hint tone="light">
+              That code is not valid for this{discounted ? ' — the price below is the sale already running' : ''}.
+            </Hint>
+          ) : quote?.codeApplied ? (
+            <Hint tone="light">
+              Code applied — {quote.percentOff}% off{' '}
+              {quote.duration === 'forever' ? 'every payment' : 'your first payment'}.
+            </Hint>
+          ) : (
+            <Hint tone="light">Leave it blank if you do not have one.</Hint>
+          )}
+        </div>
+
+        {discounted && (
+          <p className="mt-4 rounded-lg border border-ink-on-light/12 bg-white px-4 py-3 text-[14px] leading-relaxed text-ink-on-light">
+            <span className="text-ink-on-light-dim line-through">{listPrice}</span>{' '}
+            <strong className="font-medium">{price}</strong>
+            <span className="text-ink-on-light-dim">
+              {' '}
+              /{chosen.interval} — {quote?.percentOff}% off
+              {quote?.duration === 'forever' ? '' : ' your first payment'}
+            </span>
+          </p>
+        )}
+
         {/*
           The card details are not asked for here, and that is the point.
 
@@ -243,7 +347,10 @@ export function JoinForm({
           nothing — and a decorative card field on a checkout is a lie about where the
           number goes.
         */}
-        <Button type="submit" size="lg" className="w-full" disabled={pending || !ready}>
+        {/* Disabled while a quote is in flight: the button names an amount, and naming a
+            stale one is how somebody clicks "Pay $199" and is charged $149 — or worse,
+            the other way round. */}
+        <Button type="submit" size="lg" className="w-full" disabled={pending || !ready || quoting}>
           {pending ? (
             <>
               <Spinner />

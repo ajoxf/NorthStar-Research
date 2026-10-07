@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic'
  * accidentally submit it as a field is a form that can withdraw a product by mistake.
  */
 const actionSchema = z.object({
-  action: z.enum(['archive', 'restore', 'make_default']),
+  action: z.enum(['archive', 'restore', 'make_default', 'enable_card']),
 })
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
@@ -40,6 +40,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
   const action = actionSchema.safeParse(body)
   if (action.success) {
+    if (action.data.action === 'enable_card') return enableCard(existing)
     return handleAction(existing.id, existing.isDefault, action.data.action)
   }
 
@@ -108,6 +109,50 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   // deliberately emptied it. Only the second should clear the package.
   if (input.itemIds !== undefined) await setPackageItems(existing.id, input.itemIds)
 
+  return NextResponse.json({ ok: true })
+}
+
+/**
+ * Put an existing package on card, without reopening the edit form.
+ *
+ * Card selling was only ever reachable by opening a package, finding the tick box, and
+ * saving — which is a reasonable place for it when you are already changing a price, and a
+ * poor one when the whole job is "this cannot be bought by card and I want it to be". The
+ * list already says which packages are crypto-only; this is the button next to that
+ * sentence.
+ *
+ * It does exactly what saving the form with the box ticked does, on the values already
+ * stored: no price, interval or name is changed, so nothing about what the package
+ * advertises can move as a side effect of making it purchasable.
+ */
+async function enableCard(existing: {
+  id: string
+  name: string
+  priceCents: number
+  currency: string
+  interval: string
+  stripePriceId: string | null
+  stripeProductId: string | null
+}) {
+  const price = await resolveStripePrice({
+    sellByCard: true,
+    desired: {
+      priceCents: existing.priceCents,
+      currency: existing.currency,
+      interval: existing.interval as 'month' | 'year',
+      name: existing.name,
+    },
+    current: {
+      stripePriceId: existing.stripePriceId,
+      stripeProductId: existing.stripeProductId,
+    },
+  })
+  if (!price.ok) return NextResponse.json({ error: price.error }, { status: 400 })
+
+  await db.package.update({
+    where: { id: existing.id },
+    data: { stripePriceId: price.stripePriceId, stripeProductId: price.stripeProductId },
+  })
   return NextResponse.json({ ok: true })
 }
 

@@ -16,10 +16,40 @@ import type { StripePriceFacts } from '@/lib/package-shape'
  * As with Cregis, placeholder credentials fail loudly rather than silently.
  */
 
-export const STRIPE_ENV_KEYS = ['STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID'] as const
+/**
+ * What card payment actually needs: the key, and nothing else.
+ *
+ * **`STRIPE_PRICE_ID` used to be in this list, and that was wrong.** It is the fallback
+ * price for the built-in plan — the one the site sold before packages existed, which only
+ * appears when no package has been created at all. Every package and every section now
+ * carries its own Stripe Price, created by this app when the price is set.
+ *
+ * Having it here meant a deployment with a perfectly good secret key and no fallback price
+ * had card payment refused everywhere: the join page hid the card option, section checkout
+ * answered "card payment is not available yet", and saving a package as card-sellable was
+ * rejected with a message naming the key that *was* set. Nothing said which variable was
+ * actually missing, and the one it named was the one already there.
+ *
+ * The fallback path keeps its own requirement, at its own call site, where it is the only
+ * thing that needs it — see `createStripeCheckout`.
+ */
+export const STRIPE_ENV_KEYS = ['STRIPE_SECRET_KEY'] as const
+
+/** The legacy fallback price. Needed only by the built-in plan; see the note above. */
+export const STRIPE_FALLBACK_PRICE_KEY = 'STRIPE_PRICE_ID'
 
 export function stripeConfigured(): boolean {
   return isConfigured(...STRIPE_ENV_KEYS)
+}
+
+/**
+ * Can the built-in plan be sold by card?
+ *
+ * Separate from `stripeConfigured` because it is a separate question, and only ever asked
+ * about a deployment with no packages at all.
+ */
+export function stripeFallbackPriceConfigured(): boolean {
+  return isConfigured(STRIPE_FALLBACK_PRICE_KEY)
 }
 
 export function stripeClient(): Stripe {
@@ -102,6 +132,31 @@ export async function createStripePrice(input: {
 }
 
 /**
+ * A Stripe Coupon for one offer.
+ *
+ * Coupons are immutable in the same way Prices are, so this creates rather than edits and
+ * the caller repoints the offer at what comes back. Editing an offer's percentage
+ * therefore mints a new coupon and leaves the old one attached to anybody already carrying
+ * it — which is the correct behaviour and the same rule the rest of this file follows.
+ *
+ * `duration` is where "25% off your first month" and "25% off for as long as you stay" are
+ * actually told apart. They produce an identical first invoice and are entirely different
+ * promises, which is why OfferDuration is stored rather than assumed.
+ */
+export async function createStripeCoupon(input: {
+  percentOff: number
+  duration: 'first_payment' | 'forever'
+  name: string
+}): Promise<string> {
+  const coupon = await stripeClient().coupons.create({
+    percent_off: input.percentOff,
+    duration: input.duration === 'forever' ? 'forever' : 'once',
+    name: input.name,
+  })
+  return coupon.id
+}
+
+/**
  * Archive a Stripe Price so it stops appearing as sellable in the dashboard.
  *
  * Never throws. A price we have already stopped using is bookkeeping, and failing a
@@ -178,6 +233,10 @@ export async function createStripeCheckout(
     packageId?: string
     /** Set when this is a single section rather than the all-access plan. */
     sectionId?: string
+    /** A Stripe Coupon to apply, when an offer covers this sale. See createStripeCoupon. */
+    couponId?: string | null
+    /** Our own offer id, carried into the subscription metadata for the webhook. */
+    offerId?: string | null
   } = {},
 ): Promise<{ url: string; sessionId: string }> {
   const stripe = stripeClient()
@@ -197,9 +256,21 @@ export async function createStripeCheckout(
         plan: options.planName ?? PLAN.name,
         ...(options.packageId ? { packageId: options.packageId } : {}),
         ...(options.sectionId ? { sectionId: options.sectionId } : {}),
+        ...(options.offerId ? { offerId: options.offerId } : {}),
       },
     },
-    allow_promotion_codes: false,
+    /*
+     * Our coupon, or none — never Stripe's own promotion-code box.
+     *
+     * `discounts` and `allow_promotion_codes` are mutually exclusive in the API, and the
+     * choice between them is a real one: turning the box on would let somebody apply a
+     * coupon created in the Stripe dashboard that this app has never heard of, with no
+     * Offer row, no scope, no redemption count and nothing in the orders explaining why
+     * the amount was lower. Offers created here stay the only way a price moves.
+     */
+    ...(options.couponId
+      ? { discounts: [{ coupon: options.couponId }] }
+      : { allow_promotion_codes: false }),
   })
 
   if (!session.url) {

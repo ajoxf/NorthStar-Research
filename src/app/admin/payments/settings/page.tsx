@@ -357,16 +357,20 @@ function SettingTable({ rows }: { rows: SettingRow[] }) {
             )}
           </div>
 
-          <StatusBadge status={row.status} />
+          <StatusBadge status={row.status} optional={row.optional} />
         </li>
       ))}
     </ul>
   )
 }
 
-function StatusBadge({ status }: { status: SettingRow['status'] }) {
+function StatusBadge({ status, optional }: { status: SettingRow['status']; optional?: boolean }) {
   if (status === 'set') return <Badge tone="up">Set</Badge>
   if (status === 'placeholder') return <Badge tone="down">Placeholder</Badge>
+  // An optional variable that nobody has set is not a fault. Showing it in red beside the
+  // ones that actually stop payments is how an owner comes to chase a variable nothing
+  // reads — or concludes card payment is broken when it is working.
+  if (optional) return <Badge tone="muted">Not set</Badge>
   return <Badge tone="down">Missing</Badge>
 }
 

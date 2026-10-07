@@ -297,7 +297,36 @@ function PackageRow({
 
           {!pkg.stripePriceId && !pkg.archived && (
             <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">
-              No Stripe price, so card checkout will not offer this package — crypto still works.
+              {stripeReady
+                ? 'No Stripe price yet, so card checkout will not offer this package — crypto still works.'
+                : 'STRIPE_SECRET_KEY is not set on this deployment, so no package can be sold by card. Add it in Vercel and redeploy.'}
+              {stripeReady && (
+                <>
+                  {' '}
+                  {/*
+                    The button sits in the sentence that describes the problem, not among
+                    the row's other controls. Turning card selling on was only reachable by
+                    opening the package and finding a tick box — a reasonable place for it
+                    while changing a price, and a poor one when the whole job is "this
+                    cannot be bought by card and I want it to be".
+                  */}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className="underline underline-offset-4 hover:text-ink disabled:opacity-50"
+                    onClick={() =>
+                      void act(
+                        { action: 'enable_card' },
+                        'PATCH',
+                        `${pkg.name} can now be paid for by card`,
+                      )
+                    }
+                  >
+                    Create one now
+                  </button>
+                  {' — it uses the price already set here, and changes nothing else.'}
+                </>
+              )}
             </p>
           )}
         </div>

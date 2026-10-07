@@ -69,6 +69,33 @@ enum BillingInterval {
   year
 }
 
+/// Who a section is priced for.
+///
+/// A label and a merchandising filter, never an access rule. A retail buyer cannot read an
+/// institutional section because they hold no entitlement to that item — not because
+/// anything here said no. Keeping it that way is the point: one access path, the one in
+/// report-access.ts, and no second place where the answer to "can this person read this"
+/// could come out differently.
+enum Audience {
+  /// Priced for an individual reading on their own account.
+  retail
+  /// Priced for a desk. Usually the deeper work, usually the higher number.
+  institutional
+}
+
+/// Whether a discount is an introductory offer or a standing price cut.
+///
+/// Stripe needs to know — it maps to a coupon's `once` or `forever` — and so does anyone
+/// reading a renewal. The two are genuinely different promises: "25% off your first month"
+/// and "25% off for as long as you stay" are the same first invoice and very different
+/// businesses, and the thing that tells them apart must be stored rather than remembered.
+enum OfferDuration {
+  /// The first payment only.
+  first_payment
+  /// Every payment for as long as the subscription runs.
+  forever
+}
+
 /// What kind of thing an Item is. The kind never changes what an entitlement *means* —
 /// it is for grouping and for the admin's own sake.
 enum ItemKind {
@@ -551,6 +578,16 @@ model CheckoutOrder {
   sectionId String?
   section   Section? @relation(fields: [sectionId], references: [id])
 
+  /// Which offer reduced this order, when one did.
+  ///
+  /// Recorded rather than recomputed. `amount` above is what was actually charged, and an
+  /// offer that is later edited, expired or archived must not change the story of why a
+  /// past order was for less than the list price — which is exactly what re-deriving the
+  /// discount at read time would do. It is also what the redemption counter is reconciled
+  /// against, so a miscount can be corrected from the orders rather than guessed at.
+  offerId String?
+  offer   Offer?  @relation(fields: [offerId], references: [id])
+
   /// The Stripe subscription this checkout created, when it was a card sale.
   ///
   /// Recorded so a section entitlement can be tied to its own subscription at redemption.
@@ -689,9 +726,109 @@ model Package {
   orders  CheckoutOrder[]
   codes   RedemptionCode[]
   items   PackageItem[]
+  offers  OfferPackage[]
 
   @@index([archivedAt, sortOrder])
   @@index([authorId, archivedAt])
+}
+
+/// A discount — a public sale, or one that needs a code.
+///
+/// **One model for both, because they differ in exactly one column.** A public sale applies
+/// by itself and shows a reduced price wherever the thing is sold; a code applies only when
+/// somebody enters it. Everything else about them — the percentage, the window, the scope,
+/// the ceiling on redemptions, what happens at renewal — is identical, and two models would
+/// have been two copies of the same pricing rules waiting to disagree.
+///
+/// **This never edits a price.** `Section.priceCents` and `Package.priceCents` stay the list
+/// price and are not touched. The amount charged is computed at checkout from the list price
+/// and whichever offer applies, so withdrawing a sale restores the real price by itself and
+/// no campaign can leave a permanently altered price behind it.
+model Offer {
+  id String @id @default(cuid())
+  /// What the desk calls it — "Launch week", "Q1 institutional". A campaign name, shown
+  /// only in the admin; a buyer sees the percentage and the price, never this.
+  name String
+
+  /// Null is a public sale. A value is the code somebody has to type.
+  ///
+  /// Unique, so two campaigns cannot quietly claim the same string and leave which one
+  /// applies up to row order.
+  code String? @unique
+
+  /// Whole percent off, 1–99.
+  ///
+  /// Not 100, and the exclusion is deliberate: a free subscription is a comp, and comps
+  /// already have a mechanism in a gifted RedemptionCode, which grants with no payment at
+  /// all. A 100% offer would send somebody to a checkout for nothing — an order neither
+  /// Stripe nor Cregis can settle — so the one case that looks like a bigger discount is
+  /// in fact a different operation.
+  percentOff Int
+
+  duration OfferDuration @default(first_payment)
+
+  /// The window. A null start means live as soon as it exists; a null end means live until
+  /// somebody archives it.
+  startsAt DateTime?
+  endsAt   DateTime?
+
+  /// A ceiling on uses. Null is uncapped.
+  ///
+  /// **The count it is compared against is not stored here.** It is derived from paid
+  /// CheckoutOrder rows carrying this offer, because a stored counter has to be
+  /// incremented by a webhook — and webhooks are delivered more than once, so the counter
+  /// would drift up on every retry and quietly close a campaign that had not sold out.
+  /// Counting the orders is idempotent, is right even if a webhook is missed entirely,
+  /// and is the same number anyone reconciling the books would arrive at.
+  maxRedemptions Int?
+
+  /// Does this apply to everything on sale?
+  ///
+  /// **An explicit flag rather than "no scope rows means everything".** That inference is
+  /// exactly the shape of the empty-package bug — a package with no items granted
+  /// all-access, so an operator who saved before ticking the contents gave away the site.
+  /// Here the same inference would discount it. An offer with nothing selected and this
+  /// off applies to nothing, which is the harmless way round.
+  appliesToEverything Boolean @default(false)
+
+  /// The Stripe Coupon this became. Created on first card use and reused after, the same
+  /// way a package's Stripe Price is: coupons are immutable, so editing the percentage
+  /// makes a new one and points here at it.
+  stripeCouponId String?
+
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sections OfferSection[]
+  packages OfferPackage[]
+  orders   CheckoutOrder[]
+
+  @@index([archivedAt, startsAt, endsAt])
+  @@index([code])
+}
+
+/// Which sections an offer is good for.
+model OfferSection {
+  offerId   String
+  offer     Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+
+  @@id([offerId, sectionId])
+  @@index([sectionId])
+}
+
+/// Which packages an offer is good for.
+model OfferPackage {
+  offerId   String
+  offer     Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  packageId String
+  package   Package @relation(fields: [packageId], references: [id])
+
+  @@id([offerId, packageId])
+  @@index([packageId])
 }
 
 model Report {
@@ -942,6 +1079,15 @@ model Section {
   currency   String          @default("USD")
   interval   BillingInterval @default(month)
 
+  /// Who this section is priced for. See the Audience enum: a label, never a gate.
+  ///
+  /// **Nullable rather than defaulted, deliberately.** A default would relabel every
+  /// section already on sale the moment this deployed — and the build runs `prisma db
+  /// push` against the live database, so "the moment this deployed" is not a figure of
+  /// speech. Null means nobody has classified it yet: no badge in public, and a count in
+  /// the admin so it does not stay that way by accident.
+  audience Audience?
+
   /// Set once the section is wired to Stripe. Null means crypto-only, exactly like a
   /// package with no price id.
   stripePriceId   String?
@@ -964,6 +1110,7 @@ model Section {
   entitlements Entitlement[]
   orders       CheckoutOrder[]
   codes        RedemptionCode[]
+  offers       OfferSection[]
 
   /// One section per topic per author. A second "Energy by Sarah" is a mistake, not a product.
   @@unique([topicId, authorId])

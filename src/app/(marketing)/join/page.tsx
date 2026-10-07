@@ -46,7 +46,10 @@ export default async function JoinPage({
   // Resolved server-side so the page can say plainly which payment methods are actually
   // wired up, rather than presenting a button that fails at the last step.
   const cryptoReady = isConfigured('CREGIS_PROJECT_ID', 'CREGIS_API_KEY', 'CREGIS_BASE_URL')
-  const cardReady = isConfigured('STRIPE_SECRET_KEY', 'STRIPE_PRICE_ID')
+  // Only the key. A package carries its own Stripe price; STRIPE_PRICE_ID is the fallback
+  // for the built-in plan and requiring it here hid the card option on deployments that
+  // were perfectly able to take a card. See STRIPE_ENV_KEYS.
+  const cardReady = isConfigured('STRIPE_SECRET_KEY')
 
   /*
    * Which trial to advertise, when there is one.

@@ -29,6 +29,8 @@ export type SectionRow = {
   priceCents: number
   currency: string
   interval: string
+  /** 'retail' | 'institutional' | null. Null is unclassified — see the Audience enum. */
+  audience: string | null
   sortOrder: number
   archived: boolean
   reportCount: number
@@ -83,6 +85,7 @@ export function SectionManager({
     description: '',
     imageUrl: '',
     cadence: '',
+    audience: '',
   })
 
   const topic = topics.find((t) => t.id === form.topicId)
@@ -134,6 +137,7 @@ export function SectionManager({
         description: form.description,
         imageUrl: form.imageUrl,
         cadence: form.cadence,
+        audience: form.audience === '' ? null : form.audience,
       },
       `${preview ?? 'Section'} created`,
     )
@@ -146,6 +150,7 @@ export function SectionManager({
         description: '',
         imageUrl: '',
         cadence: '',
+        audience: '',
       })
       setOpen(false)
     }
@@ -221,7 +226,7 @@ export function SectionManager({
             </p>
           )}
 
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div>
               <Label htmlFor="s-price">Price</Label>
               <Input
@@ -243,6 +248,22 @@ export function SectionManager({
                 <option value="month">Monthly</option>
                 <option value="year">Yearly</option>
               </Select>
+            </div>
+            <div>
+              <Label htmlFor="s-audience">Priced for</Label>
+              <Select
+                id="s-audience"
+                value={form.audience}
+                onChange={(e) => setForm({ ...form, audience: e.target.value })}
+              >
+                <option value="">Not saying yet</option>
+                <option value="retail">Retail</option>
+                <option value="institutional">Institutional</option>
+              </Select>
+              <Hint>
+                A label on the card and a filter visitors can use. It does not control who
+                can read anything — that is decided by what somebody has bought.
+              </Hint>
             </div>
           </div>
 
@@ -318,7 +339,16 @@ export function SectionManager({
                   <img src={section.imageUrl} alt="" className="h-full w-full object-cover" />
                 ) : null}
               </div>
-              <div className="min-w-0 flex-1">
+              {/*
+                A floor on the name column, not `min-w-0`.
+
+                The row carries seven controls now, and none of them shrink — so a name
+                column allowed to collapse collapsed, and "Price Forecasting - Precious
+                Metals by NordStarPro Desk" wrapped one word per line down a strip two
+                inches wide. With a floor the row wraps instead: the controls drop to their
+                own line, which is the right thing to give up at that width.
+              */}
+              <div className="min-w-[260px] flex-1">
                 <span className="text-[15px] text-ink">
                   {sectionName({
                     displayName: section.displayName,
@@ -349,7 +379,32 @@ export function SectionManager({
                 </p>
               </div>
               {section.archived && <Badge tone="muted">off sale</Badge>}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                {/*
+                  A select in the row rather than another popover. It has two values and no
+                  confirmation to make, and this list already carries six controls per
+                  section — a seventh that opens something would be the one nobody uses.
+                */}
+                <Select
+                  aria-label="Who this section is priced for"
+                  className="h-8 w-[132px] py-0 text-[12px]"
+                  disabled={busy}
+                  value={section.audience ?? ''}
+                  onChange={(e) => {
+                    const value = e.target.value
+                    void send(
+                      `/api/admin/sections/${section.id}`,
+                      'PATCH',
+                      // '' is the unclassified option, and the API reads null as "clear it".
+                      { audience: value === '' ? null : value },
+                      value === '' ? 'Audience cleared' : `Marked ${value}`,
+                    )
+                  }}
+                >
+                  <option value="">Unclassified</option>
+                  <option value="retail">Retail</option>
+                  <option value="institutional">Institutional</option>
+                </Select>
                 <PriceEditor
                   section={section}
                   busy={busy}

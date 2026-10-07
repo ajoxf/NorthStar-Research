@@ -23,6 +23,15 @@ export type BrowseFilterState = {
   maxPriceCents: number | null
   /** Keep only rows a visitor can start reading today without paying. */
   trialOnly: boolean
+  /**
+   * Audiences to keep. Empty means both, like every other list here.
+   *
+   * A row whose audience is null survives only when nothing is selected. Unclassified is
+   * genuinely not an answer to "is this retail or institutional", and showing it under
+   * both would tell a visitor filtering for retail that something is priced for them when
+   * nobody has said so.
+   */
+  audiences: string[]
   sort: BrowseSort
 }
 
@@ -31,6 +40,7 @@ export const EMPTY_BROWSE_FILTER: BrowseFilterState = {
   authors: [],
   maxPriceCents: null,
   trialOnly: false,
+  audiences: [],
   sort: null,
 }
 
@@ -51,6 +61,8 @@ export type BrowseItem = {
   /** The cheapest way into this row, in minor units. Null when nothing here is on sale. */
   priceCents: number | null
   hasTrial: boolean
+  /** 'retail' | 'institutional', or null when nobody has classified it. */
+  audience?: string | null
 }
 
 /**
@@ -73,6 +85,11 @@ export function matchesBrowseFilter(item: BrowseItem, filter: BrowseFilterState)
     return false
   }
   if (filter.trialOnly && !item.hasTrial) return false
+  if (filter.audiences.length > 0) {
+    // Unclassified is not an answer, so it does not satisfy a request for either one.
+    if (!item.audience) return false
+    if (!filter.audiences.includes(item.audience)) return false
+  }
   if (filter.maxPriceCents !== null) {
     /*
      * A row with no price cannot satisfy a ceiling.

@@ -28,6 +28,18 @@ export type CoverageRow = {
   cadence: string | null
   description: string | null
   priceCents: number
+  /**
+   * What a buyer pays today, when a public sale covers this section. Null when nothing is
+   * running, in which case the list price above is the only number shown.
+   *
+   * Computed on the server, like every other price here: an offer's scope and window are
+   * not public data, so the browser could not work this out and a figure it guessed could
+   * disagree with the one actually charged.
+   */
+  saleCents: number | null
+  salePercentOff: number | null
+  /** 'retail' | 'institutional' | null. A label, never a gate. */
+  audience: string | null
   currency: string
   interval: string
   imageUrl: string | null
@@ -58,6 +70,7 @@ export function CoverageBrowse({ rows }: { rows: CoverageRow[] }) {
         authors: [row.author.slug],
         priceCents: row.priceCents,
         hasTrial: row.trialDays !== null,
+        audience: row.audience,
       })),
     [rows],
   )
@@ -108,6 +121,9 @@ export function CoverageBrowse({ rows }: { rows: CoverageRow[] }) {
         authors={authors}
         ceilings={priceCeilings(items)}
         trialCount={rows.filter((row) => row.trialDays !== null).length}
+        // Only the audiences actually present, so the control cannot offer a chip that
+        // matches nothing. Sorted so the order does not follow whatever happens to be first.
+        audiences={[...new Set(rows.map((row) => row.audience).filter(Boolean))].sort() as string[]}
         currency={rows[0]?.currency ?? 'USD'}
         value={filter}
         onChange={setFilter}
@@ -198,15 +214,32 @@ function SubjectCard({ row, showTopic = false }: { row: CoverageRow; showTopic?:
                       {row.cadence}
                     </span>
                   )}
+                  {/* Who it is priced for. Unclassified sections say nothing rather than
+                      guessing, which is why the column is nullable. */}
+                  {row.audience && (
+                    <span className="rounded-full border border-ink-on-light/20 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-on-light-dim">
+                      {row.audience}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
             <span className="shrink-0 text-right">
+              {/*
+                The list price is struck through rather than replaced. A sale price shown on
+                its own is indistinguishable from a price cut, and the saving is the part
+                that persuades anybody — so both numbers appear, in that order.
+              */}
+              {row.saleCents !== null && (
+                <span className="block font-mono text-[12px] text-ink-on-light-dim line-through">
+                  {formatPrice(row.priceCents, row.currency)}
+                </span>
+              )}
               <span className="block font-display text-[26px] font-medium leading-none tracking-[-0.03em] text-ink-on-light">
-                {formatPrice(row.priceCents, row.currency)}
+                {formatPrice(row.saleCents ?? row.priceCents, row.currency)}
               </span>
               <span className="mt-1 block font-mono text-[11px] uppercase tracking-[0.14em] text-ink-on-light-dim">
-                per {row.interval}
+                {row.saleCents !== null ? `${row.salePercentOff}% off · per ${row.interval}` : `per ${row.interval}`}
               </span>
             </span>
           </div>
