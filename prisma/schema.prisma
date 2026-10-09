@@ -383,6 +383,12 @@ model Member {
   reportsCreated  Report[]         @relation("ReportAuthor")
   appSettings     AppSetting[]
 
+  /// Money-handling trails. An admin acts; the act is attributable for ever.
+  refundsRecorded  Refund[]      @relation("RefundRecordedBy")
+  ledgerWritten    LedgerEntry[] @relation("LedgerCreatedBy")
+  payoutsRequested Payout[]      @relation("PayoutRequestedBy")
+  payoutsApproved  Payout[]      @relation("PayoutApprovedBy")
+
   @@index([subscriptionStatus])
   @@index([createdAt])
 }
@@ -578,6 +584,26 @@ model CheckoutOrder {
   sectionId String?
   section   Section? @relation(fields: [sectionId], references: [id])
 
+  /// The money facts this order's revenue share is computed from, in minor units.
+  ///
+  /// `amount` above stays the record of what was charged, as a string, exactly as it
+  /// always was. These are additional and integer, because a share is arithmetic and
+  /// arithmetic on a formatted string is how a ledger goes wrong quietly.
+  ///
+  /// All three are nullable and all three mean "not known", not "zero" — though the
+  /// calculation treats them the same way for now. Tax and processor fees are not yet
+  /// captured anywhere: there is no tax engine wired up, and neither webhook records what
+  /// the processor kept. Until they are, net equals gross and the whole amount is shared,
+  /// which is the honest behaviour rather than a convenient one. The columns exist so that
+  /// turning either on later changes what the calculation is handed, not what it does.
+  grossCents     Int?
+  /// Collected for a tax authority. Held, never earned, and removed before any share.
+  taxCents       Int?
+  /// Kept by Stripe or Cregis.
+  gatewayFeeCents Int?
+  /// Owed to an introducing broker on this sale. See the IB note on AffiliateAward.
+  ibFeeCents     Int?
+
   /// Which offer reduced this order, when one did.
   ///
   /// Recorded rather than recomputed. `amount` above is what was actually charged, and an
@@ -587,6 +613,9 @@ model CheckoutOrder {
   /// against, so a miscount can be corrected from the orders rather than guessed at.
   offerId String?
   offer   Offer?  @relation(fields: [offerId], references: [id])
+
+  refunds Refund[]
+  ledger  LedgerEntry[]
 
   /// The Stripe subscription this checkout created, when it was a card sale.
   ///
@@ -831,6 +860,201 @@ model OfferPackage {
   @@index([packageId])
 }
 
+/// Money given back to a buyer, recorded by an operator.
+///
+/// **Recorded here, not performed here.** Neither processor is refunded through this app:
+/// an operator issues the refund in Stripe or sends the crypto back, then writes it down
+/// so the ledger knows. Pretending otherwise would mean a button that claims to have moved
+/// money it never touched.
+///
+/// Partial refunds are the normal case, not an edge one — a month of a year, a goodwill
+/// gesture on a complaint — so the amount is stored rather than inferred from the order.
+model Refund {
+  id      String        @id @default(cuid())
+  orderId String
+  order   CheckoutOrder @relation(fields: [orderId], references: [id])
+
+  /// Minor units, always positive. The direction lives in the ledger entry it writes.
+  amountCents Int
+  currency    String @default("USD")
+
+  /// Why. Shown on the contributor's statement beside the reversal, because "your balance
+  /// went down by $86" with no reason attached is the start of an argument.
+  reason String?
+
+  /// Who recorded it. An admin, not the buyer.
+  recordedByMemberId String?
+  recordedBy         Member? @relation("RefundRecordedBy", fields: [recordedByMemberId], references: [id])
+
+  /// When the money actually went back, which may not be when it was typed in.
+  refundedAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  ledger LedgerEntry[]
+
+  @@index([orderId])
+  @@index([refundedAt])
+}
+
+/// What a ledger row is.
+enum LedgerEntryKind {
+  /// A share of a sale, credited to a contributor.
+  earning
+  /// A share given back because the sale was refunded.
+  reversal
+  /// A correction made by hand, in either direction.
+  adjustment
+  /// Money paid out, which reduces the balance.
+  payout
+}
+
+/// Every movement on a contributor's account.
+///
+/// **Append-only, and that is the entire point.** Rows are added and never edited or
+/// deleted, so a balance is a sum rather than a stored number somebody has to keep
+/// correct, and the reason for every figure survives any change to the terms that produced
+/// it. A correction is a new row, not an edit — which is why there is an `adjustment` kind
+/// rather than an update path.
+///
+/// A contributor's balance is the sum of `amountCents`. What they can actually withdraw is
+/// the sum of the rows whose `payableAt` has passed; see balanceOf in lib/earnings.ts.
+model LedgerEntry {
+  id       String          @id @default(cuid())
+  authorId String
+  author   Author          @relation(fields: [authorId], references: [id])
+  kind     LedgerEntryKind
+
+  /// Minor units. Positive credits the contributor, negative debits them.
+  ///
+  /// Signed rather than paired with a direction column, because every consumer wants the
+  /// sum and a direction column means every one of them has to remember to apply it.
+  amountCents Int
+  currency    String @default("USD")
+
+  /// When this becomes withdrawable. Null is immediately.
+  ///
+  /// Null on payouts, reversals and adjustments deliberately: a payout has already left,
+  /// and a reversal that waited out a holdback would leave a balance claiming money that
+  /// was refunded weeks earlier — precisely the balance somebody would withdraw against.
+  payableAt DateTime?
+
+  /// What produced this row. Exactly one is set for a machine-written entry; an
+  /// adjustment typed by an operator has none of them.
+  orderId  String?
+  order    CheckoutOrder? @relation(fields: [orderId], references: [id])
+  refundId String?
+  refund   Refund?        @relation(fields: [refundId], references: [id])
+  payoutId String?
+  payout   Payout?        @relation(fields: [payoutId], references: [id])
+
+  /// The terms this was computed under, snapshotted.
+  ///
+  /// Not read back from the Author, because that record changes. A statement from before a
+  /// renegotiation has to still reconcile, and a refund has to take back what was actually
+  /// given rather than what today's rate would have given.
+  sharePercent Int?
+  /// The net revenue the share was taken of, so a statement can show its working.
+  basisCents   Int?
+
+  /// An operator's words, for an adjustment or anything that needs explaining.
+  note String?
+
+  /// Who wrote it, when a person did. Null for entries posted by the system.
+  createdByMemberId String?
+  createdBy         Member? @relation("LedgerCreatedBy", fields: [createdByMemberId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  /// One earning per order per author, so a replayed webhook cannot pay twice.
+  ///
+  /// Partial: a nullable orderId means refunds, payouts and adjustments are unaffected by
+  /// it, while a second earning for the same sale is refused by the database rather than
+  /// by whichever caller remembered to check.
+  @@unique([orderId, authorId, kind])
+  @@index([authorId, createdAt])
+  @@index([authorId, payableAt])
+}
+
+/// How far along a withdrawal is.
+enum PayoutStatus {
+  /// Written down, waiting for someone to approve it.
+  requested
+  /// Approved, not yet sent.
+  approved
+  /// Turned down. Stays on the record with its reason.
+  rejected
+  /// Sent to the contributor through the gateway.
+  sent
+  /// Confirmed as arrived.
+  settled
+  /// Attempted and did not arrive.
+  failed
+}
+
+/// A withdrawal of a contributor's balance.
+///
+/// **Approval is a separate act from the request, always.** Nothing moves on one person's
+/// say-so in one step: a payout is written down, somebody looks at it, and only then can it
+/// be marked sent. That ordering is enforced in the route rather than trusted to the
+/// screen, because the screen is not what an API client talks to.
+///
+/// **Paying is still manual.** The gateway integration here collects money; whether it can
+/// also disburse to a third party is an open question with the processor. So this records
+/// the decision, the amount, the destination and the reference — and a human performs the
+/// transfer. That is honest about where the boundary is, and the day the gateway grows a
+/// payout API, only the "sent" step changes.
+model Payout {
+  id       String       @id @default(cuid())
+  authorId String
+  author   Author       @relation(fields: [authorId], references: [id])
+  status   PayoutStatus @default(requested)
+
+  /// Minor units, positive. The ledger entry it writes is the negative one.
+  amountCents Int
+  currency    String @default("USD")
+
+  /// Where it is going. A wallet address, or a note naming another arrangement.
+  ///
+  /// Free text rather than a validated address: the gateway settles in crypto today, but
+  /// a column that only accepts one chain's format would have to be migrated the first
+  /// time that changes, and an operator pasting the wrong string is caught by the approval
+  /// step rather than by a regular expression.
+  destination String?
+
+  requestedByMemberId String?
+  requestedBy         Member?   @relation("PayoutRequestedBy", fields: [requestedByMemberId], references: [id])
+  requestedAt         DateTime  @default(now())
+
+  /// Who approved it, and when. Both null until somebody does.
+  ///
+  /// Recorded even when it is the same person who requested it. A one-person desk would be
+  /// unable to pay anybody at all if a second approver were required, so the rule is that
+  /// approval must *happen* and must be attributable — and a self-approved payout is
+  /// labelled as one wherever it is shown, rather than being silently indistinguishable
+  /// from one that two people saw.
+  approvedByMemberId String?
+  approvedBy         Member?   @relation("PayoutApprovedBy", fields: [approvedByMemberId], references: [id])
+  approvedAt         DateTime?
+
+  rejectedReason String?
+
+  /// The processor's own identifier for the transfer, once there is one.
+  externalReference String?
+
+  sentAt    DateTime?
+  settledAt DateTime?
+
+  note String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ledger LedgerEntry[]
+
+  @@index([authorId, status])
+  @@index([status, requestedAt])
+}
+
 model Report {
   id          String      @id @default(cuid())
   /// Optional. The desk numbers its own editions in the title now, so new uploads carry
@@ -1017,6 +1241,15 @@ model Author {
   /// stable rather than whatever the database returns.
   sortOrder Int @default(0)
 
+  /// This contributor's share of net revenue, as whole percent. Null uses the house
+  /// default (see DEFAULT_SHARE_PERCENT).
+  ///
+  /// **Changing it does not rewrite history.** Every ledger entry stores the percentage it
+  /// was computed at, so last quarter's statement still reconciles after a renegotiation —
+  /// and a refund of an old sale takes back what was actually given rather than what
+  /// today's terms would have given.
+  revenueSharePercent Int?
+
   archivedAt DateTime?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -1025,6 +1258,9 @@ model Author {
   /// The packages sold in this author's name. Empty for a contributor whose work is only
   /// sold section by section, or through the house membership.
   packages Package[]
+
+  ledger  LedgerEntry[]
+  payouts Payout[]
 
   @@index([archivedAt])
 }
