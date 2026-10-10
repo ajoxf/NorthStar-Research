@@ -7,7 +7,10 @@ import { AffiliatePanel } from '@/app/admin/affiliates/[id]/affiliate-panel'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
 import { describeReward, formatAward, referralLink } from '@/lib/affiliates'
+import { CARRIED_NOTE, carryOverAwards } from '@/lib/affiliate-commission'
 import { db } from '@/lib/db'
+import { balanceForAffiliate } from '@/lib/ledger'
+import { formatPrice } from '@/lib/package-shape'
 import { appBaseUrl } from '@/lib/env'
 import { formatDate } from '@/lib/utils'
 
@@ -26,13 +29,19 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
   })
   if (!affiliate) notFound()
 
-  const conversions = affiliate.referrals.filter((r) => r.status === 'converted')
-  const owed = affiliate.awards
-    .filter((award) => !award.settledAt)
-    .reduce((total, award) => total + award.amount, 0)
-  const settled = affiliate.awards
-    .filter((award) => award.settledAt)
-    .reduce((total, award) => total + award.amount, 0)
+  // Commission owed from before the ledger moves onto it once; then everything reads the ledger.
+  await carryOverAwards(affiliate.id)
+  // Counted, not read off the capped lists below, so a busy link is not undercounted.
+  const [clicks, conversions, balance, carriedRows] = await Promise.all([
+    db.referral.count({ where: { affiliateId: affiliate.id } }),
+    db.referral.count({ where: { affiliateId: affiliate.id, status: 'converted' } }),
+    balanceForAffiliate(affiliate.id),
+    db.ledgerEntry.findMany({
+      where: { affiliateId: affiliate.id, note: { startsWith: CARRIED_NOTE } },
+      select: { note: true },
+    }),
+  ])
+  const carried = new Set(carriedRows.map((row) => row.note?.slice(CARRIED_NOTE.length)))
 
   let base = 'https://APP_BASE_URL-not-set'
   try {
@@ -59,11 +68,13 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
       </div>
       <p className="mt-1.5 break-all font-mono text-[14px] text-ink-dim">{affiliate.email}</p>
 
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="Clicks" value={affiliate.referrals.length} />
-        <Stat label="Paid conversions" value={conversions.length} />
-        <Stat label="Owed" value={formatAward(affiliate.rewardKind, owed)} accent={owed > 0} />
-        <Stat label="Settled" value={formatAward(affiliate.rewardKind, settled)} />
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <Stat label="Clicks" value={clicks} />
+        <Stat label="Paid conversions" value={conversions} />
+        <Stat label="Earned" value={formatPrice(balance.earnedCents)} />
+        <Stat label="Paid out" value={formatPrice(balance.paidCents)} />
+        <Stat label="Held (30 days)" value={formatPrice(balance.heldCents)} />
+        <Stat label="Available" value={formatPrice(balance.availableCents)} accent={balance.availableCents > 0} />
       </div>
 
       <AffiliatePanel
@@ -75,9 +86,10 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
           rewardKind: affiliate.rewardKind,
           rewardAmount: affiliate.rewardAmount,
           visitorDiscountPercent: affiliate.visitorDiscountPercent,
+          commissionOn: affiliate.commissionOn,
           notes: affiliate.notes,
           link: referralLink(base, affiliate.slug),
-          rewardDescription: describeReward(affiliate.rewardKind, affiliate.rewardAmount),
+          rewardDescription: describeReward(affiliate.rewardKind, affiliate.rewardAmount, affiliate.commissionOn),
         }}
         awards={affiliate.awards.map((award) => ({
           id: award.id,
@@ -85,6 +97,7 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
           reason: award.reason ?? 'Conversion',
           createdAt: formatDate(award.createdAt),
           settled: Boolean(award.settledAt),
+          onLedger: carried.has(award.id),
         }))}
       />
 

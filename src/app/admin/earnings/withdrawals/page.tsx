@@ -35,6 +35,7 @@ export default async function WithdrawalsPage() {
       requestedByMemberId: true,
       approvedByMemberId: true,
       author: { select: { name: true } },
+      affiliate: { select: { name: true } },
       requestedBy: { select: { email: true } },
       approvedBy: { select: { email: true } },
     },
@@ -42,7 +43,8 @@ export default async function WithdrawalsPage() {
 
   const rows = payouts.map((payout) => ({
     id: payout.id,
-    authorName: payout.author.name,
+    // An expert's withdrawal, or an affiliate's commission being paid out.
+    authorName: payout.author?.name ?? (payout.affiliate ? `${payout.affiliate.name} (affiliate)` : 'Unknown'),
     amountCents: payout.amountCents,
     currency: payout.currency,
     status: payout.status as PayoutStatusValue,

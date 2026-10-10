@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { clawBackCommission } from '@/lib/affiliate-commission'
 import { db } from '@/lib/db'
 import {
   DEFAULT_HOLDBACK_DAYS,
@@ -371,6 +372,18 @@ export async function recordRefund(input: {
         },
       })
     }
+    // The affiliate who introduced the sale gives back their share of it too, in proportion
+    // to how much of the order has now been refunded — all of it on a full refund.
+    await clawBackCommission(tx, {
+      orderId: order.id,
+      refundId: refund.id,
+      grossCents,
+      refundedAfterCents: alreadyRefunded + input.amountCents,
+      currency: order.currency,
+      reason: input.reason ?? null,
+      recordedByMemberId: input.recordedByMemberId ?? null,
+    })
+
     return plan.reduce((sum, entry) => sum + entry.reversalCents, 0)
   })
 
@@ -401,7 +414,7 @@ export async function recordRefund(input: {
 export function refundPortions(
   order: {
     lines: { authorId: string | null; chargeCents: number }[]
-    ledger: { authorId: string; amountCents: number }[]
+    ledger: { authorId: string | null; amountCents: number }[]
   },
   grossCents: number,
 ): RefundPortion[] {
@@ -414,7 +427,7 @@ export function refundPortions(
       earningCents: earningOf(portion.authorId),
     }))
   }
-  const authorId = order.ledger[0]?.authorId ?? null
+  const authorId = order.ledger.find((entry) => entry.authorId !== null)?.authorId ?? null
   return [{ authorId, grossCents, earningCents: earningOf(authorId) }]
 }
 
@@ -430,10 +443,13 @@ export async function balanceFor(authorId: string, now: Date = new Date()): Prom
 /** Balances for every contributor at once, so the list is one query rather than N. */
 export async function balancesByAuthor(now: Date = new Date()): Promise<Record<string, Balance>> {
   const entries = await db.ledgerEntry.findMany({
+    // Experts only: an affiliate's rows have no author and their own balances.
+    where: { authorId: { not: null } },
     select: { authorId: true, amountCents: true, payableAt: true },
   })
   const grouped = new Map<string, { amountCents: number; payableAt: Date | null }[]>()
   for (const entry of entries) {
+    if (!entry.authorId) continue
     const list = grouped.get(entry.authorId) ?? []
     list.push({ amountCents: entry.amountCents, payableAt: entry.payableAt })
     grouped.set(entry.authorId, list)
@@ -441,4 +457,26 @@ export async function balancesByAuthor(now: Date = new Date()): Promise<Record<s
   const balances: Record<string, Balance> = {}
   for (const [authorId, list] of grouped) balances[authorId] = balanceOf(list, now)
   return balances
+}
+
+/**
+ * One affiliate's commission: what they have earned, what is held, what could be paid
+ * today, and what has been paid. The same arithmetic as an expert's balance — one ledger,
+ * two kinds of party.
+ */
+export async function balanceForAffiliate(
+  affiliateId: string,
+  now: Date = new Date(),
+): Promise<Balance & { earnedCents: number; paidCents: number }> {
+  const entries = await db.ledgerEntry.findMany({
+    where: { affiliateId },
+    select: { kind: true, amountCents: true, payableAt: true },
+  })
+  return {
+    ...balanceOf(entries, now),
+    earnedCents: entries
+      .filter((entry) => entry.kind === 'commission' || entry.kind === 'reversal')
+      .reduce((sum, entry) => sum + entry.amountCents, 0),
+    paidCents: -entries.filter((entry) => entry.kind === 'payout').reduce((sum, entry) => sum + entry.amountCents, 0),
+  }
 }

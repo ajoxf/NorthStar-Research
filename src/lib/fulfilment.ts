@@ -2,6 +2,7 @@ import 'server-only'
 
 import type { BillingProvider, CheckoutOrder, Prisma } from '@prisma/client'
 
+import { applyCommission, planCommission } from '@/lib/affiliate-commission'
 import { codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
 import { db } from '@/lib/db'
 import { appBaseUrl } from '@/lib/env'
@@ -15,7 +16,6 @@ import {
 import { getNotificationProvider } from '@/lib/notifications'
 import { addPeriod, type BillingIntervalValue } from '@/lib/package-shape'
 import { intervalForPackage } from '@/lib/packages'
-import { recordReferralConversion } from '@/lib/referral-attribution'
 
 type Tx = Prisma.TransactionClient
 
@@ -57,6 +57,9 @@ export async function fulfilPaidOrder(input: {
   const lines = linesForOrder({ sectionId: order.sectionId, packageId: order.packageId, lines: stored })
 
   const member = await db.member.findUnique({ where: { email: order.email } })
+  // The affiliate's commission, worked out before the transaction so it can never fail the
+  // payment, and written inside it so it lands with the payment. See affiliate-commission.ts.
+  const commission = await planCommission(order)
   const paidUpdate = {
     status: 'paid' as const,
     paidAt: now,
@@ -70,6 +73,7 @@ export async function fulfilPaidOrder(input: {
   if (member && fulfilmentRoute({ hasPassword: Boolean(member.passwordHash) }) === 'grant') {
     await db.$transaction(async (tx) => {
       await tx.checkoutOrder.update({ where: { id: order.id }, data: paidUpdate })
+      if (commission) await applyCommission(tx, commission, order, now)
       for (const line of lines) {
         await grantLine(tx, member, line, { provider, subscriptionId, now })
       }
@@ -92,6 +96,7 @@ export async function fulfilPaidOrder(input: {
 
     await db.$transaction(async (tx) => {
       await tx.checkoutOrder.update({ where: { id: order.id }, data: paidUpdate })
+      if (commission) await applyCommission(tx, commission, order, now)
       await tx.redemptionCode.create({
         // Expiry runs from payment: the buyer has the code the moment the callback lands.
         data: {
@@ -308,8 +313,6 @@ async function afterPayment(
     console.error(`${tag} receipt threw`, error)
   }
 
-  // One award per referral at most, so a renewal through here never credits twice.
-  await recordReferralConversion(order.email, Math.round(Number(input.amount) || 0))
 
   if (result.outcome === 'code') {
     const redeemUrl = `${appBaseUrl()}/redeem?code=${encodeURIComponent(result.code)}`

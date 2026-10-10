@@ -39,6 +39,8 @@ export async function resolveCart(refs: CartItemRef[]): Promise<{ items: { key: 
 export async function priceLines(
   items: { key: string; item: CheckoutItem }[],
   offerCode?: string | null,
+  /** Further candidates — an affiliate link's visitor discount. One discount still wins. */
+  extraOffers: OfferShape[] = [],
 ): Promise<{ lines: CartLine[]; offer: OfferShape | null; listCents: number; chargeCents: number; codeApplied: boolean }> {
   const withTargets = items.map(({ key, item }) => ({
     key,
@@ -50,7 +52,7 @@ export async function priceLines(
   const candidates = (
     await Promise.all(withTargets.map((line) => (line.target ? offerForCheckout(line.target, offerCode) : null)))
   ).filter((offer): offer is OfferShape => offer !== null)
-  const cart = priceCart(withTargets, candidates)
+  const cart = priceCart(withTargets, [...candidates, ...extraOffers])
 
   // Whether the typed code is the reason for the discount, so the page can say so.
   const codeApplied =

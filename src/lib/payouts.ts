@@ -105,6 +105,7 @@ export async function advancePayout(input: {
     select: {
       id: true,
       authorId: true,
+      affiliateId: true,
       amountCents: true,
       currency: true,
       status: true,
@@ -151,6 +152,7 @@ export async function advancePayout(input: {
       await tx.ledgerEntry.create({
         data: {
           authorId: payout.authorId,
+          affiliateId: payout.affiliateId,
           kind: 'payout',
           // Negative: the ledger is signed, and a payout takes money off the balance.
           amountCents: -payout.amountCents,
@@ -168,6 +170,7 @@ export async function advancePayout(input: {
       await tx.ledgerEntry.create({
         data: {
           authorId: payout.authorId,
+          affiliateId: payout.affiliateId,
           kind: 'adjustment',
           amountCents: payout.amountCents,
           currency: payout.currency,

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { priceWithOffer } from '@/lib/offer'
+import { affiliateForCheckout } from '@/lib/affiliate-commission'
+import { priceCart } from '@/lib/cart-shape'
+import { priceWithOffer, type OfferShape } from '@/lib/offer'
 import { offerByCode, offerForCheckout } from '@/lib/offers'
 import { db } from '@/lib/db'
 import { isFallbackPackage } from '@/lib/package-shape'
@@ -77,8 +79,14 @@ async function quote(
   currency: string,
   code?: string,
 ) {
-  const offer = await offerForCheckout(target, code)
-  const priced = priceWithOffer(listCents, offer)
+  // The buyer's own best offer, and the affiliate link's discount if they came by one —
+  // one wins, by the same rule checkout uses (priceCart), so this figure is what is charged.
+  const referral = await affiliateForCheckout()
+  const best = priceCart(
+    [{ target, listCents }],
+    [await offerForCheckout(target, code), referral?.offer ?? null].filter((o): o is OfferShape => o !== null),
+  ).offer
+  const priced = priceWithOffer(listCents, best)
 
   /*
    * Whether the *code they typed* worked, asked separately.

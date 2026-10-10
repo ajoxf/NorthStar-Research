@@ -80,7 +80,7 @@ export default async function AdminAffiliatesPage() {
                       {referralLink(base, affiliate.slug)}
                     </p>
                     <p className="mt-1.5 text-[15px] text-ink-dim">
-                      {describeReward(affiliate.rewardKind, affiliate.rewardAmount)}
+                      {describeReward(affiliate.rewardKind, affiliate.rewardAmount, affiliate.commissionOn)}
                       {affiliate.visitorDiscountPercent
                         ? ` · visitor gets ${affiliate.visitorDiscountPercent}% off`
                         : ''}
