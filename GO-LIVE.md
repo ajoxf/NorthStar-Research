@@ -67,7 +67,7 @@ refuses to take money. That is intended behaviour, not a bug.
 ## 3. Card payments — decide whether they are in scope
 
 `/join` offers a **Card** option described as auto-renewing, backed by
-`src/app/api/checkout/stripe/route.ts`. It needs:
+`src/lib/payments/stripe-provider.ts` (through `/api/checkout`). It needs:
 
 ```
 STRIPE_SECRET_KEY, STRIPE_PRICE_ID (recurring, $199/mo), STRIPE_WEBHOOK_SECRET

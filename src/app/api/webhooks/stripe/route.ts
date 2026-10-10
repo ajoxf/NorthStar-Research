@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
-import { MissingConfigError, addBillingPeriod, appBaseUrl } from '@/lib/env'
+import { addBillingPeriod, appBaseUrl } from '@/lib/env'
 import { codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
 import { getNotificationProvider } from '@/lib/notifications'
-import { verifyStripeWebhook, type Stripe } from '@/lib/stripe'
+import { type Stripe } from '@/lib/payments/stripe'
+import { stripeProvider } from '@/lib/payments/stripe-provider'
 import { recordReferralConversion } from '@/lib/referral-attribution'
 
 export const runtime = 'nodejs'
@@ -23,27 +24,11 @@ export const dynamic = 'force-dynamic'
  *   customer.subscription.deleted → subscription ended; let access lapse at period end
  */
 export async function POST(request: Request) {
-  const payload = await request.text()
-  const signature = request.headers.get('stripe-signature')
-
-  if (!signature) {
-    return NextResponse.json({ error: 'missing signature' }, { status: 400 })
+  const verified = await stripeProvider.verifyWebhook(await request.text(), request.headers)
+  if (!verified.ok) {
+    return NextResponse.json({ error: verified.error }, { status: verified.status })
   }
-
-  let event: Stripe.Event
-  try {
-    event = verifyStripeWebhook(payload, signature)
-  } catch (error) {
-    if (error instanceof MissingConfigError) {
-      console.error(
-        `[stripe:webhook] REJECTED — ${error.message} No payment can be processed until real ` +
-          `Stripe credentials are set. This event was NOT actioned.`,
-      )
-      return NextResponse.json({ error: 'billing not configured' }, { status: 503 })
-    }
-    console.error('[stripe:webhook] signature verification failed', error)
-    return NextResponse.json({ error: 'invalid signature' }, { status: 401 })
-  }
+  const event = verified.event
 
   try {
     switch (event.type) {

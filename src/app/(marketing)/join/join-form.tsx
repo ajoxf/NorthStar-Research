@@ -137,18 +137,18 @@ export function JoinForm({
 
     setPending(true)
     try {
-      const endpoint = method === 'card' ? '/api/checkout/stripe' : '/api/checkout/create'
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
+          method,
           phoneNumber: phone || undefined,
           packageId: chosen.id,
           offerCode: code || undefined,
         }),
       })
-      const data = await response.json()
+      const data = await response.json().catch(() => ({}))
 
       if (!response.ok) {
         setError(data.error ?? 'Checkout could not be started. Please try again.')

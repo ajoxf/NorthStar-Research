@@ -72,7 +72,7 @@ Development unless noted.
 not add them by hand.
 
 The four `CREGIS_*` placeholders are deliberate. The code treats any value containing
-`REPLACE_ME` as unset and fails loudly rather than silently: `/api/checkout/create` returns
+`REPLACE_ME` as unset and fails loudly rather than silently: `/api/checkout` returns
 a 503 saying payments are not configured, and the webhook refuses to process a callback it
 cannot verify. A placeholder can never be mistaken for a working integration.
 
@@ -143,7 +143,7 @@ The cron at `/api/cron/weekly-send` is registered by `vercel.json` and runs week
 
 - Real Cregis credentials, pasted over the four placeholders.
 - A decision on the **static outbound IP** for Cregis — see the note at the top of
-  `src/lib/cregis.ts`. Vercel functions have no fixed outbound IP by default.
+  `src/lib/payments/cregis.ts`. Vercel functions have no fixed outbound IP by default.
 - Email and WhatsApp provider accounts. WhatsApp needs business verification and approved
   templates, which is a separate signup with its own lead time.
 - The real domain, added under Settings → Domains, then update `APP_BASE_URL` **and**

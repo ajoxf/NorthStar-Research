@@ -157,28 +157,3 @@ export async function offerForCheckout(
   if (sale === null) return typed
   return typed.percentOff >= sale.percentOff ? typed : sale
 }
-
-/**
- * The Stripe Coupon for an offer, minted on first card use and reused after.
- *
- * Lazy for the same reason a section's Stripe Price is: an offer can be set up, scoped and
- * scheduled long before anybody pays by card for something it covers, and minting a coupon
- * for every campaign the desk sketches out leaves a trail of unused objects in an account
- * somebody has to read.
- */
-export async function stripeCouponForOffer(offer: OfferShape): Promise<string> {
-  const row = await db.offer.findUnique({
-    where: { id: offer.id },
-    select: { stripeCouponId: true },
-  })
-  if (row?.stripeCouponId) return row.stripeCouponId
-
-  const { createStripeCoupon } = await import('@/lib/stripe')
-  const couponId = await createStripeCoupon({
-    percentOff: offer.percentOff,
-    duration: offer.duration,
-    name: offer.name,
-  })
-  await db.offer.update({ where: { id: offer.id }, data: { stripeCouponId: couponId } })
-  return couponId
-}

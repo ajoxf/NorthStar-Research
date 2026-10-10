@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { getCurrentMember } from '@/lib/auth'
 import { MissingConfigError } from '@/lib/env'
-import { createBillingPortalSession } from '@/lib/stripe'
+import { createBillingPortalSession } from '@/lib/payments/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

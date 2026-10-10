@@ -7,8 +7,7 @@ import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { DashboardCharts } from '@/app/admin/dashboard-charts'
 import { EngagementPanel } from '@/app/admin/engagement-panel'
-import { cregisConfigured } from '@/lib/cregis'
-import { stripeConfigured } from '@/lib/stripe'
+import { paymentAvailability } from '@/lib/payments'
 import { googleConfigured } from '@/lib/oauth'
 import { providerNames } from '@/lib/notifications'
 import { isConfigured } from '@/lib/env'
@@ -144,13 +143,13 @@ function Stat({ label, value, hint }: { label: string; value: number; hint?: str
  * what it exists to prevent.
  */
 async function ConfigurationPanel({ providers }: { providers: { email: string } }) {
-  const cregisReady = await cregisConfigured()
+  const { stripe: stripeReady, cregis: cregisReady } = await paymentAvailability()
 
   const rows = [
     {
       label: 'Card billing (Stripe)',
-      ready: stripeConfigured(),
-      detail: stripeConfigured()
+      ready: stripeReady,
+      detail: stripeReady
         ? 'Subscriptions renew automatically'
         : 'Not configured — card checkout will refuse to run',
     },

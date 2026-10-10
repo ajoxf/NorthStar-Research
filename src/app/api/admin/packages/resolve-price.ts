@@ -1,7 +1,7 @@
 import 'server-only'
 
 import { type PackageShape, stripePriceMismatch } from '@/lib/package-shape'
-import { archiveStripePrice, createStripePrice, stripeConfigured, stripePriceFacts } from '@/lib/stripe'
+import { archiveStripePrice, createStripePrice, stripeConfigured, stripePriceFacts } from '@/lib/payments/stripe'
 
 /**
  * Work out which Stripe Price a package should point at after a save.

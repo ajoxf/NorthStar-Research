@@ -65,7 +65,7 @@ export function SectionBuy({
     }
     setPending(method)
     try {
-      const response = await fetch('/api/checkout/section', {
+      const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), sectionId, method }),
