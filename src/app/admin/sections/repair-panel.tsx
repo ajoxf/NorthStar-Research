@@ -73,18 +73,18 @@ export function RepairPanel({ unlinked }: { unlinked: number }) {
 
   return (
     <div className="mb-8 rounded-lg border border-accent/30 bg-accent/[0.06] p-5">
-      <h2 className="text-[15px] text-ink">
+      <h2 className="text-[17px] text-ink">
         {unlinked > 0
           ? `${unlinked} section${unlinked === 1 ? '' : 's'} cannot be put in a package`
           : 'Repair sections'}
       </h2>
-      <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-ink-dim">
+      <p className="mt-2 max-w-3xl text-[16px] leading-relaxed text-ink-dim">
         A section is sold through a grantable item. Sections created before that was wired
         up have none, so they can be priced and shown but never bundled into a package or
         offered on trial. This links them, and points any older subscriber records at the
         right item.
       </p>
-      <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-ink-dim">
+      <p className="mt-2 max-w-3xl text-[15px] leading-relaxed text-ink-dim">
         Nothing is deleted and nobody&rsquo;s access changes. Check first — that writes
         nothing — then apply. Running it twice is harmless.
       </p>
@@ -112,12 +112,12 @@ export function RepairPanel({ unlinked }: { unlinked: number }) {
 
       {report && (
         <div className="mt-4 rounded-lg border border-line bg-panel p-4">
-          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
+          <p className="font-mono text-[12px] uppercase tracking-[0.12em] text-ink-dim">
             {report.dryRun ? 'Would change' : 'Changed'}
           </p>
 
           {report.clean ? (
-            <p className="mt-2 text-[14px] text-ink">
+            <p className="mt-2 text-[16px] text-ink">
               Nothing — every section already has its item.
             </p>
           ) : (
@@ -132,7 +132,7 @@ export function RepairPanel({ unlinked }: { unlinked: number }) {
                 ['Sections linked', report.sectionsLinked],
                 ['Subscriber records linked', report.entitlementsLinked],
               ].map(([label, value]) => (
-                <div key={String(label)} className="flex justify-between gap-4 text-[14px]">
+                <div key={String(label)} className="flex justify-between gap-4 text-[16px]">
                   <dt className="text-ink-dim">{label}</dt>
                   <dd className="font-mono text-ink">{value}</dd>
                 </div>
@@ -141,7 +141,7 @@ export function RepairPanel({ unlinked }: { unlinked: number }) {
           )}
 
           {!report.dryRun && report.entitlementsUnresolved > 0 && (
-            <p className="mt-3 text-[13px] leading-relaxed text-down">
+            <p className="mt-3 text-[15px] leading-relaxed text-down">
               {report.entitlementsUnresolved} subscriber record
               {report.entitlementsUnresolved === 1 ? '' : 's'} still could not be matched to an
               item. Nobody has lost access — but this one needs a person to look at it.
@@ -151,7 +151,7 @@ export function RepairPanel({ unlinked }: { unlinked: number }) {
           {report.warnings.length > 0 && (
             <ul className="mt-3 space-y-1">
               {report.warnings.map((warning) => (
-                <li key={warning} className="text-[13px] leading-relaxed text-ink-dim">
+                <li key={warning} className="text-[15px] leading-relaxed text-ink-dim">
                   {warning}
                 </li>
               ))}
@@ -159,7 +159,7 @@ export function RepairPanel({ unlinked }: { unlinked: number }) {
           )}
 
           {report.dryRun && !report.clean && (
-            <p className="mt-3 text-[13px] text-ink-dim">
+            <p className="mt-3 text-[15px] text-ink-dim">
               Nothing has been written yet.
             </p>
           )}

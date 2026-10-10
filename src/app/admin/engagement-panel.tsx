@@ -28,22 +28,22 @@ export async function EngagementPanel() {
   return (
     <section className="mt-8">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+        <h2 className="font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
           Engagement
         </h2>
-        <Link href="/admin/engagement" className="font-mono text-[12px] text-accent hover:underline">
+        <Link href="/admin/engagement" className="font-mono text-[14px] text-accent-ink hover:underline">
           Who is reading
         </Link>
       </div>
 
       {!openTrackingLive && (
-        <p className="mb-3 flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3.5 text-[13px] leading-relaxed text-ink-dim">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+        <p className="mb-3 flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3.5 text-[15px] leading-relaxed text-ink-dim">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-ink" aria-hidden />
           <span>
             <strong className="font-medium text-ink">Opens are not being tracked yet.</strong> Add
             a Resend webhook pointing at{' '}
-            <code className="font-mono text-[12px]">/api/webhooks/resend</code> and set{' '}
-            <code className="font-mono text-[12px]">RESEND_WEBHOOK_SECRET</code>. Until then the
+            <code className="font-mono text-[14px]">/api/webhooks/resend</code> and set{' '}
+            <code className="font-mono text-[14px]">RESEND_WEBHOOK_SECRET</code>. Until then the
             Opened column stays at zero — <span className="text-ink">Read</span> is unaffected and
             is the better measure anyway.
           </span>
@@ -58,11 +58,11 @@ export async function EngagementPanel() {
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/admin/reports/${report.id}`}
-                    className="text-[13px] text-ink hover:text-accent"
+                    className="text-[15px] text-ink hover:text-accent-ink"
                   >
                     {report.title}
                   </Link>
-                  <p className="font-mono text-[11px] text-ink-dim">
+                  <p className="font-mono text-[12px] text-ink-dim">
                     {formatDate(report.publishDate)}
                     {report.failed > 0 && (
                       <span className="text-down"> · {report.failed} failed</span>
@@ -84,11 +84,11 @@ export async function EngagementPanel() {
                 <td className="px-4 py-2.5">
                   <Link
                     href={`/admin/members/${member.id}`}
-                    className="break-all text-[13px] text-ink hover:text-accent"
+                    className="break-all text-[15px] text-ink hover:text-accent-ink"
                   >
                     {member.email}
                   </Link>
-                  <p className="font-mono text-[11px] text-ink-dim">
+                  <p className="font-mono text-[12px] text-ink-dim">
                     {member.lastReadAt ? `last read ${formatDate(member.lastReadAt)}` : 'never read'}
                   </p>
                 </td>
@@ -101,7 +101,7 @@ export async function EngagementPanel() {
         </Panel>
       </div>
 
-      <p className="mt-3 text-[12px] leading-relaxed text-ink-dim">
+      <p className="mt-3 text-[14px] leading-relaxed text-ink-dim">
         <span className="text-ink">Read</span> means a signed-in member opened the report in the
         portal — the only figure here that a mail client cannot distort.{' '}
         <span className="text-ink">Opened</span> comes from a tracking pixel, which some clients
@@ -121,7 +121,7 @@ export async function EngagementPanel() {
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0 overflow-hidden rounded-lg border border-line bg-panel">
-      <p className="border-b border-line px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
+      <p className="border-b border-line px-4 py-2.5 font-mono text-[12px] uppercase tracking-[0.12em] text-ink-dim">
         {title}
       </p>
       <div className="overflow-x-auto">{children}</div>
@@ -133,7 +133,7 @@ function Table({ head, children }: { head: string[]; children: React.ReactNode }
   return (
     <table className="w-full min-w-[300px] text-left">
       <thead>
-        <tr className="border-b border-line font-mono text-[10px] uppercase tracking-[0.12em] text-ink-dim">
+        <tr className="border-b border-line font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
           {head.map((label, index) => (
             <th key={label} className={index === 0 ? 'px-4 py-2 font-medium' : 'px-3 py-2 font-medium'}>
               {label}
@@ -149,7 +149,7 @@ function Table({ head, children }: { head: string[]; children: React.ReactNode }
 function Num({ value, strong, dim }: { value: number; strong?: boolean; dim?: boolean }) {
   return (
     <td
-      className={`px-3 py-2.5 font-mono text-[13px] ${
+      className={`px-3 py-2.5 font-mono text-[15px] ${
         strong ? 'text-ink' : dim ? 'text-ink-dim/40' : 'text-ink-dim'
       }`}
     >

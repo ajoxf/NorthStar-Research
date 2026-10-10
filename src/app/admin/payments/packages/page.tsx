@@ -96,7 +96,7 @@ export default async function PackagesPage() {
       <div className="mx-auto max-w-4xl px-5 py-12">
         <Link
           href="/admin/payments/settings"
-          className="mb-6 inline-flex items-center gap-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:text-ink"
+          className="mb-6 inline-flex items-center gap-1.5 font-mono text-[14px] text-ink-dim transition-colors hover:text-ink"
         >
           <ArrowLeft className="h-3 w-3" aria-hidden />
           Payment settings
@@ -105,9 +105,9 @@ export default async function PackagesPage() {
         <div className="mb-8">
           <span className="eyebrow">Configuration</span>
           <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Packages and pricing</h1>
-          <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+          <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
             Everything the site sells. The default package is what the homepage, the FAQs and a
-            bare <code className="font-mono text-[13px]">/join</code> quote; the rest are reachable
+            bare <code className="font-mono text-[15px]">/join</code> quote; the rest are reachable
             by their own link, and every package on sale appears on the join page.
           </p>
         </div>
@@ -118,7 +118,7 @@ export default async function PackagesPage() {
           visible on a buyer's card statement.
         */}
         <div className="mb-8 rounded-lg border border-accent/40 bg-accent/10 px-4 py-3.5">
-          <p className="text-[14px] leading-relaxed text-ink">
+          <p className="text-[16px] leading-relaxed text-ink">
             <strong className="font-medium">Stripe charges what Stripe says.</strong> A card
             subscription bills the amount on the Stripe price you paste in, not the amount typed
             here — so a package is checked against Stripe before it saves, and refused if the two
@@ -128,7 +128,7 @@ export default async function PackagesPage() {
             href="https://dashboard.stripe.com/prices"
             target="_blank"
             rel="noreferrer noopener"
-            className="mt-2 inline-flex items-center gap-1.5 font-mono text-[12px] text-accent hover:underline"
+            className="mt-2 inline-flex items-center gap-1.5 font-mono text-[14px] text-accent-ink hover:underline"
           >
             Stripe prices
             <ExternalLink className="h-3 w-3" aria-hidden />
@@ -143,14 +143,14 @@ export default async function PackagesPage() {
         />
 
         <section className="mt-12 border-t border-line pt-8">
-          <h2 className="mb-3 text-[17px] text-ink">Archive, not delete</h2>
-          <p className="max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+          <h2 className="mb-3 text-[19px] text-ink">Archive, not delete</h2>
+          <p className="max-w-2xl text-[16px] leading-relaxed text-ink-dim">
             A package that anyone has bought is the record of what they bought, so it is archived
             rather than removed: it stops being sold, and every member and order pointing at it
             still resolves. A package nobody has touched — a draft, a typo, a price that was never
             offered — can be deleted outright, and that button only appears when that is true.
           </p>
-          <p className="mt-3 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+          <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
             Editing a price changes what new buyers pay. It does not re-price anyone already
             subscribed: existing card subscriptions keep billing the Stripe price they were
             created against until those members are moved deliberately.

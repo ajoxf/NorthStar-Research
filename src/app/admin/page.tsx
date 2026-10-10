@@ -52,7 +52,7 @@ export default async function AdminDashboard() {
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-mono text-xl text-ink">Overview</h1>
-          <p className="mt-1 font-mono text-[12px] text-ink-dim">
+          <p className="mt-1 font-mono text-[14px] text-ink-dim">
             Members, reports and delivery at a glance.
           </p>
         </div>
@@ -76,17 +76,17 @@ export default async function AdminDashboard() {
 
       <section className="mt-8">
         <div className="mb-3 flex items-baseline justify-between">
-          <h2 className="font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+          <h2 className="font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
             Recent uploads
           </h2>
-          <Link href="/admin/reports" className="font-mono text-[12px] text-accent hover:underline">
+          <Link href="/admin/reports" className="font-mono text-[14px] text-accent-ink hover:underline">
             All {reportCount} reports
           </Link>
         </div>
 
         <div className="rounded-lg border border-line bg-panel">
           {recentReports.length === 0 ? (
-            <p className="px-5 py-10 text-center font-mono text-[13px] text-ink-dim">
+            <p className="px-5 py-10 text-center font-mono text-[15px] text-ink-dim">
               No reports uploaded yet.
             </p>
           ) : (
@@ -102,13 +102,13 @@ export default async function AdminDashboard() {
                   the least useful parts at that size — the archive is one tap away — so
                   they drop out below sm, and the title takes the room.
                 */}
-                <span className="hidden w-28 shrink-0 font-mono text-[12px] text-ink-dim sm:block">
+                <span className="hidden w-28 shrink-0 font-mono text-[14px] text-ink-dim sm:block">
                   {formatDate(report.publishDate)}
                 </span>
-                <span className="hidden w-40 shrink-0 truncate font-mono text-[12px] text-accent sm:block">
+                <span className="hidden w-40 shrink-0 truncate font-mono text-[14px] text-accent-ink sm:block">
                   {reportTypeLabel(report.type)}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[14px] text-ink">{report.title}</span>
+                <span className="min-w-0 flex-1 truncate text-[16px] text-ink">{report.title}</span>
                 <Badge tone={report.published ? 'up' : 'muted'} className="shrink-0">
                   {report.published ? 'Published' : 'Draft'}
                 </Badge>
@@ -124,9 +124,9 @@ export default async function AdminDashboard() {
 function Stat({ label, value, hint }: { label: string; value: number; hint?: string }) {
   return (
     <div className="rounded-lg border border-line bg-panel p-5">
-      <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
+      <div className="font-mono text-[12px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
       <div className="mt-2 font-mono text-3xl text-ink">{value}</div>
-      {hint && <div className="mt-1 font-mono text-[11px] text-ink-dim">{hint}</div>}
+      {hint && <div className="mt-1 font-mono text-[12px] text-ink-dim">{hint}</div>}
     </div>
   )
 }
@@ -187,7 +187,7 @@ async function ConfigurationPanel({ providers }: { providers: { email: string } 
 
   return (
     <section className="mt-8">
-      <h2 className="mb-3 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+      <h2 className="mb-3 font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
         Integration status
       </h2>
 
@@ -205,8 +205,8 @@ async function ConfigurationPanel({ providers }: { providers: { email: string } 
             <Badge tone={row.ready ? 'up' : 'accent'} className="shrink-0">
               {row.ready ? 'Ready' : 'Not configured'}
             </Badge>
-            <span className="text-[14px] text-ink">{row.label}</span>
-            <span className="min-w-0 font-mono text-[12px] text-ink-dim sm:ml-auto">
+            <span className="text-[16px] text-ink">{row.label}</span>
+            <span className="min-w-0 font-mono text-[14px] text-ink-dim sm:ml-auto">
               {row.detail}
             </span>
           </div>

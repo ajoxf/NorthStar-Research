@@ -46,7 +46,7 @@ export default async function AdminReportsPage() {
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-mono text-xl text-ink">Reports</h1>
-          <p className="mt-1 font-mono text-[12px] text-ink-dim">
+          <p className="mt-1 font-mono text-[14px] text-ink-dim">
             {reports.length} total. Reports are never deleted — un-publish to hide one from members.
           </p>
         </div>
@@ -68,7 +68,7 @@ export default async function AdminReportsPage() {
       <div className="mt-5 overflow-x-auto rounded-lg border border-line bg-panel">
         <table className="w-full min-w-[860px] text-left">
           <thead>
-            <tr className="border-b border-line font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
+            <tr className="border-b border-line font-mono text-[12px] uppercase tracking-[0.12em] text-ink-dim">
               <th className="px-5 py-3 font-medium">Date</th>
               <th className="px-5 py-3 font-medium">Type</th>
               <th className="px-5 py-3 font-medium">Section</th>
@@ -81,17 +81,17 @@ export default async function AdminReportsPage() {
           <tbody>
             {reports.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-5 py-12 text-center font-mono text-[13px] text-ink-dim">
+                <td colSpan={7} className="px-5 py-12 text-center font-mono text-[15px] text-ink-dim">
                   No reports yet. Upload the first one to get started.
                 </td>
               </tr>
             ) : (
               reports.map((report) => (
                 <tr key={report.id} className="border-b border-line last:border-b-0 hover:bg-panel-2">
-                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-dim">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[14px] text-ink-dim">
                     {formatDate(report.publishDate)}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-accent">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[14px] text-accent-ink">
                     {reportTypeLabel(report.type)}
                   </td>
                   {/*
@@ -105,7 +105,7 @@ export default async function AdminReportsPage() {
                   */}
                   {/* Wraps rather than holding one line: "Markets research by NordStarPro
                       Desk" on a single line pushed every title into a five-line column. */}
-                  <td className="max-w-[170px] px-5 py-3.5 font-mono text-[12px] leading-snug">
+                  <td className="max-w-[170px] px-5 py-3.5 font-mono text-[14px] leading-snug">
                     {report.section ? (
                       <span className="text-ink-dim">{sectionName(report.section)}</span>
                     ) : (
@@ -116,7 +116,7 @@ export default async function AdminReportsPage() {
                     <div className="flex items-center gap-2.5">
                       <Link
                         href={`/admin/reports/${report.id}`}
-                        className="text-[14px] text-ink hover:text-accent"
+                        className="text-[16px] text-ink hover:text-accent-ink"
                       >
                         {report.title}
                       </Link>
@@ -143,7 +143,7 @@ export default async function AdminReportsPage() {
                             )}
                             target="_blank"
                             rel="noreferrer noopener"
-                            className="shrink-0 whitespace-nowrap rounded border border-line px-2 py-0.5 font-mono text-[11px] text-ink-dim transition-colors hover:border-up/50 hover:text-up"
+                            className="shrink-0 whitespace-nowrap rounded border border-line px-2 py-0.5 font-mono text-[12px] text-ink-dim transition-colors hover:border-up/50 hover:text-up"
                           >
                             WhatsApp
                           </a>
@@ -161,7 +161,7 @@ export default async function AdminReportsPage() {
                           {!report.shareHook && (
                             <Link
                               href={`/admin/reports/${report.id}`}
-                              className="shrink-0 whitespace-nowrap font-mono text-[11px] text-accent hover:underline"
+                              className="shrink-0 whitespace-nowrap font-mono text-[12px] text-accent-ink hover:underline"
                             >
                               + hook
                             </Link>
@@ -170,10 +170,10 @@ export default async function AdminReportsPage() {
                       )}
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 font-mono text-[13px] text-ink-dim">
+                  <td className="px-5 py-3.5 font-mono text-[15px] text-ink-dim">
                     {report._count.deliveryLogs}
                   </td>
-                  <td className="px-5 py-3.5 font-mono text-[13px] text-ink-dim">
+                  <td className="px-5 py-3.5 font-mono text-[15px] text-ink-dim">
                     {report._count.views}
                   </td>
                   <td className="px-5 py-3.5">

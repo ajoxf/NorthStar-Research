@@ -98,7 +98,7 @@ export function PackageManager({
   return (
     <div>
       {live.length === 0 && (
-        <div className="mb-6 rounded-lg border border-line bg-panel px-4 py-3.5 text-[14px] leading-relaxed text-ink-dim">
+        <div className="mb-6 rounded-lg border border-line bg-panel px-4 py-3.5 text-[16px] leading-relaxed text-ink-dim">
           No packages yet, so the site is selling the built-in plan — $199 a month, exactly as
           before. Creating your first package here replaces it everywhere.
         </div>
@@ -121,8 +121,8 @@ export function PackageManager({
         <div className="space-y-8">
           {house.length > 0 && (
             <section>
-              <h2 className="mb-1 text-[15px] text-ink">The house</h2>
-              <p className="mb-3 text-[13px] leading-relaxed text-ink-dim">
+              <h2 className="mb-1 text-[17px] text-ink">The house</h2>
+              <p className="mb-3 text-[15px] leading-relaxed text-ink-dim">
                 Not attributed to any one contributor — the whole-site membership and anything
                 spanning several people.
               </p>
@@ -143,8 +143,8 @@ export function PackageManager({
 
           {byAuthor.map((group) => (
             <section key={group.author.id}>
-              <h2 className="mb-1 text-[15px] text-ink">{group.author.name}</h2>
-              <p className="mb-3 text-[13px] leading-relaxed text-ink-dim">
+              <h2 className="mb-1 text-[17px] text-ink">{group.author.name}</h2>
+              <p className="mb-3 text-[15px] leading-relaxed text-ink-dim">
                 Shown on this contributor&rsquo;s own page. One author per package, so what they
                 are owed is a sum of these rather than a split of somebody else&rsquo;s.
               </p>
@@ -167,7 +167,7 @@ export function PackageManager({
 
       {creating ? (
         <div className="mt-4 rounded-lg border border-accent/40 bg-panel p-5">
-          <h3 className="mb-4 text-[15px] text-ink">New package</h3>
+          <h3 className="mb-4 text-[17px] text-ink">New package</h3>
           <PackageForm
             authors={authors}
             items={items}
@@ -194,8 +194,8 @@ export function PackageManager({
 
       {archived.length > 0 && (
         <section className="mt-12">
-          <h2 className="mb-1 text-[17px] text-ink">Archived</h2>
-          <p className="mb-4 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+          <h2 className="mb-1 text-[19px] text-ink">Archived</h2>
+          <p className="mb-4 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
             Withdrawn from sale. Members already on these keep them, and every order still
             resolves — which is the point of archiving rather than deleting.
           </p>
@@ -271,7 +271,7 @@ function PackageRow({
       <div className="flex flex-col gap-3 p-4 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-x-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[15px] text-ink">{pkg.name}</span>
+            <span className="text-[17px] text-ink">{pkg.name}</span>
             {pkg.isDefault && <Badge tone="accent">Default</Badge>}
             {pkg.archived && <Badge tone="muted">Archived</Badge>}
             {!pkg.stripePriceId && !pkg.archived && <Badge tone="neutral">Crypto only</Badge>}
@@ -282,21 +282,21 @@ function PackageRow({
             )}
           </div>
 
-          <p className="mt-1 font-mono text-[13px] text-ink">
+          <p className="mt-1 font-mono text-[15px] text-ink">
             {formatPrice(pkg.priceCents, pkg.currency)} / {pkg.interval}
           </p>
 
           {pkg.description && (
-            <p className="mt-1 text-[13px] leading-relaxed text-ink-dim">{pkg.description}</p>
+            <p className="mt-1 text-[15px] leading-relaxed text-ink-dim">{pkg.description}</p>
           )}
 
-          <p className="mt-2 font-mono text-[11px] text-ink-dim">
+          <p className="mt-2 font-mono text-[12px] text-ink-dim">
             {pkg.members} member{pkg.members === 1 ? '' : 's'} · {pkg.orders} order
             {pkg.orders === 1 ? '' : 's'} · /join?package={pkg.slug}
           </p>
 
           {!pkg.stripePriceId && !pkg.archived && (
-            <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">
+            <p className="mt-2 text-[15px] leading-relaxed text-ink-dim">
               {stripeReady
                 ? 'No Stripe price yet, so card checkout will not offer this package — crypto still works.'
                 : 'STRIPE_SECRET_KEY is not set on this deployment, so no package can be sold by card. Add it in Vercel and redeploy.'}
@@ -645,10 +645,10 @@ function PackageForm({
                         )
                       }
                     />
-                    <span className="min-w-0 text-[14px] text-ink">
+                    <span className="min-w-0 text-[16px] text-ink">
                       {item.name}
                       {item.archived && (
-                        <span className="ml-2 font-mono text-[11px] text-ink-dim">off sale</span>
+                        <span className="ml-2 font-mono text-[12px] text-ink-dim">off sale</span>
                       )}
                     </span>
                   </label>
@@ -661,7 +661,7 @@ function PackageForm({
                   falls back to the legacy all-access membership — see grantFor — so
                   leaving it empty sells the whole site at this package's price.
                 */
-                <p className="mt-2 text-[13px] leading-relaxed text-down">
+                <p className="mt-2 text-[15px] leading-relaxed text-down">
                   Nothing ticked, so this package still grants <strong>the whole site</strong> —
                   every contributor, every section. That is the old all-access membership.
                   Tick what it should actually include and it will grant only that from the
@@ -703,8 +703,8 @@ function PackageForm({
               onChange={(event) => setOfferToMembers(event.target.checked)}
             />
             <span className="min-w-0">
-              <span className="block text-[14px] text-ink">Suggest this to existing members</span>
-              <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
+              <span className="block text-[16px] text-ink">Suggest this to existing members</span>
+              <span className="mt-1 block text-[15px] leading-relaxed text-ink-dim">
                 Shows it under &ldquo;Also available to you&rdquo; on the member dashboard, to
                 members who do not already hold any part of it — that overlap is handled for
                 you. Turning this off does not withdraw the package: it is still sold on the
@@ -723,8 +723,8 @@ function PackageForm({
               onChange={(event) => setTrialEnabled(event.target.checked)}
             />
             <span className="min-w-0">
-              <span className="block text-[14px] text-ink">Offer a free trial of this package</span>
-              <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
+              <span className="block text-[16px] text-ink">Offer a free trial of this package</span>
+              <span className="mt-1 block text-[15px] leading-relaxed text-ink-dim">
                 No card. Everything in the package opens at once and stops on its own —
                 there is nothing to cancel. Somebody who has already held any part of this
                 package cannot trial it again.
@@ -766,8 +766,8 @@ function PackageForm({
               onChange={(event) => setSellByCard(event.target.checked)}
             />
             <span className="min-w-0">
-              <span className="block text-[14px] text-ink">Sell this by card (Stripe)</span>
-              <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
+              <span className="block text-[16px] text-ink">Sell this by card (Stripe)</span>
+              <span className="mt-1 block text-[15px] leading-relaxed text-ink-dim">
                 {stripeReady
                   ? 'A matching Stripe price is created for you when you save. Stripe prices cannot be ' +
                     'edited, so changing the amount always creates a new one and archives the old.'
@@ -785,7 +785,7 @@ function PackageForm({
         */}
         {sellByCard && (
           <details className="sm:col-span-2">
-            <summary className="cursor-pointer font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim hover:text-ink">
+            <summary className="cursor-pointer font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim hover:text-ink">
               Use an existing Stripe price
             </summary>
             <div className="mt-3">

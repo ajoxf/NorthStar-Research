@@ -85,7 +85,7 @@ export function AffiliateCreator() {
 
   return (
     <form onSubmit={handleSubmit} className="panel p-5 sm:p-6" noValidate>
-      <h2 className="mb-5 text-[17px] text-ink">New affiliate</h2>
+      <h2 className="mb-5 text-[19px] text-ink">New affiliate</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
@@ -134,9 +134,9 @@ export function AffiliateCreator() {
               key={reward.value}
               type="button"
               onClick={() => setRewardKind(reward.value)}
-              className={`h-10 rounded-full border px-4 text-[13px] transition-colors ${
+              className={`h-10 rounded-full border px-4 text-[15px] transition-colors ${
                 rewardKind === reward.value
-                  ? 'border-accent bg-accent/10 text-ink'
+                  ? 'border-accent-ink bg-accent/10 text-ink'
                   : 'border-line text-ink-dim hover:text-ink'
               }`}
             >

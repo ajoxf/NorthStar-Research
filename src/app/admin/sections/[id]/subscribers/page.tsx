@@ -92,41 +92,41 @@ export default async function SectionSubscribersPage({ params }: { params: { id:
     <div className="mx-auto max-w-5xl px-5 py-10">
       <Link
         href="/admin/sections"
-        className="mb-6 inline-flex items-center gap-1.5 font-mono text-[12px] text-ink-dim hover:text-ink"
+        className="mb-6 inline-flex items-center gap-1.5 font-mono text-[14px] text-ink-dim hover:text-ink"
       >
         <ArrowLeft className="h-3 w-3" aria-hidden />
         All sections
       </Link>
 
       <h1 className="text-2xl text-ink">{sectionName(section)}</h1>
-      <p className="mt-1 font-mono text-[12px] text-ink-dim">/{section.slug}</p>
+      <p className="mt-1 font-mono text-[14px] text-ink-dim">/{section.slug}</p>
 
       <dl className="mt-7 grid gap-4 rounded-lg border border-line bg-panel p-5 sm:grid-cols-3">
         <div>
-          <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
+          <dt className="font-mono text-[12px] uppercase tracking-[0.12em] text-ink-dim">
             Holding it now
           </dt>
           <dd className="mt-1 font-display text-2xl text-ink">{live.length}</dd>
         </div>
         <div>
-          <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
+          <dt className="font-mono text-[12px] uppercase tracking-[0.12em] text-ink-dim">
             Ever held it
           </dt>
           <dd className="mt-1 font-display text-2xl text-ink">{rows.length}</dd>
         </div>
         <div>
-          <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
+          <dt className="font-mono text-[12px] uppercase tracking-[0.12em] text-ink-dim">
             Reading on all-access
           </dt>
           <dd className="mt-1 font-display text-2xl text-ink">{allAccessCount}</dd>
-          <p className="mt-1 text-[12px] leading-relaxed text-ink-dim">
+          <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">
             Not in the list below. They read every section regardless of what they hold.
           </p>
         </div>
       </dl>
 
       {rows.length === 0 ? (
-        <p className="mt-8 text-[15px] text-ink-dim">
+        <p className="mt-8 text-[17px] text-ink-dim">
           Nobody has ever held this section
           {allAccessCount > 0 ? (
             <>
@@ -140,8 +140,8 @@ export default async function SectionSubscribersPage({ params }: { params: { id:
         </p>
       ) : (
         <div className="mt-8 overflow-x-auto rounded-lg border border-line">
-          <table className="w-full min-w-[720px] text-left text-[13px]">
-            <thead className="bg-panel font-mono text-[11px] uppercase tracking-[0.1em] text-ink-dim">
+          <table className="w-full min-w-[720px] text-left text-[15px]">
+            <thead className="bg-panel font-mono text-[12px] uppercase tracking-[0.1em] text-ink-dim">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Member</th>
                 <th className="px-4 py-2.5 font-medium">State</th>
@@ -158,12 +158,12 @@ export default async function SectionSubscribersPage({ params }: { params: { id:
                     <td className="px-4 py-3">
                       <Link
                         href={`/admin/members/${row.member.id}`}
-                        className="text-ink underline underline-offset-4 hover:text-accent"
+                        className="text-ink underline underline-offset-4 hover:text-accent-ink"
                       >
                         {name || row.member.email}
                       </Link>
                       {name && (
-                        <div className="font-mono text-[11px] text-ink-dim">{row.member.email}</div>
+                        <div className="font-mono text-[12px] text-ink-dim">{row.member.email}</div>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -187,7 +187,7 @@ export default async function SectionSubscribersPage({ params }: { params: { id:
                         <>
                           {formatDate(row.renewsAt)}
                           {row.daysLeft !== null && (
-                            <span className="ml-2 font-mono text-[11px]">
+                            <span className="ml-2 font-mono text-[12px]">
                               {row.daysLeft >= 0 ? `${row.daysLeft}d left` : `${-row.daysLeft}d ago`}
                             </span>
                           )}

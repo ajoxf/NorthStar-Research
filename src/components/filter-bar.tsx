@@ -11,6 +11,7 @@ import {
 } from '@/lib/browse-filter'
 import { formatPrice } from '@/lib/package-shape'
 import { cn } from '@/lib/utils'
+import { sectionAudienceLabel } from '@/lib/section-audience'
 
 /**
  * The controls a visitor narrows a list with, on either ground.
@@ -303,7 +304,7 @@ export function FilterBar({
                       }
                     >
                       {selected && <Check className="h-3.5 w-3.5" aria-hidden />}
-                      {audience === 'retail' ? 'Retail' : 'Institutional'}
+                      {sectionAudienceLabel(audience)}
                     </button>
                   )
                 })}

@@ -98,7 +98,7 @@ export function MemberGrowthChart({ weeks }: { weeks: WeekPoint[] }) {
         ))}
       </svg>
 
-      <figcaption className="mt-2 font-mono text-[11px] text-ink-dim">
+      <figcaption className="mt-2 font-mono text-[12px] text-ink-dim">
         {latest.total} members · {weeks.reduce((sum, week) => sum + week.joined, 0)} joined in{' '}
         {weeks.length} weeks
       </figcaption>

@@ -33,7 +33,7 @@ export default async function OffersPage() {
       <h1 className="mt-4 font-display text-[32px] font-medium leading-[1.05] tracking-[-0.04em]">
         Discounts
       </h1>
-      <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+      <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
         A percentage off, for everyone or for whoever has the code. The list price is never
         edited — the charge is worked out from it each time — so a discount that ends puts
         the real price back without anybody having to remember to.

@@ -66,10 +66,10 @@ export function BackfillSections({
 
   return (
     <div className="mb-6 rounded-lg border border-accent/30 bg-accent/[0.06] p-5">
-      <h2 className="text-[15px] text-ink">
+      <h2 className="text-[17px] text-ink">
         {untagged} report{untagged === 1 ? '' : 's'} {untagged === 1 ? 'has' : 'have'} no section
       </h2>
-      <p className="mt-2 max-w-3xl text-[14px] leading-relaxed text-ink-dim">
+      <p className="mt-2 max-w-3xl text-[16px] leading-relaxed text-ink-dim">
         Only all-access members can read these, so they are not part of anything a
         contributor sells. Filing them into a section adds the members who bought that
         section to the people who can read them — nobody loses access, and any one of them

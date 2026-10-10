@@ -57,11 +57,11 @@ export function VisibilityToggle({ visible, ready }: { visible: boolean; ready: 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-line bg-panel p-3.5">
       {visible ? (
-        <Eye className="h-4 w-4 shrink-0 text-accent" aria-hidden />
+        <Eye className="h-4 w-4 shrink-0 text-accent-ink" aria-hidden />
       ) : (
         <EyeOff className="h-4 w-4 shrink-0 text-ink-dim" aria-hidden />
       )}
-      <p className="min-w-[240px] flex-1 text-[13px] leading-relaxed text-ink-dim">
+      <p className="min-w-[240px] flex-1 text-[15px] leading-relaxed text-ink-dim">
         {visible ? (
           <>
             <span className="text-ink">The public can see sections.</span> /coverage and /experts
@@ -87,7 +87,7 @@ export function VisibilityToggle({ visible, ready }: { visible: boolean; ready: 
         <Link
           href="/coverage"
           target="_blank"
-          className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+          className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[14px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
         >
           Preview coverage
           <ExternalLink className="h-3 w-3" aria-hidden />
@@ -95,7 +95,7 @@ export function VisibilityToggle({ visible, ready }: { visible: boolean; ready: 
         <Link
           href="/experts"
           target="_blank"
-          className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+          className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[14px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
         >
           Preview experts
           <ExternalLink className="h-3 w-3" aria-hidden />

@@ -58,7 +58,7 @@ export default async function ReportAudiencePage({
     <div className="mx-auto max-w-4xl px-5 py-10">
       <Link
         href={`/admin/reports/${report.id}`}
-        className="mb-6 inline-flex items-center gap-1.5 font-mono text-[12px] text-ink-dim hover:text-ink"
+        className="mb-6 inline-flex items-center gap-1.5 font-mono text-[14px] text-ink-dim hover:text-ink"
       >
         <ArrowLeft className="h-3 w-3" aria-hidden />
         {report.title}
@@ -67,7 +67,7 @@ export default async function ReportAudiencePage({
       <div className="mb-8">
         <span className="eyebrow">Engagement</span>
         <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Who read it</h1>
-        <p className="mt-2 font-mono text-[12px] text-ink-dim">
+        <p className="mt-2 font-mono text-[14px] text-ink-dim">
           {report.title} · {formatDate(report.publishDate)}
         </p>
       </div>
@@ -82,11 +82,11 @@ export default async function ReportAudiencePage({
           <span className="font-display text-5xl text-ink">
             {rate === null ? '—' : `${Math.round(rate * 100)}%`}
           </span>
-          <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
+          <span className="font-mono text-[14px] uppercase tracking-[0.14em] text-ink-dim">
             read it
           </span>
         </div>
-        <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">
+        <p className="mt-2 text-[15px] leading-relaxed text-ink-dim">
           {rate === null
             ? 'This report has not reached anybody yet.'
             : `${counts.read} of the ${counts.read + counts.opened + counts.delivered} members it reached. ` +
@@ -99,14 +99,14 @@ export default async function ReportAudiencePage({
       </div>
 
       {!opensLive && counts.opened === 0 && (
-        <p className="mb-6 flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3.5 text-[13px] leading-relaxed text-ink-dim">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+        <p className="mb-6 flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3.5 text-[15px] leading-relaxed text-ink-dim">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-ink" aria-hidden />
           <span>
             <strong className="font-medium text-ink">Email opens are not being tracked.</strong>{' '}
             Everyone who did not read the report shows as &ldquo;delivered&rdquo; rather than
             splitting into opened and unopened. Add a Resend webhook at{' '}
-            <code className="font-mono text-[12px]">/api/webhooks/resend</code> with{' '}
-            <code className="font-mono text-[12px]">RESEND_WEBHOOK_SECRET</code> to separate them.
+            <code className="font-mono text-[14px]">/api/webhooks/resend</code> with{' '}
+            <code className="font-mono text-[14px]">RESEND_WEBHOOK_SECRET</code> to separate them.
             Read is unaffected, and is the better measure regardless.
           </span>
         </p>
@@ -134,7 +134,7 @@ export default async function ReportAudiencePage({
 
         <a
           href={`/api/admin/reports/${report.id}/audience.csv${filter === 'all' ? '' : `?state=${filter}`}`}
-          className={`inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink${
+          className={`inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[14px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink${
             counts.failed > 0 ? '' : ' ml-auto'
           }`}
         >
@@ -144,13 +144,13 @@ export default async function ReportAudiencePage({
       </div>
 
       {filter !== 'all' && (
-        <p className="mb-4 text-[13px] leading-relaxed text-ink-dim">
+        <p className="mb-4 text-[15px] leading-relaxed text-ink-dim">
           {AUDIENCE_STATES.find((state) => state.key === filter)?.meaning}
         </p>
       )}
 
       {shown.length === 0 ? (
-        <p className="rounded-lg border border-line bg-panel px-4 py-8 text-center text-[14px] text-ink-dim">
+        <p className="rounded-lg border border-line bg-panel px-4 py-8 text-center text-[16px] text-ink-dim">
           Nobody in this group.
         </p>
       ) : (
@@ -163,18 +163,18 @@ export default async function ReportAudiencePage({
               <div className="min-w-0 flex-1">
                 <Link
                   href={`/admin/members?search=${encodeURIComponent(row.email)}`}
-                  className="break-all text-[14px] text-ink hover:text-accent"
+                  className="break-all text-[16px] text-ink hover:text-accent-ink"
                 >
                   {row.name ?? row.email}
                 </Link>
                 {row.name && (
-                  <p className="break-all font-mono text-[11px] text-ink-dim">{row.email}</p>
+                  <p className="break-all font-mono text-[12px] text-ink-dim">{row.email}</p>
                 )}
               </div>
 
               <div className="flex shrink-0 items-center gap-3">
                 {row.viewedAt && (
-                  <span className="hidden font-mono text-[11px] text-ink-dim sm:inline">
+                  <span className="hidden font-mono text-[12px] text-ink-dim sm:inline">
                     {formatDate(row.viewedAt)}
                   </span>
                 )}
@@ -187,7 +187,7 @@ export default async function ReportAudiencePage({
                 knowing whether to fix a config, a mailbox, or nothing at all.
               */}
               {row.error && (
-                <p className="w-full break-words text-[13px] leading-relaxed text-down">
+                <p className="w-full break-words text-[15px] leading-relaxed text-down">
                   {row.error}
                 </p>
               )}
@@ -212,9 +212,9 @@ function FilterChip({
   return (
     <Link
       href={href}
-      className={`rounded-full border px-3 py-1.5 font-mono text-[12px] transition-colors ${
+      className={`rounded-full border px-3 py-1.5 font-mono text-[14px] transition-colors ${
         active
-          ? 'border-accent/40 bg-accent/10 text-accent'
+          ? 'border-accent/40 bg-accent/10 text-accent-ink'
           : 'border-line text-ink-dim hover:text-ink'
       }`}
     >

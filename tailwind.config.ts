@@ -27,6 +27,10 @@ const config: Config = {
         'ink-dim': 'rgb(var(--ink-dim) / <alpha-value>)',
         accent: 'rgb(var(--accent) / <alpha-value>)',
         'accent-hover': 'rgb(var(--accent-hover) / <alpha-value>)',
+        // The accent drawn as text or a thin marker, and the label on an accent fill. The
+        // same values as `accent` and `bg` on the dark ground; see globals.css.
+        'accent-ink': 'rgb(var(--accent-ink) / <alpha-value>)',
+        'on-accent': 'rgb(var(--on-accent) / <alpha-value>)',
         imprint: 'rgb(var(--imprint) / <alpha-value>)',
         up: 'rgb(var(--up) / <alpha-value>)',
         down: 'rgb(var(--down) / <alpha-value>)',

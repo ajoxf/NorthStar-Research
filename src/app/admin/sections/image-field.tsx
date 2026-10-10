@@ -92,7 +92,7 @@ export function SectionImageField({
           // host, which next/image would need configuring for one URL at a time.
           <img src={value} alt="" className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full w-full items-center justify-center text-[12px] text-ink-dim">
+          <div className="flex h-full w-full items-center justify-center text-[14px] text-ink-dim">
             No image yet
           </div>
         )}

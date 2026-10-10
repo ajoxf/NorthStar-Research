@@ -107,7 +107,7 @@ export function WithdrawalQueue({ payouts }: { payouts: PayoutRow[] }) {
   }
 
   if (payouts.length === 0) {
-    return <p className="text-[14px] text-ink-dim">No withdrawals yet.</p>
+    return <p className="text-[16px] text-ink-dim">No withdrawals yet.</p>
   }
 
   return (
@@ -119,8 +119,8 @@ export function WithdrawalQueue({ payouts }: { payouts: PayoutRow[] }) {
             <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
               <div className="min-w-[280px] flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[15px] text-ink">{payout.authorName}</span>
-                  <span className="font-mono text-[14px] text-ink">
+                  <span className="text-[17px] text-ink">{payout.authorName}</span>
+                  <span className="font-mono text-[16px] text-ink">
                     {formatPrice(payout.amountCents, payout.currency)}
                   </span>
                   <Badge tone={TONE[payout.status]}>{PAYOUT_LABELS[payout.status]}</Badge>
@@ -131,7 +131,7 @@ export function WithdrawalQueue({ payouts }: { payouts: PayoutRow[] }) {
                   */}
                   {payout.selfApproved && <Badge tone="down">self-approved</Badge>}
                 </div>
-                <p className="mt-1 font-mono text-[11px] leading-relaxed text-ink-dim">
+                <p className="mt-1 font-mono text-[12px] leading-relaxed text-ink-dim">
                   requested {payout.requestedAt.slice(0, 10)}
                   {payout.requestedByEmail && ` by ${payout.requestedByEmail}`}
                   {payout.approvedAt &&
@@ -141,26 +141,26 @@ export function WithdrawalQueue({ payouts }: { payouts: PayoutRow[] }) {
                   {payout.sentAt && ` · sent ${payout.sentAt.slice(0, 10)}`}
                 </p>
                 {payout.destination && (
-                  <p className="mt-1 break-all font-mono text-[11px] text-ink-dim">
+                  <p className="mt-1 break-all font-mono text-[12px] text-ink-dim">
                     to {payout.destination}
                   </p>
                 )}
                 {payout.externalReference && (
-                  <p className="mt-1 break-all font-mono text-[11px] text-ink-dim">
+                  <p className="mt-1 break-all font-mono text-[12px] text-ink-dim">
                     ref {payout.externalReference}
                   </p>
                 )}
                 {payout.rejectedReason && (
-                  <p className="mt-1 text-[13px] text-ink-dim">{payout.rejectedReason}</p>
+                  <p className="mt-1 text-[15px] text-ink-dim">{payout.rejectedReason}</p>
                 )}
-                {payout.note && <p className="mt-1 text-[13px] text-ink-dim">{payout.note}</p>}
+                {payout.note && <p className="mt-1 text-[15px] text-ink-dim">{payout.note}</p>}
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
                 {/* The reference is captured at the moment of sending, where it is known. */}
                 {payout.status === 'approved' && (
                   <Input
-                    className="h-9 w-[180px] text-[12px]"
+                    className="h-9 w-[180px] text-[14px]"
                     placeholder="Transaction ref"
                     aria-label="Transaction reference"
                     value={reference[payout.id] ?? ''}
@@ -182,7 +182,7 @@ export function WithdrawalQueue({ payouts }: { payouts: PayoutRow[] }) {
                   </Button>
                 ))}
                 {moves.length === 0 && (
-                  <span className="font-mono text-[11px] text-ink-dim">nothing left to do</span>
+                  <span className="font-mono text-[12px] text-ink-dim">nothing left to do</span>
                 )}
               </div>
             </div>

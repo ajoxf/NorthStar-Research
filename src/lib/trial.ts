@@ -22,9 +22,11 @@ import {
   TRIAL_ENABLED_KEY,
   TRIAL_ITEM_KEY,
   TRIAL_MIGRATED_KEY,
+  TRIAL_NEW_SECTIONS_KEY,
   TRIAL_DEFAULTS,
   clampDays,
   parseDays,
+  parseNewSectionsOpen,
   type TrialSettings,
 } from '@/lib/trial-shape'
 
@@ -64,6 +66,37 @@ export async function setTrialEnabled(value: boolean, adminId: string): Promise<
 
 export async function setTrialDays(days: number, adminId: string): Promise<void> {
   await writeSetting(TRIAL_DAYS_KEY, String(clampDays(days)), adminId)
+}
+
+/** Whether a section created now starts with its trial open. See TRIAL_NEW_SECTIONS_KEY. */
+export async function newSectionsOpenTrial(): Promise<boolean> {
+  const raw = await readSettings([TRIAL_NEW_SECTIONS_KEY])
+  return parseNewSectionsOpen(raw[TRIAL_NEW_SECTIONS_KEY])
+}
+
+export async function setNewSectionsOpenTrial(value: boolean, adminId: string): Promise<void> {
+  await writeSetting(TRIAL_NEW_SECTIONS_KEY, value ? 'true' : 'false', adminId)
+}
+
+/**
+ * Open the trial on every section on the shelf that does not have one open.
+ *
+ * Each keeps its own day count, blank included, so a section somebody set to seven days
+ * stays at seven. Archived sections are left alone: a trial of something off the shelf is
+ * a signup that refuses everybody who reaches it. Returns how many were opened.
+ */
+export async function openTrialOnEverySection(): Promise<number> {
+  await migrateLegacyTrialSettings()
+  const { count } = await db.item.updateMany({
+    where: {
+      kind: 'section',
+      archivedAt: null,
+      trialEnabled: false,
+      section: { is: { archivedAt: null } },
+    },
+    data: { trialEnabled: true },
+  })
+  return count
 }
 
 export async function setTrialItem(slug: string, adminId: string): Promise<void> {

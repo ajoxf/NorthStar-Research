@@ -59,7 +59,7 @@ export function EarningsManager({ authors }: { authors: AuthorEarnings[] }) {
   return (
     <div className="space-y-4">
       {authors.length === 0 ? (
-        <p className="text-[14px] text-ink-dim">No contributors yet.</p>
+        <p className="text-[16px] text-ink-dim">No contributors yet.</p>
       ) : (
         authors.map((author) => <AuthorCard key={author.id} author={author} />)
       )}
@@ -102,12 +102,12 @@ function AuthorCard({ author }: { author: AuthorEarnings }) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-[240px] flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-[18px] text-ink">{author.name}</h2>
+            <h2 className="text-[20px] text-ink">{author.name}</h2>
             <Badge tone={usingDefault ? 'muted' : 'neutral'}>
               {share}% share{usingDefault ? ' (house default)' : ''}
             </Badge>
           </div>
-          <p className="mt-2 font-mono text-[12px] text-ink-dim">
+          <p className="mt-2 font-mono text-[14px] text-ink-dim">
             {/*
               Three figures, not one. "Balance" alone is the number somebody tries to
               withdraw and cannot — the holdback is the difference and has to be visible.
@@ -224,8 +224,8 @@ function WithdrawalForm({
 
   return (
     <div className="rounded-xl border border-line bg-panel-2 p-5">
-      <p className="text-[15px] text-ink">Request a withdrawal</p>
-      <p className="mt-1 text-[13px] leading-relaxed text-ink-dim">
+      <p className="text-[17px] text-ink">Request a withdrawal</p>
+      <p className="mt-1 text-[15px] leading-relaxed text-ink-dim">
         Creating one moves nothing. It goes to the approval queue, and only an approved
         withdrawal can be marked sent.
       </p>
@@ -300,8 +300,8 @@ function AdjustmentForm({
 
   return (
     <div className="rounded-xl border border-line bg-panel-2 p-5">
-      <p className="text-[15px] text-ink">Correction</p>
-      <p className="mt-1 text-[13px] leading-relaxed text-ink-dim">
+      <p className="text-[17px] text-ink">Correction</p>
+      <p className="mt-1 text-[15px] leading-relaxed text-ink-dim">
         {/*
           The ledger is append-only, so a correction is a new row rather than an edit. That
           is what keeps the history of what it said before.
@@ -363,7 +363,7 @@ function LedgerTable({
   const now = Date.now()
 
   if (author.entries.length === 0) {
-    return <p className="text-[14px] text-ink-dim">Nothing on this ledger yet.</p>
+    return <p className="text-[16px] text-ink-dim">Nothing on this ledger yet.</p>
   }
 
   return (
@@ -373,13 +373,13 @@ function LedgerTable({
         return (
           <li key={entry.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
             <div className="min-w-[260px] flex-1">
-              <span className="text-[14px] text-ink">{KIND_LABEL[entry.kind] ?? entry.kind}</span>
+              <span className="text-[16px] text-ink">{KIND_LABEL[entry.kind] ?? entry.kind}</span>
               {held && (
                 <span className="ml-2">
                   <Badge tone="muted">held until {entry.payableAt!.slice(0, 10)}</Badge>
                 </span>
               )}
-              <p className="mt-0.5 font-mono text-[11px] text-ink-dim">
+              <p className="mt-0.5 font-mono text-[12px] text-ink-dim">
                 {entry.occurredAt.slice(0, 10)}
                 {entry.sharePercent !== null && entry.basisCents !== null && (
                   <>
@@ -391,7 +391,7 @@ function LedgerTable({
               </p>
             </div>
             <span
-              className={`font-mono text-[14px] ${entry.amountCents < 0 ? 'text-down' : 'text-ink'}`}
+              className={`font-mono text-[16px] ${entry.amountCents < 0 ? 'text-down' : 'text-ink'}`}
             >
               {entry.amountCents < 0 ? '−' : '+'}
               {formatPrice(Math.abs(entry.amountCents), entry.currency)}
@@ -446,7 +446,7 @@ function RefundButton({
 
   return (
     <div className="w-full rounded-lg border border-line bg-panel-2 p-4">
-      <p className="text-[13px] leading-relaxed text-ink-dim">
+      <p className="text-[15px] leading-relaxed text-ink-dim">
         {/*
           Said plainly, because the opposite assumption is expensive: somebody who believes
           this refunds the buyer will not go and do it in Stripe.
@@ -501,7 +501,7 @@ export function WithdrawalsLink({ waiting }: { waiting: number }) {
   return (
     <Link
       href="/admin/earnings/withdrawals"
-      className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2.5 text-[14px] text-ink hover:border-ink-dim"
+      className="inline-flex items-center gap-2 rounded-lg border border-line bg-panel px-4 py-2.5 text-[16px] text-ink hover:border-ink-dim"
     >
       Withdrawals
       {waiting > 0 && <Badge tone="accent">{waiting} awaiting approval</Badge>}

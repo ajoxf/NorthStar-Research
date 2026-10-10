@@ -90,10 +90,10 @@ export function PdfAttach({
 
   return (
     <div className="mt-6 rounded-xl border border-line bg-panel p-5">
-      <h2 className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+      <h2 className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
         {hasPdf ? 'Replace the document' : 'Upload the document'}
       </h2>
-      <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+      <p className="mt-2 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
         {hasPdf
           ? 'Uploading another PDF replaces what members read. The previous file is left in storage rather than removed.'
           : 'The member’s reader builds the whole reading experience from this file — the pages, and the charts lifted out of them.'}
@@ -120,14 +120,14 @@ export function PdfAttach({
           {hasPdf ? 'Choose a replacement' : 'Choose a PDF'}
         </Button>
         {busy && (
-          <span className="font-mono text-[11px] text-ink-dim">
+          <span className="font-mono text-[12px] text-ink-dim">
             {progress < 100 ? `Uploading ${Math.round(progress)}%` : 'Saving…'}
           </span>
         )}
       </div>
 
       {error && (
-        <p className="mt-3 text-[13px] leading-relaxed text-down">{error}</p>
+        <p className="mt-3 text-[15px] leading-relaxed text-down">{error}</p>
       )}
     </div>
   )

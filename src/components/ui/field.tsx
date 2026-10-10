@@ -84,6 +84,11 @@ export const Select = React.forwardRef<
   )
 })
 
+/*
+ * Label, hint and error sizes read a variable with the old size as its fallback, so the
+ * site is unchanged and the admin console — which sets the variables on its wrapper — can
+ * run them a step larger without a second set of components.
+ */
 export function Label({
   className,
   tone = 'dark',
@@ -92,7 +97,7 @@ export function Label({
   return (
     <label
       className={cn(
-        'mb-1.5 block font-mono text-[11px] uppercase tracking-[0.14em]',
+        'mb-1.5 block font-mono text-[length:var(--ui-label-size,11px)] uppercase tracking-[0.14em]',
         MUTED[tone],
         className,
       )}
@@ -106,7 +111,7 @@ export function FieldError({ children, tone = 'dark' }: { children?: React.React
   return (
     <p
       role="alert"
-      className={cn('mt-1.5 text-[13px]', tone === 'light' ? 'text-down-on-light' : 'text-down')}
+      className={cn('mt-1.5 text-[length:var(--ui-hint-size,13px)]', tone === 'light' ? 'text-down-on-light' : 'text-down')}
     >
       {children}
     </p>
@@ -114,5 +119,5 @@ export function FieldError({ children, tone = 'dark' }: { children?: React.React
 }
 
 export function Hint({ children, tone = 'dark' }: { children: React.ReactNode } & ToneProp) {
-  return <p className={cn('mt-1.5 text-[13px] leading-relaxed', MUTED[tone])}>{children}</p>
+  return <p className={cn('mt-1.5 text-[length:var(--ui-hint-size,13px)] leading-relaxed', MUTED[tone])}>{children}</p>
 }

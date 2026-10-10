@@ -99,14 +99,14 @@ export function TestPayments({ state }: { state: TestState }) {
       </div>
 
       {(!state.stripeReady || !state.cregisReady) && (
-        <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+        <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
           {!state.stripeReady && !state.cregisReady
             ? 'Neither processor is configured yet, so there is nothing to test.'
             : `${!state.stripeReady ? 'Stripe' : 'Cregis'} is not configured yet, so that test is unavailable.`}
         </p>
       )}
 
-      <p className="mt-4 text-[13px] leading-relaxed text-ink-dim">
+      <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
         Real money, live mode, charged to <span className="text-ink">{state.adminEmail}</span>. It
         creates no membership, issues no code and sends no email — refund it from the processor
         when you are done. The card test is a one-off charge, not a subscription, so it proves
@@ -115,14 +115,14 @@ export function TestPayments({ state }: { state: TestState }) {
       </p>
 
       {error && (
-        <p role="alert" className="mt-3 break-words text-[13px] leading-relaxed text-down">
+        <p role="alert" className="mt-3 break-words text-[15px] leading-relaxed text-down">
           {error}
         </p>
       )}
 
       {state.recent.length > 0 && (
         <>
-          <h3 className="mb-2 mt-6 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+          <h3 className="mb-2 mt-6 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
             Recent tests
           </h3>
           <ul className="overflow-hidden rounded-lg border border-line">
@@ -131,14 +131,14 @@ export function TestPayments({ state }: { state: TestState }) {
                 key={test.id}
                 className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line bg-panel-2 px-4 py-2.5 last:border-b-0"
               >
-                <span className="font-mono text-[12px] capitalize text-ink-dim">
+                <span className="font-mono text-[14px] capitalize text-ink-dim">
                   {test.provider} · ${test.amount} · {test.when}
                 </span>
                 <Badge tone={TONE[test.status] ?? 'muted'}>{test.status}</Badge>
               </li>
             ))}
           </ul>
-          <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">
+          <p className="mt-2 text-[15px] leading-relaxed text-ink-dim">
             A row that reaches <span className="text-ink">paid</span> is the proof: the money
             arrived and the processor&rsquo;s callback reached this app with a valid signature. One
             stuck at <span className="text-ink">pending</span> after you have paid means the

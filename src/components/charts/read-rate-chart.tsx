@@ -151,7 +151,7 @@ export function ReadRateChart({ points }: { points: ReadRatePoint[] }) {
         ))}
       </svg>
 
-      <figcaption className="mt-2 font-mono text-[11px] text-ink-dim">
+      <figcaption className="mt-2 font-mono text-[12px] text-ink-dim">
         Latest {Math.round((latest.rate ?? 0) * 100)}% · average {Math.round(average * 100)}% across{' '}
         {usable.length} editions
       </figcaption>

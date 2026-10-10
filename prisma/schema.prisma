@@ -77,7 +77,8 @@ enum BillingInterval {
 /// report-access.ts, and no second place where the answer to "can this person read this"
 /// could come out differently.
 enum Audience {
-  /// Priced for an individual reading on their own account.
+  /// Priced for an individual reading on their own account. Shown as "Starter" — the
+  /// stored value stays `retail`; see src/lib/section-audience.ts.
   retail
   /// Priced for a desk. Usually the deeper work, usually the higher number.
   institutional

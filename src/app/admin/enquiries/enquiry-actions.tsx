@@ -123,7 +123,7 @@ export function EnquiryActions({
             <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <span className="font-mono text-[11px] text-ink-dim">
+            <span className="font-mono text-[12px] text-ink-dim">
               The price comes from the default package.
             </span>
           </div>
