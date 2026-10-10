@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
 import { MissingConfigError } from '@/lib/env'
+import { affiliateForCheckout } from '@/lib/affiliate-commission'
 import { heldKeys, priceLines, resolveCart } from '@/lib/cart'
 import { CART_MAX_ITEMS } from '@/lib/cart-shape'
 import { amountString } from '@/lib/package-shape'
@@ -78,7 +79,9 @@ export async function startCheckout(input: {
     if (reason) throw new CheckoutRefusal(items.length > 1 ? `${item.name}: ${reason}` : reason, 409)
   }
 
-  const priced = await priceLines(items, input.offerCode)
+  // The affiliate whose link brought this buyer, and their visitor discount if any.
+  const referral = await affiliateForCheckout()
+  const priced = await priceLines(items, input.offerCode, referral?.offer ? [referral.offer] : [])
 
   const held = await heldKeys(items, email)
   if (held.length > 0) {
@@ -124,6 +127,7 @@ export async function startCheckout(input: {
       sectionId: single?.kind === 'section' ? single.id : null,
       packageId: single?.kind === 'package' ? single.id : null,
       offerId: priced.offer?.id ?? null,
+      affiliateId: referral?.affiliateId ?? null,
       status: 'pending',
       lines: {
         create: priced.lines.map((line, position) => ({

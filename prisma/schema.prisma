@@ -495,6 +495,10 @@ model Affiliate {
   /// Percent off the first payment; 100 means free.
   visitorDiscountPercent Int?
 
+  /// Whether commission is paid on the referred buyer's first payment only, or on every
+  /// payment they make — renewals included. A term per affiliate, like an expert's share.
+  commissionOn AffiliateCommissionScope @default(first_payment)
+
   notes String?
 
   /// Set when the affiliate is also a member of the product.
@@ -505,6 +509,11 @@ model Affiliate {
 
   referrals Referral[]
   awards    AffiliateAward[]
+  ledger    LedgerEntry[]
+  payouts   Payout[]
+  orders    CheckoutOrder[]
+  /// The discount visitors arriving by this affiliate's link receive. See Offer.affiliateId.
+  offers    Offer[]
 
   @@index([status])
 }
@@ -621,6 +630,11 @@ model CheckoutOrder {
   offerId String?
   offer   Offer?  @relation(fields: [offerId], references: [id])
 
+  /// The affiliate whose link this buyer arrived by, read from the referral cookie at
+  /// checkout. What commission is credited against; null when nobody introduced them.
+  affiliateId String?
+  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
+
   refunds Refund[]
   /// What was bought, one row per item. Orders placed before lines existed have none; see
   /// linesForOrder in src/lib/fulfilment-shape.ts for how those are read.
@@ -647,6 +661,8 @@ model CheckoutOrder {
 
   createdAt DateTime  @default(now())
   paidAt    DateTime?
+
+  @@index([affiliateId])
 }
 
 /// A sellable membership: a name, a price, and — for card buyers — the Stripe price it
@@ -847,10 +863,17 @@ model Offer {
 
   sections OfferSection[]
   packages OfferPackage[]
+  /// Set when this offer is an affiliate's visitor discount. Such an offer is never a
+  /// public sale and never answers a typed code: it applies only to a checkout that arrived
+  /// through that affiliate's link.
+  affiliateId String?
+  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
+
   orders   CheckoutOrder[]
 
   @@index([archivedAt, startsAt, endsAt])
   @@index([code])
+  @@index([affiliateId])
 }
 
 /// Which sections an offer is good for.
@@ -927,6 +950,10 @@ enum LedgerEntryKind {
   adjustment
   /// Money paid out, which reduces the balance.
   payout
+  /// An affiliate's commission on a sale they introduced. Its own kind rather than an
+  /// `earning`, so the experts' sweep — which looks for orders with no earning yet — is
+  /// never satisfied by an affiliate's row.
+  commission
 }
 
 /// Every movement on a contributor's account.
@@ -941,9 +968,14 @@ enum LedgerEntryKind {
 /// the sum of the rows whose `payableAt` has passed; see balanceOf in lib/earnings.ts.
 model LedgerEntry {
   id       String          @id @default(cuid())
-  authorId String
-  author   Author          @relation(fields: [authorId], references: [id])
-  kind     LedgerEntryKind
+  /// The party this row belongs to: a subject matter expert, or an affiliate. Exactly one
+  /// is set. Expert rows were the only kind before affiliates joined the ledger, which is why
+  /// this was once required.
+  authorId    String?
+  author      Author?         @relation(fields: [authorId], references: [id])
+  affiliateId String?
+  affiliate   Affiliate?      @relation(fields: [affiliateId], references: [id])
+  kind        LedgerEntryKind
 
   /// Minor units. Positive credits the contributor, negative debits them.
   ///
@@ -994,6 +1026,8 @@ model LedgerEntry {
   @@unique([orderId, authorId, kind])
   @@index([authorId, createdAt])
   @@index([authorId, payableAt])
+  @@index([affiliateId, payableAt])
+  @@index([orderId, affiliateId])
 }
 
 /// How far along a withdrawal is.
@@ -1026,8 +1060,11 @@ enum PayoutStatus {
 /// payout API, only the "sent" step changes.
 model Payout {
   id       String       @id @default(cuid())
-  authorId String
-  author   Author       @relation(fields: [authorId], references: [id])
+  /// Who is being paid: an expert or an affiliate, exactly one.
+  authorId    String?
+  author      Author?      @relation(fields: [authorId], references: [id])
+  affiliateId String?
+  affiliate   Affiliate?   @relation(fields: [affiliateId], references: [id])
   status   PayoutStatus @default(requested)
 
   /// Minor units, positive. The ledger entry it writes is the negative one.
@@ -1073,6 +1110,7 @@ model Payout {
   ledger LedgerEntry[]
 
   @@index([authorId, status])
+  @@index([affiliateId, status])
   @@index([status, requestedAt])
 }
 
@@ -1606,4 +1644,12 @@ model OrderLine {
 
   @@index([orderId])
   @@index([authorId])
+}
+
+/// When an affiliate earns on a buyer they introduced.
+enum AffiliateCommissionScope {
+  /// The buyer's first paid order only.
+  first_payment
+  /// Every payment the buyer makes, renewals included.
+  every_payment
 }

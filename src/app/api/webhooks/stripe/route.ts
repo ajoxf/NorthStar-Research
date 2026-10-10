@@ -6,6 +6,7 @@ import { fulfilPaidOrder } from '@/lib/fulfilment'
 import { getNotificationProvider } from '@/lib/notifications'
 import { type Stripe } from '@/lib/payments/stripe'
 import { stripeProvider } from '@/lib/payments/stripe-provider'
+import { recordCardRenewal } from '@/lib/renewals'
 import { resolveSubscription } from '@/lib/subscription-target'
 
 export const runtime = 'nodejs'
@@ -247,6 +248,24 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
    * member's card each month in silence unless they had Stripe's own receipts switched on.
    */
   if (invoice.billing_reason !== 'subscription_cycle') return
+
+  /*
+   * The renewal as an order, so the money it took is paid out to the experts and, on
+   * every-payment terms, credited to the affiliate — see renewals.ts. Never fails the
+   * webhook: access has already been extended, and a missing order can be repaired by hand.
+   */
+  if (subscriptionId && target.kind !== 'unknown') {
+    try {
+      await recordCardRenewal({
+        id: invoice.id ?? `inv_${subscriptionId}_${Date.now()}`,
+        subscriptionId,
+        amountPaidCents: invoice.amount_paid ?? 0,
+        currency: invoice.currency ?? 'usd',
+      })
+    } catch (error) {
+      console.error(`[stripe:webhook] renewal ${invoice.id} paid but not recorded as an order`, error)
+    }
+  }
 
   try {
     const receipt = await getNotificationProvider().sendReceiptEmail(

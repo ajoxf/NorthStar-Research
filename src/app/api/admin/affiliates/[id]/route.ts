@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { optionalEmailSchema } from '@/lib/validation'
 
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
+import { CARRIED_NOTE, syncAffiliateOffer } from '@/lib/affiliate-commission'
 import { db } from '@/lib/db'
 
 export const runtime = 'nodejs'
@@ -16,6 +17,7 @@ const schema = z.object({
   rewardKind: z.enum(['percent', 'fixed', 'free_months']).optional(),
   rewardAmount: z.number().int().min(0).max(10_000).optional(),
   visitorDiscountPercent: z.number().int().min(0).max(100).nullable().optional(),
+  commissionOn: z.enum(['first_payment', 'every_payment']).optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
   /** Mark an award paid. Settlement happens outside this system — see below. */
   settleAwardId: z.string().optional(),
@@ -62,6 +64,17 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const data = parsed.data
 
   if (data.settleAwardId) {
+    // A carried-over award is on the ledger; settling it here as well would pay it twice.
+    const onLedger = await db.ledgerEntry.findFirst({
+      where: { affiliateId: affiliate.id, note: `${CARRIED_NOTE}${data.settleAwardId}` },
+      select: { id: true },
+    })
+    if (onLedger) {
+      return NextResponse.json(
+        { error: 'That award is on the ledger now — pay it through a withdrawal.' },
+        { status: 409 },
+      )
+    }
     // Scoped to this affiliate: an id from one partner's page must not settle another's.
     const updated = await db.affiliateAward.updateMany({
       where: { id: data.settleAwardId, affiliateId: affiliate.id, settledAt: null },
@@ -88,7 +101,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ ok: true })
   }
 
-  await db.affiliate.update({
+  const updated = await db.affiliate.update({
     where: { id: affiliate.id },
     data: {
       name: data.name ?? undefined,
@@ -98,9 +111,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       rewardAmount: data.rewardAmount ?? undefined,
       visitorDiscountPercent:
         data.visitorDiscountPercent === undefined ? undefined : data.visitorDiscountPercent,
+      commissionOn: data.commissionOn ?? undefined,
       notes: data.notes === undefined ? undefined : data.notes,
     },
   })
 
+  await syncAffiliateOffer(updated)
   return NextResponse.json({ ok: true })
 }

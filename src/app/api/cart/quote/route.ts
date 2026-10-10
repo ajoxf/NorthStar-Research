@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
+import { affiliateForCheckout } from '@/lib/affiliate-commission'
 import { heldKeys, priceLines, resolveCart } from '@/lib/cart'
 import { CART_MAX_ITEMS, groupByInterval } from '@/lib/cart-shape'
 
@@ -31,11 +32,13 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: 'Nothing to price.' }, { status: 400 })
 
   const { items, unavailable } = await resolveCart(parsed.data.items)
+  // A visitor who came by an affiliate's link sees that link's discount, as checkout applies it.
+  const referral = await affiliateForCheckout()
   const held = await heldKeys(items, parsed.data.email)
 
   const groups = await Promise.all(
     groupByInterval(items.map((entry) => ({ ...entry, interval: entry.item.interval }))).map(async (group) => {
-      const priced = await priceLines(group.items, parsed.data.code)
+      const priced = await priceLines(group.items, parsed.data.code, referral?.offer ? [referral.offer] : [])
       return {
         interval: group.interval,
         currency: group.items[0].item.currency,

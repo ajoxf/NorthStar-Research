@@ -5,6 +5,7 @@ import { emailSchema } from '@/lib/validation'
 
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { normaliseSlug } from '@/lib/affiliates'
+import { syncAffiliateOffer } from '@/lib/affiliate-commission'
 import { db } from '@/lib/db'
 
 export const runtime = 'nodejs'
@@ -17,6 +18,8 @@ const schema = z.object({
   rewardKind: z.enum(['percent', 'fixed', 'free_months']).default('percent'),
   rewardAmount: z.number().int().min(0).max(10_000),
   visitorDiscountPercent: z.number().int().min(0).max(100).nullable().optional(),
+  /** First payment only, or every payment including renewals. */
+  commissionOn: z.enum(['first_payment', 'every_payment']).default('first_payment'),
   notes: z.string().trim().max(2000).optional(),
 })
 
@@ -70,9 +73,12 @@ export async function POST(request: Request) {
       rewardKind: data.rewardKind,
       rewardAmount: data.rewardAmount,
       visitorDiscountPercent: data.visitorDiscountPercent ?? null,
+      commissionOn: data.commissionOn,
       notes: data.notes || null,
     },
   })
 
+  // The link's visitor discount is a real offer, so it prices and records like any other.
+  await syncAffiliateOffer(affiliate)
   return NextResponse.json({ ok: true, id: affiliate.id, slug: affiliate.slug })
 }

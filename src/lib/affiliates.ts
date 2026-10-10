@@ -66,10 +66,16 @@ export function awardFor(
   return rewardAmount
 }
 
-export function describeReward(kind: AffiliateRewardKind, amount: number): string {
-  if (kind === 'percent') return `${amount}% of the first payment`
-  if (kind === 'fixed') return `$${amount} per conversion`
-  return `${amount} free month${amount === 1 ? '' : 's'} per conversion`
+export function describeReward(
+  kind: AffiliateRewardKind,
+  amount: number,
+  on: 'first_payment' | 'every_payment' = 'first_payment',
+): string {
+  // Free months are granted once per buyer whatever the scope.
+  if (kind === 'free_months') return `${amount} free month${amount === 1 ? '' : 's'} per new buyer`
+  const when = on === 'every_payment' ? 'every payment, renewals included' : 'the first payment'
+  if (kind === 'percent') return `${amount}% of ${when}`
+  return `$${amount} on ${when}`
 }
 
 /** Units an award is denominated in, for display. */

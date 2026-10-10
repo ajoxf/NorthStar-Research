@@ -70,16 +70,29 @@ export function toOfferShape(row: OfferRow, redeemedCount = 0): OfferShape {
  */
 export async function liveOffers(): Promise<OfferShape[]> {
   const [rows, used] = await Promise.all([
-    db.offer.findMany({ where: { archivedAt: null }, include: WITH_SCOPE, orderBy: { createdAt: 'desc' } }),
+    // An affiliate's visitor discount is never a public sale and never answers a typed code:
+    // it reaches a checkout only through that affiliate's link. See affiliateOffer.
+    db.offer.findMany({ where: { archivedAt: null, affiliateId: null }, include: WITH_SCOPE, orderBy: { createdAt: 'desc' } }),
     redemptionCounts(),
   ])
   return rows.map((row) => toOfferShape(row, used[row.id] ?? 0))
 }
 
+/** The visitor discount for one affiliate's link, when it has one and it is live. */
+export async function affiliateOffer(affiliateId: string): Promise<OfferShape | null> {
+  const row = await db.offer.findFirst({
+    where: { affiliateId, archivedAt: null },
+    include: WITH_SCOPE,
+    orderBy: { createdAt: 'desc' },
+  })
+  return row ? toOfferShape(row, 0) : null
+}
+
 /** Everything, archived included, for the admin list. */
 export async function allOffers(): Promise<OfferShape[]> {
   const [rows, used] = await Promise.all([
-    db.offer.findMany({ include: WITH_SCOPE, orderBy: { createdAt: 'desc' } }),
+    // Affiliate discounts are managed on the affiliate, not here.
+    db.offer.findMany({ where: { affiliateId: null }, include: WITH_SCOPE, orderBy: { createdAt: 'desc' } }),
     redemptionCounts(),
   ])
   return rows.map((row) => toOfferShape(row, used[row.id] ?? 0))

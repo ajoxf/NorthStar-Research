@@ -16,6 +16,7 @@ type Affiliate = {
   rewardKind: 'percent' | 'fixed' | 'free_months'
   rewardAmount: number
   visitorDiscountPercent: number | null
+  commissionOn: 'first_payment' | 'every_payment'
   notes: string | null
   link: string
   rewardDescription: string
@@ -27,6 +28,8 @@ type Award = {
   reason: string
   createdAt: string
   settled: boolean
+  /** Carried onto the ledger: paid through a withdrawal now, never marked settled here. */
+  onLedger: boolean
 }
 
 /**
@@ -132,6 +135,7 @@ export function AffiliatePanel({
                 email: String(form.get('email') ?? ''),
                 rewardKind: String(form.get('rewardKind') ?? affiliate.rewardKind),
                 rewardAmount: Number(form.get('rewardAmount') ?? 0),
+                commissionOn: String(form.get('commissionOn') ?? affiliate.commissionOn),
                 visitorDiscountPercent: discount > 0 ? discount : null,
                 notes: String(form.get('notes') ?? '') || null,
               },
@@ -157,7 +161,7 @@ export function AffiliatePanel({
                 defaultValue={affiliate.rewardKind}
                 className="h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-[17px] text-ink"
               >
-                <option value="percent">% of first payment</option>
+                <option value="percent">% of what the buyer paid</option>
                 <option value="fixed">Fixed $ per sale</option>
                 <option value="free_months">Free months</option>
               </select>
@@ -171,6 +175,19 @@ export function AffiliatePanel({
                 min={0}
                 defaultValue={affiliate.rewardAmount}
               />
+            </div>
+            <div>
+              <Label htmlFor="commissionOn">Pays on</Label>
+              <select
+                id="commissionOn"
+                name="commissionOn"
+                defaultValue={affiliate.commissionOn}
+                className="h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-[17px] text-ink"
+              >
+                <option value="first_payment">The buyer&rsquo;s first payment only</option>
+                <option value="every_payment">Every payment, renewals included</option>
+              </select>
+              <Hint>Commission is held 30 days, and taken back if the payment is refunded.</Hint>
             </div>
             <div>
               <Label htmlFor="visitorDiscountPercent">Visitor discount %</Label>
@@ -242,12 +259,14 @@ export function AffiliatePanel({
 
       <section className="panel mt-5 p-5 sm:p-6">
         <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="eyebrow">Awards</h2>
+          <h2 className="eyebrow">Awards before the ledger</h2>
         </div>
         <p className="mb-5 text-[15px] leading-relaxed text-ink-dim">
-          Earned automatically when a referral pays. Marking one settled records that{' '}
-          <span className="text-ink">you have already paid it</span> — this system does not move
-          money.
+          History. Cash commission is now credited to the ledger when a referred buyer pays —
+          see the figures above. Cash awards that were still unpaid have been carried onto it and
+          are paid through a withdrawal like any other commission. Free months are still recorded
+          here for you to grant; marking one settled records that{' '}
+          <span className="text-ink">you have granted it</span>.
         </p>
 
         {awards.length === 0 ? (
@@ -269,6 +288,10 @@ export function AffiliatePanel({
                 {award.settled ? (
                   <span className="shrink-0 font-mono text-[12px] uppercase tracking-[0.12em] text-up">
                     Settled
+                  </span>
+                ) : award.onLedger ? (
+                  <span className="shrink-0 font-mono text-[12px] uppercase tracking-[0.12em] text-ink-dim">
+                    On the ledger
                   </span>
                 ) : (
                   <Button
