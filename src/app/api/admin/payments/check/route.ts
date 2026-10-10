@@ -5,13 +5,13 @@ import { isConfigured } from '@/lib/env'
 import { REQUIRED_STRIPE_EVENTS, processorUrls } from '@/lib/payment-settings'
 import { priceLine, stripePriceMismatch } from '@/lib/package-shape'
 import { sellablePackages } from '@/lib/packages'
-import { cregisConfigured } from '@/lib/cregis'
+import { cregisConfigured } from '@/lib/payments/cregis'
 import {
   stripeClient,
   stripeConfigured,
   stripeFallbackPriceConfigured,
   stripePriceFacts,
-} from '@/lib/stripe'
+} from '@/lib/payments/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'

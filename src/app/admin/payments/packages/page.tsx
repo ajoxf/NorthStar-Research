@@ -9,7 +9,7 @@ import { db } from '@/lib/db'
 import { grantableItemOptions } from '@/lib/package-items'
 import { grantableItems } from '@/lib/package-trial'
 import { allPackages, packageUsageMap } from '@/lib/packages'
-import { stripeConfigured } from '@/lib/stripe'
+import { getPaymentProvider } from '@/lib/payments'
 
 export const metadata: Metadata = {
   title: 'Packages and pricing',
@@ -139,7 +139,7 @@ export default async function PackagesPage() {
           packages={rows}
           authors={authors}
           items={items}
-          stripeReady={stripeConfigured()}
+          stripeReady={await getPaymentProvider('stripe').configured()}
         />
 
         <section className="mt-12 border-t border-line pt-8">

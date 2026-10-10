@@ -78,7 +78,7 @@ See `.env.example` for the full annotated list. The ones that must be real befor
 
 **Placeholders fail loudly, never silently.** `src/lib/env.ts` treats any value containing
 `REPLACE_ME` as unset. Invoking the Cregis client with a placeholder throws a
-`MissingConfigError` naming every missing key; `/api/checkout/create` turns that into a 503
+`MissingConfigError` naming every missing key; `/api/checkout` turns that into a 503
 that says payments are not configured, and the Cregis webhook rejects the callback rather
 than processing a payment it cannot verify. A placeholder must never be mistaken for a
 working integration.
@@ -89,7 +89,7 @@ working integration.
 
 ### Payment → code → account
 
-1. `POST /api/checkout/create` records a `CheckoutOrder` as `pending`, then signs and calls
+1. `POST /api/checkout` (crypto) records a `CheckoutOrder` as `pending`, then signs and calls
    Cregis to create a $199 order.
 2. Cregis calls `POST /api/webhooks/cregis` server-to-server. The signature is verified
    (MD5 of the API key + sorted `key=value` pairs) **before anything in the payload is
@@ -197,7 +197,7 @@ Things this build deliberately did not decide, and things that need a real value
 - **Static outbound IP for Cregis.** Confirmed not required for this account. Vercel
   serverless functions still have no fixed outbound IP, so if a checkout ever fails with an
   authorisation or IP error while the credentials are unchanged, re-read the note at the top
-  of `src/lib/cregis.ts` before touching the key — a rejection on source IP means the key is
+  of `src/lib/payments/cregis.ts` before touching the key — a rejection on source IP means the key is
   correct.
 - **WhatsApp delivery.** Reports are delivered by email only. The `NotificationProvider`
   WhatsApp methods and the Twilio provider remain in `src/lib/notifications/`, and the

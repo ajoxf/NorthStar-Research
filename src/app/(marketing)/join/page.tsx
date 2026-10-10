@@ -6,11 +6,11 @@ import { Band, Eyebrow } from '@/components/band'
 import { ButtonLink } from '@/components/ui/button'
 import { ToastProvider } from '@/components/ui/toast'
 import { db } from '@/lib/db'
-import { isConfigured } from '@/lib/env'
 import { FALLBACK_PACKAGE } from '@/lib/package-shape'
 import { packageContents } from '@/lib/package-items'
 import { sellablePackages } from '@/lib/packages'
 import { trialOffers } from '@/lib/trial'
+import { paymentAvailability } from '@/lib/payments'
 
 export const metadata: Metadata = { title: 'Checkout' }
 export const dynamic = 'force-dynamic'
@@ -44,12 +44,11 @@ export default async function JoinPage({
    */
 
   // Resolved server-side so the page can say plainly which payment methods are actually
-  // wired up, rather than presenting a button that fails at the last step.
-  const cryptoReady = isConfigured('CREGIS_PROJECT_ID', 'CREGIS_API_KEY', 'CREGIS_BASE_URL')
-  // Only the key. A package carries its own Stripe price; STRIPE_PRICE_ID is the fallback
-  // for the built-in plan and requiring it here hid the card option on deployments that
-  // were perfectly able to take a card. See STRIPE_ENV_KEYS.
-  const cardReady = isConfigured('STRIPE_SECRET_KEY')
+  // wired up, rather than presenting a button that fails at the last step. Asked of each
+  // rail: Cregis can be configured from the console, which an environment check missed.
+  const available = await paymentAvailability()
+  const cryptoReady = available.cregis
+  const cardReady = available.stripe
 
   /*
    * Which trial to advertise, when there is one.

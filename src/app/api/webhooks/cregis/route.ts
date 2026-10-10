@@ -1,12 +1,10 @@
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
-import { appBaseUrl, MissingConfigError } from '@/lib/env'
+import { appBaseUrl } from '@/lib/env'
 import { addPeriod } from '@/lib/package-shape'
 import { intervalForPackage } from '@/lib/packages'
-import { verifyCregisCallback } from '@/lib/cregis'
-import { callbackIpAllowed, clientAddress } from '@/lib/cregis-callback'
-import { resolveCregisSettings } from '@/lib/cregis-settings'
+import { cregisProvider } from '@/lib/payments/cregis-provider'
 import { isPaidStatus, isUnderpaid, unwrapCallbackOrder } from '@/lib/cregis-protocol'
 import { codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
 import { recordReferralConversion } from '@/lib/referral-attribution'
@@ -36,55 +34,12 @@ function ack(): Response {
  * That page can be visited by anyone; this one cannot be forged without the API key.
  */
 export async function POST(request: Request) {
-  const raw = await request.text()
-
-  let payload: Record<string, unknown>
-  try {
-    payload = JSON.parse(raw)
-  } catch {
-    console.error('[cregis:webhook] rejected — body was not valid JSON')
-    return NextResponse.json({ error: 'invalid payload' }, { status: 400 })
+  // JSON, then the optional source allowlist, then the signature — see cregis-provider.ts.
+  const verified = await cregisProvider.verifyWebhook(await request.text(), request.headers)
+  if (!verified.ok) {
+    return NextResponse.json({ error: verified.error }, { status: verified.status })
   }
-
-  /*
-   * Optional source-address allowlist, checked before the signature.
-   *
-   * Off unless an operator sets it, and that default is correct rather than lax: the
-   * signature below is what actually authorises the callback, and Cregis has historically
-   * called from a rotating pool of addresses. An incomplete allowlist would silently
-   * reject real payments — the worst failure this system has — so it is opt-in, and the
-   * console says as much beside the field.
-   */
-  try {
-    const { callbackIps } = await resolveCregisSettings()
-    const source = clientAddress(request.headers)
-    if (!callbackIpAllowed(callbackIps.value, source)) {
-      console.error(`[cregis:webhook] rejected — source ${source ?? 'unknown'} is not allowlisted`)
-      return NextResponse.json({ error: 'source not allowed' }, { status: 403 })
-    }
-  } catch (error) {
-    // A settings lookup failure must not silently open the gate, but it also must not
-    // reject a real payment: the signature check below still stands on its own.
-    console.error('[cregis:webhook] could not read the IP allowlist; continuing on signature', error)
-  }
-
-  try {
-    if (!(await verifyCregisCallback(payload))) {
-      // Never fall back to trusting the payload. An unverifiable callback is a hostile
-      // callback as far as this route is concerned.
-      console.error('[cregis:webhook] rejected — signature verification failed')
-      return NextResponse.json({ error: 'invalid signature' }, { status: 401 })
-    }
-  } catch (error) {
-    if (error instanceof MissingConfigError) {
-      console.error(
-        `[cregis:webhook] REJECTED — ${error.message} No payment can be processed until real ` +
-          `Cregis credentials are set. This callback was NOT actioned.`,
-      )
-      return NextResponse.json({ error: 'payment integration not configured' }, { status: 503 })
-    }
-    throw error
-  }
+  const payload = verified.event
 
   // Cregis nests the order under `data`; reading it off the envelope matches nothing.
   const { status, orderId, cregisOrderId } = unwrapCallbackOrder(payload)

@@ -15,8 +15,7 @@ import { ButtonLink } from '@/components/ui/button'
 import { ToastProvider } from '@/components/ui/toast'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { cregisConfigured } from '@/lib/cregis'
-import { stripeConfigured } from '@/lib/stripe'
+import { paymentAvailability } from '@/lib/payments'
 import {
   migrateLegacyTrialSettings,
   TRIAL_DEFAULTS,
@@ -58,10 +57,10 @@ export default async function PaymentSettingsPage() {
   const stripe = stripeSettings()
   const cregis = await cregisSettings()
   const cregisFormState = await buildCregisFormState()
-  const [packages, defaultPkg, cregisReady, recentTests] = await Promise.all([
+  const [packages, defaultPkg, available, recentTests] = await Promise.all([
     sellablePackages(),
     defaultPackage(),
-    cregisConfigured(),
+    paymentAvailability(),
     db.checkoutOrder.findMany({
       where: { isTest: true },
       orderBy: { createdAt: 'desc' },
@@ -70,7 +69,7 @@ export default async function PaymentSettingsPage() {
   ])
   const urls = processorUrls()
   const baseLooksWrong = urls.base !== CANONICAL_BASE_URL
-  const stripeReady = stripeConfigured()
+  const { stripe: stripeReady, cregis: cregisReady } = available
   const trialState = await buildTrialState()
   // Presence only. The URL itself is infrastructure and the secret is never surfaced.
   const relayConfigured = Boolean(process.env.CREGIS_RELAY_URL)
