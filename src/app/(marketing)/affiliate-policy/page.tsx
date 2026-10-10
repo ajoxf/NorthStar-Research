@@ -29,11 +29,6 @@ export default function AffiliatePolicyPage() {
           end any affiliate relationship. You must be at least 18, and you must be allowed,
           where you live, to promote a service like this one and be paid for it.
         </p>
-        <ReviewNote>
-          Invitation-only follows the brief&apos;s recommendation on open question 5 (open
-          affiliate registration on a financial platform attracts exactly the promotion this
-          policy prohibits). It has not yet been confirmed as a decision.
-        </ReviewNote>
       </Clause>
 
       <Clause n="2" title="How referrals are tracked">

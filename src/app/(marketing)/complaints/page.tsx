@@ -49,7 +49,7 @@ export default function ComplaintsPage() {
       <Clause n="3" title="What happens next">
         <ul>
           <li>
-            <strong>Acknowledgement</strong> within 5 business days, telling you who is
+            <strong>Acknowledgement</strong> within 10 business days, telling you who is
             handling your complaint.
           </li>
           <li>
@@ -63,7 +63,7 @@ export default function ComplaintsPage() {
           </li>
         </ul>
         <ReviewNote>
-          5 business days and 4 weeks are common working standards, not requirements taken from
+          10 business days and 4 weeks are working standards chosen for this platform, not requirements taken from
           any particular regulator. If the regulatory status in section 2 of the Regulatory
           Status page brings a specific complaints regime with it, these timings and section 4
           must follow that regime instead.

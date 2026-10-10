@@ -72,7 +72,7 @@ export default function RefundPolicyPage() {
           </li>
           <li>
             if a renewal was charged and you ask for a refund within{' '}
-            <strong>7 days</strong> of it, without having opened any research in that period;
+            <strong>120 days</strong> of it, without having opened any research in that period;
           </li>
           <li>
             if we were unable to provide access for a significant part of a period because of a
@@ -88,7 +88,7 @@ export default function RefundPolicyPage() {
         </p>
         <p>When a payment is refunded, the access it bought ends.</p>
         <ReviewNote>
-          The 7-day, nothing-read renewal window is a proposal, not something the code enforces;
+          The 120-day, nothing-read renewal window is the owner&apos;s decision, but the code does not enforce it;
           it can be checked by hand from the reading log. Consumer law in some countries gives a
           cooling-off right that a subscriber can lose by starting to use digital content
           immediately, but only if they expressly agreed to that at checkout. There is currently
