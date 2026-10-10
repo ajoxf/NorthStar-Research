@@ -1,14 +1,9 @@
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
-import { appBaseUrl } from '@/lib/env'
-import { addPeriod } from '@/lib/package-shape'
-import { intervalForPackage } from '@/lib/packages'
+import { fulfilPaidOrder } from '@/lib/fulfilment'
 import { cregisProvider } from '@/lib/payments/cregis-provider'
 import { isPaidStatus, isUnderpaid, unwrapCallbackOrder } from '@/lib/cregis-protocol'
-import { codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
-import { recordReferralConversion } from '@/lib/referral-attribution'
-import { getNotificationProvider } from '@/lib/notifications'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -108,272 +103,21 @@ export async function POST(request: Request) {
     return ack()
   }
 
-  // Crypto cannot auto-renew, so an existing member paying again is a manual renewal:
-  // extend their period rather than minting a second code they do not need.
-  const existingMember = await db.member.findUnique({ where: { email: order.email } })
-
-  if (existingMember?.passwordHash) {
-    /*
-     * Which thing is being renewed?
-     *
-     * An order carrying a section renews that section. Extending the member's own period
-     * instead would quietly upgrade a single-section subscriber to the whole archive —
-     * the same trap the Stripe renewal path has, arriving by crypto.
-     */
-    const renewingSection = order.sectionId
-      ? await db.section.findUnique({
-          where: { id: order.sectionId },
-          select: { id: true, interval: true },
-        })
-      : null
-
-    const interval = renewingSection
-      ? renewingSection.interval
-      : await intervalForPackage(order.packageId ?? existingMember.packageId)
-
-    const held = renewingSection
-      ? await db.entitlement.findUnique({
-          where: {
-            memberId_sectionId: { memberId: existingMember.id, sectionId: renewingSection.id },
-          },
-          select: { renewsAt: true },
-        })
-      : null
-
-    /*
-     * What this package contains, when the order names one.
-     *
-     * Read here so both the date below and the write inside the transaction agree about
-     * whether this is a package renewal or a legacy all-access one. Archived items are
-     * excluded, the same as at redemption — an item withdrawn from sale is not renewed
-     * into a fresh period by somebody else's payment.
-     */
-    const renewalPackageId = renewingSection ? null : (order.packageId ?? existingMember.packageId)
-    const renewalPackageItemIds = renewalPackageId
-      ? (
-          await db.packageItem.findMany({
-            where: { packageId: renewalPackageId, item: { archivedAt: null } },
-            select: { itemId: true },
-          })
-        ).map((row) => row.itemId)
-      : []
-
-    /*
-     * Stack onto unused time rather than truncating it, whichever is being renewed.
-     *
-     * For a package that is the latest date across its items, so renewing a bundle early
-     * keeps the time left on every part of it — taking the earliest would shorten the rest
-     * to match whichever item happened to lapse first.
-     */
-    const heldPackageRenewal = renewalPackageItemIds.length
-      ? (
-          await db.entitlement.aggregate({
-            where: { memberId: existingMember.id, itemId: { in: renewalPackageItemIds } },
-            _max: { renewsAt: true },
-          })
-        )._max.renewsAt
-      : null
-
-    const current = renewingSection
-      ? (held?.renewsAt ?? null)
-      : renewalPackageItemIds.length
-        ? heldPackageRenewal
-        : existingMember.subscriptionRenewsAt
-    const from = current && current > new Date() ? current : new Date()
-
-    await db.$transaction(async (tx) => {
-      await tx.checkoutOrder.update({
-        where: { id: order.id },
-        data: { status: 'paid', paidAt: new Date(), cregisOrderId, rawCallback: payload as never },
-      })
-
-      if (renewingSection) {
-        await tx.entitlement.upsert({
-          where: {
-            memberId_sectionId: { memberId: existingMember.id, sectionId: renewingSection.id },
-          },
-          create: {
-            memberId: existingMember.id,
-            sectionId: renewingSection.id,
-            status: 'active',
-            startedAt: new Date(),
-            renewsAt: addPeriod(interval, from),
-            billingProvider: 'cregis',
-          },
-          update: {
-            status: 'active',
-            renewsAt: addPeriod(interval, from),
-            cancelAtPeriodEnd: false,
-          },
-        })
-        return
-      }
-
-      /*
-       * A package renewal extends the package's items, not the member's own period.
-       *
-       * The same trap as the section branch above, one level out. `subscriptionStatus`
-       * and `subscriptionRenewsAt` *are* the all-access membership — writing them for
-       * somebody who bought one contributor's package would hand them the whole site on
-       * their second payment, having correctly sold them a slice on the first.
-       *
-       * Empty contents fall through to the member columns, matching `grantFor`: a package
-       * nobody has ticked anything onto still grants what it granted before, because the
-       * alternative is a paying member whose renewal quietly gives them nothing.
-       */
-      const renewingItemIds = renewalPackageItemIds.length > 0 ? renewalPackageItemIds : null
-
-      if (renewingItemIds) {
-        await tx.entitlement.updateMany({
-          where: { memberId: existingMember.id, itemId: { in: renewingItemIds } },
-          data: {
-            status: 'active',
-            renewsAt: addPeriod(interval, from),
-            cancelAtPeriodEnd: false,
-          },
-        })
-      } else {
-        await tx.member.update({
-          where: { id: existingMember.id },
-          data: {
-            subscriptionStatus: 'active',
-            subscriptionRenewsAt: addPeriod(interval, from),
-            billingProvider: 'cregis',
-            packageId: order.packageId ?? existingMember.packageId,
-            renewalReminderSentAt: null,
-          },
-        })
-      }
-    })
-
-    /*
-     * A renewal is a payment, and a payment gets a receipt.
-     *
-     * This was missing: a returning member paid, their period was silently extended, and
-     * they received nothing at all. No receipt, no confirmation — the only evidence
-     * anything happened was a renewal date they would have to log in to see. It presents
-     * exactly like a failed payment, and it is the same person paying again who is most
-     * entitled to know it worked.
-     *
-     * No access code here, correctly: they already have an account, and a code would be
-     * an activation step they do not need and cannot use.
-     */
-    try {
-      const receipt = await getNotificationProvider().sendReceiptEmail(
-        { email: order.email, firstName: existingMember.firstName },
-        {
-          amount: order.amount,
-          currency: order.currency,
-          method: 'Crypto',
-          reference: cregisOrderId,
-          paidAt: new Date(),
-        },
-      )
-      if (receipt.status === 'failed') {
-        console.error(`[cregis:webhook] renewal receipt failed for ${order.email}: ${receipt.error}`)
-      }
-    } catch (error) {
-      // Same rule as everywhere else on this path: the money is real and the period is
-      // extended whatever the mail does.
-      console.error('[cregis:webhook] renewal receipt threw', error)
-    }
-
-    console.info(`[cregis:webhook] renewal for ${order.email} — period extended`)
-    return ack()
-  }
-
-  const code = generateRedemptionCode()
-
-  await db.$transaction(async (tx) => {
-    await tx.checkoutOrder.update({
-      where: { id: order.id },
-      data: {
-        status: 'paid',
-        paidAt: new Date(),
-        cregisOrderId,
-        rawCallback: payload as never,
-      },
-    })
-
-    await tx.redemptionCode.create({
-      // Expiry starts from payment, not from delivery: the buyer has the code the moment
-      // the callback lands, and dating it from anything later would be a promise the
-      // system cannot keep if an email is slow.
-      data: {
-        code,
-        cregisOrderId,
-        email: order.email,
-        status: 'unused',
-        // Bought at list price, so no discount to record.
-        discountPercent: 0,
-        expiresAt: codeExpiresAt(),
-        // Carried from the order so the buyer is granted the package they paid for,
-        // whatever the default has become by the time they redeem.
-        packageId: order.packageId,
-        // Likewise the section, when a single section was what was bought. Null keeps its
-        // old meaning: this code grants the all-access membership.
-        sectionId: order.sectionId,
-      },
-    })
-
-    // Create the CRM contact now, at 'pending' — the subscription only becomes active
-    // when the code is actually redeemed, but the contact and its source exist from the
-    // moment money changes hands.
-    await tx.member.upsert({
-      where: { email: order.email },
-      create: {
-        email: order.email,
-        phoneNumber: order.phoneNumber,
-        source: 'cregis_checkout',
-        subscriptionStatus: 'pending',
-        // packageId describes the all-access plan, so a section purchase leaves it alone.
-        packageId: order.sectionId ? null : order.packageId,
-      },
-      update: {
-        phoneNumber: order.phoneNumber ?? undefined,
-        ...(order.sectionId ? {} : { packageId: order.packageId ?? undefined }),
-      },
-    })
+  /*
+   * Paid. Grant it — or, for somebody without an account, issue a code — in the one place
+   * that does this for every rail. Crypto cannot auto-renew, so an existing member paying
+   * again is a manual renewal, and fulfilment stacks the new period on the time they hold.
+   */
+  const result = await fulfilPaidOrder({
+    order,
+    provider: 'cregis',
+    providerRef: cregisOrderId,
+    methodLabel: 'Crypto',
+    amount: order.amount,
+    currency: order.currency,
+    rawCallback: payload,
   })
-
-  const redeemUrl = `${appBaseUrl()}/redeem?code=${encodeURIComponent(code)}`
-  const provider = getNotificationProvider()
-
-  // A receipt for a payment that actually happened. Sent here rather than at redemption
-  // because this is the only place the amount and the processor's reference are known.
-  try {
-    const receipt = await provider.sendReceiptEmail(
-      { email: order.email },
-      {
-        amount: order.amount,
-        currency: order.currency,
-        method: 'Crypto',
-        reference: cregisOrderId,
-        paidAt: new Date(),
-      },
-    )
-    if (receipt.status === 'failed') {
-      console.error(`[cregis:webhook] receipt failed for ${order.email}: ${receipt.error}`)
-    }
-  } catch (error) {
-    console.error('[cregis:webhook] receipt threw', error)
-  }
-
-  // Credit the affiliate, if this buyer came through one. Never throws — see the note in
-  // referral-attribution.ts: the payment is real whatever bookkeeping does.
-  await recordReferralConversion(order.email, Math.round(Number(order.amount) || 0))
-
-  // Delivery failures must not fail the webhook: the payment is real and the code is
-  // issued. Cregis retrying would only mint a duplicate. Log loudly and let the admin
-  // resend from the console.
-  try {
-    const result = await provider.sendRedemptionCodeEmail({ email: order.email }, code, redeemUrl)
-    if (result.status === 'failed') {
-      console.error(`[cregis:webhook] code ${code} issued but email failed: ${result.error}`)
-    }
-  } catch (error) {
-    console.error(`[cregis:webhook] code ${code} issued but email threw`, error)
-  }
+  if (result.outcome === 'granted') console.info(`[cregis:webhook] ${order.email} — period extended`)
 
   return ack()
 }

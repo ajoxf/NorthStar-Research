@@ -459,11 +459,17 @@ model RedemptionCode {
   /// holder has already shown they need the reminder.
   expiryReminderSentAt DateTime?
 
+  /// The order this code was issued for. Every line of that order is what redeeming it
+  /// grants. Null for codes issued by hand, which use packageId/sectionId above.
+  orderId String?
+  order   CheckoutOrder? @relation(fields: [orderId], references: [id])
+
   createdAt  DateTime  @default(now())
   redeemedAt DateTime?
 
   @@index([status])
   @@index([expiresAt])
+  @@index([orderId])
 }
 
 /// Someone who promotes the product in exchange for a reward.
@@ -616,6 +622,11 @@ model CheckoutOrder {
   offer   Offer?  @relation(fields: [offerId], references: [id])
 
   refunds Refund[]
+  /// What was bought, one row per item. Orders placed before lines existed have none; see
+  /// linesForOrder in src/lib/fulfilment-shape.ts for how those are read.
+  lines   OrderLine[]
+  /// The access codes issued for this order.
+  codes   RedemptionCode[]
   ledger  LedgerEntry[]
 
   /// The Stripe subscription this checkout created, when it was a card sale.
@@ -757,6 +768,9 @@ model Package {
   codes   RedemptionCode[]
   items   PackageItem[]
   offers  OfferPackage[]
+
+  /// Order lines that bought this.
+  orderLines OrderLine[]
 
   @@index([archivedAt, sortOrder])
   @@index([authorId, archivedAt])
@@ -1350,6 +1364,9 @@ model Section {
   offers       OfferSection[]
 
   /// One section per topic per author. A second "Energy by Sarah" is a mistake, not a product.
+  /// Order lines that bought this.
+  orderLines OrderLine[]
+
   @@unique([topicId, authorId])
   @@index([archivedAt, sortOrder])
 }
@@ -1450,6 +1467,11 @@ model Entitlement {
   memberId String
   member   Member @relation(fields: [memberId], references: [id])
 
+  /// The order line that paid for this access, when it came from a purchase. Null for
+  /// comps, trials, and rows written before order lines existed.
+  orderLineId String?
+  orderLine   OrderLine? @relation(fields: [orderLineId], references: [id])
+
   /// The section this grants, for every row written before items existed.
   ///
   /// Being retired in favour of `itemId`: the backfill gives every row an item, new writes
@@ -1490,6 +1512,7 @@ model Entitlement {
   @@index([status, renewsAt])
   @@index([sectionId])
   @@index([itemId])
+  @@index([orderLineId])
 }
 
 /// A member's account in a product's own sign-in system.
@@ -1528,4 +1551,53 @@ model ProductAccount {
 
   @@unique([memberId, itemId])
   @@index([itemId])
+}
+
+/// What kind of thing one order line bought.
+enum OrderLineKind {
+  section
+  package
+  /// The built-in plan that predates packages: the all-access membership.
+  plan
+}
+
+/// One item in an order.
+///
+/// An order used to be one thing, recorded as a single sectionId or packageId on
+/// CheckoutOrder. With a cart it is several, and each line carries what is needed to grant,
+/// attribute and refund it on its own: what was bought, the period it runs for, what it
+/// listed at, what was actually charged for it after any discount, and which subject
+/// matter expert it is credited to. Prices and the expert are snapshots taken at checkout,
+/// so a later edit to a section never rewrites the story of a sale.
+model OrderLine {
+  id       String        @id @default(cuid())
+  orderId  String
+  order    CheckoutOrder @relation(fields: [orderId], references: [id])
+  /// Display order within the order.
+  position Int           @default(0)
+
+  kind      OrderLineKind
+  sectionId String?
+  section   Section?      @relation(fields: [sectionId], references: [id])
+  packageId String?
+  package   Package?      @relation(fields: [packageId], references: [id])
+
+  /// The name as sold, kept even if the section or package is renamed later.
+  name        String
+  interval    BillingInterval
+  /// The price before any discount.
+  listCents   Int
+  /// What was charged for this line. The order's grossCents is the sum of these.
+  chargeCents Int
+  /// The offer that reduced this line, when one did.
+  offerId     String?
+  /// The expert this line's revenue is attributed to, by who sold it. Null is house revenue.
+  authorId    String?
+
+  createdAt DateTime @default(now())
+
+  entitlements Entitlement[]
+
+  @@index([orderId])
+  @@index([authorId])
 }
