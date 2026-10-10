@@ -6,6 +6,7 @@ import { getCurrentMember } from '@/lib/auth'
 import { formatPrice } from '@/lib/package-shape'
 import { defaultPackage, sellablePackages } from '@/lib/packages'
 import { sectionsPublic } from '@/lib/sections-mode'
+import { AGGREGATOR_STATEMENT } from '@/lib/legal'
 
 export function Wordmark({ href = '/' }: { href?: string }) {
   return (
@@ -139,11 +140,20 @@ export async function SiteFooter() {
             </div>
             <div className="flex flex-col gap-2.5">
               <span className="eyebrow">Legal</span>
+              <Link href="/terms" className="text-ink-dim hover:text-ink">
+                Terms
+              </Link>
               <Link href="/disclaimer" className="text-ink-dim hover:text-ink">
-                Disclaimer
+                Risk Disclaimer
               </Link>
               <Link href="/privacy-policy" className="text-ink-dim hover:text-ink">
                 Privacy Policy
+              </Link>
+              <Link href="/refund-policy" className="text-ink-dim hover:text-ink">
+                Refunds
+              </Link>
+              <Link href="/legal" className="text-ink-dim hover:text-ink">
+                All legal documents
               </Link>
               <Link href="/faqs" className="text-ink-dim hover:text-ink">
                 FAQs
@@ -155,6 +165,11 @@ export async function SiteFooter() {
         {/* Requirement 15: the complete disclaimer appears site-wide, not just on its
             own page. Set small and dim, but present in full on every page. */}
         <div className="border-t border-line pt-8">
+          {/* The positioning, in the owner's words, above the disclaimer rather than in
+              it: the disclaimer text is fixed verbatim, and this belongs beside it. */}
+          <p className="mb-6 max-w-3xl text-[13px] leading-relaxed text-ink">
+            {AGGREGATOR_STATEMENT}
+          </p>
           <h2 className="eyebrow mb-4">Disclaimer</h2>
           <DisclaimerText className="space-y-3 text-[12px] leading-relaxed text-ink-dim/85" />
           <p className="mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim/60">
