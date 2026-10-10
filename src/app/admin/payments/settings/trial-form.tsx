@@ -33,6 +33,8 @@ export type TrialItem = {
 
 export type TrialState = {
   grantable: TrialItem[]
+  /** Whether a section created from now on starts with its trial open. */
+  newSectionsOpen: boolean
 }
 
 /**
@@ -53,10 +55,11 @@ export type TrialState = {
 export function TrialForm({ state }: { state: TrialState }) {
   const [items, setItems] = React.useState(state.grantable)
   const anyOpen = items.some((item) => item.trialEnabled)
+  const closedSections = items.filter((item) => item.kind === 'section' && !item.trialEnabled)
 
   if (items.length === 0) {
     return (
-      <p className="text-[14px] leading-relaxed text-ink-dim">
+      <p className="text-[16px] leading-relaxed text-ink-dim">
         There is nothing to offer yet.
       </p>
     )
@@ -64,11 +67,21 @@ export function TrialForm({ state }: { state: TrialState }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-[14px] leading-relaxed text-ink-dim">
+      <p className="text-[16px] leading-relaxed text-ink-dim">
         One switch each, independent. A member can run a trial of the membership and of a
         section at once, but only ever one trial of each — an expired trial still counts, so
         nobody renews a free month by waiting.
       </p>
+
+      <SectionDefaults
+        initial={state.newSectionsOpen}
+        closedCount={closedSections.length}
+        onOpenedAll={() =>
+          setItems((all) =>
+            all.map((item) => (item.kind === 'section' ? { ...item, trialEnabled: true } : item)),
+          )
+        }
+      />
 
       <ul className="flex flex-col gap-2">
         {items.map((item) => (
@@ -83,9 +96,116 @@ export function TrialForm({ state }: { state: TrialState }) {
       </ul>
 
       {!anyOpen && (
-        <p className="text-[13px] text-ink-dim">
+        <p className="text-[15px] text-ink-dim">
           Every trial is closed. /trial returns a 404 and nothing advertises one.
         </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * The two house-level controls for section trials.
+ *
+ * The default only decides what a section created from now on starts with. Turning every
+ * existing section on is a separate button with a confirmation, because a setting that
+ * silently began giving away products already on sale would be a decision made by a side
+ * effect.
+ */
+function SectionDefaults({
+  initial,
+  closedCount,
+  onOpenedAll,
+}: {
+  initial: boolean
+  closedCount: number
+  onOpenedAll: () => void
+}) {
+  const router = useRouter()
+  const toast = useToast()
+  const [newSectionsOpen, setNewSectionsOpen] = React.useState(initial)
+  const [pending, setPending] = React.useState<'default' | 'all' | null>(null)
+
+  async function saveDefault(next: boolean) {
+    // Ticked at once and put back if the save fails, so the box answers the click rather
+    // than sitting unchanged until the server does.
+    setNewSectionsOpen(next)
+    setPending('default')
+    try {
+      const response = await fetch('/api/admin/trial/sections', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newSectionsOpen: next }),
+      }).catch(() => null)
+      const data = await response?.json().catch(() => null)
+      if (!response?.ok) {
+        setNewSectionsOpen(!next)
+        toast(data?.error ?? 'Could not save that.', 'error')
+        return
+      }
+      toast(next ? 'New sections will start with a trial open' : 'New sections will start closed')
+    } finally {
+      setPending(null)
+    }
+  }
+
+  async function openAll() {
+    const ok = window.confirm(
+      `Open the free trial on ${closedCount} section${closedCount === 1 ? '' : 's'} without ` +
+        'one? Each keeps its own trial length, and any can be closed again below.',
+    )
+    if (!ok) return
+    setPending('all')
+    try {
+      const response = await fetch('/api/admin/trial/sections', { method: 'POST' })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) {
+        toast(data?.error ?? 'Could not open them.', 'error')
+        return
+      }
+      onOpenedAll()
+      toast(`Trial opened on ${data?.opened ?? 0} section${data?.opened === 1 ? '' : 's'}`)
+      router.refresh()
+    } finally {
+      setPending(null)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-line bg-panel-2 px-4 py-3">
+      <label className="flex items-start gap-3">
+        <input
+          type="checkbox"
+          className="mt-1 h-4 w-4 shrink-0 accent-accent"
+          checked={newSectionsOpen}
+          disabled={pending !== null}
+          onChange={(event) => saveDefault(event.target.checked)}
+        />
+        <span>
+          <span className="block text-[16px] text-ink">New sections start with a trial open</span>
+          <span className="block text-[15px] leading-relaxed text-ink-dim">
+            Applies when a section is created. Sections that already exist keep whatever
+            they are set to.
+          </span>
+        </span>
+      </label>
+
+      {closedCount > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line pt-3">
+          <p className="min-w-0 flex-1 text-[15px] text-ink-dim">
+            {closedCount} section{closedCount === 1 ? ' has' : 's have'} no trial open.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={pending !== null}
+            onClick={openAll}
+          >
+            {pending === 'all' && <Spinner />}
+            Open trials on every section
+          </Button>
+        </div>
       )}
     </div>
   )
@@ -131,13 +251,13 @@ function TrialRow({ item, onSaved }: { item: TrialItem; onSaved: (next: TrialIte
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-line bg-panel-2 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[15px] text-ink">{item.name}</p>
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+        <p className="truncate text-[17px] text-ink">{item.name}</p>
+        <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
           {item.kind === 'product' ? 'Platform' : item.kind === 'research' ? 'Membership' : 'Section'}
         </p>
       </div>
 
-      <label className="flex items-center gap-2 text-[13px] text-ink-dim">
+      <label className="flex items-center gap-2 text-[15px] text-ink-dim">
         <span>Days</span>
         <Input
           className="h-9 w-20"

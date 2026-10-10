@@ -85,7 +85,7 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
     <div className="mx-auto max-w-4xl px-5 py-10">
       <Link
         href="/admin/members"
-        className="mb-6 inline-flex items-center gap-1.5 font-mono text-[12px] text-ink-dim hover:text-ink"
+        className="mb-6 inline-flex items-center gap-1.5 font-mono text-[14px] text-ink-dim hover:text-ink"
       >
         <ArrowLeft className="h-3 w-3" aria-hidden />
         All members
@@ -94,7 +94,7 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl text-ink">{fullName(member) || member.email}</h1>
-          <p className="mt-1 font-mono text-[12px] text-ink-dim">{member.email}</p>
+          <p className="mt-1 font-mono text-[14px] text-ink-dim">{member.email}</p>
         </div>
         <Badge tone={statusTone(member.subscriptionStatus)}>{member.subscriptionStatus}</Badge>
       </div>
@@ -154,7 +154,7 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
 
       {member.redemptionCodes.length > 0 && (
         <section className="mt-8">
-          <h2 className="mb-3 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+          <h2 className="mb-3 font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
             Redemption codes
           </h2>
           <div className="rounded-lg border border-line bg-panel">
@@ -163,9 +163,9 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
                 key={code.id}
                 className="flex items-center gap-4 border-b border-line px-5 py-3 last:border-b-0"
               >
-                <span className="font-mono text-[13px] text-accent">{code.code}</span>
+                <span className="font-mono text-[15px] text-accent-ink">{code.code}</span>
                 <Badge tone={code.status === 'redeemed' ? 'up' : 'muted'}>{code.status}</Badge>
-                <span className="ml-auto font-mono text-[11px] text-ink-dim">
+                <span className="ml-auto font-mono text-[12px] text-ink-dim">
                   {code.redeemedAt ? `Redeemed ${formatDate(code.redeemedAt)}` : `Issued ${formatDate(code.createdAt)}`}
                 </span>
               </div>
@@ -175,12 +175,12 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
       )}
 
       <section className="mt-8">
-        <h2 className="mb-3 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+        <h2 className="mb-3 font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
           Delivery history
         </h2>
         <div className="rounded-lg border border-line bg-panel">
           {member.deliveryLogs.length === 0 ? (
-            <p className="px-5 py-8 text-center font-mono text-[13px] text-ink-dim">
+            <p className="px-5 py-8 text-center font-mono text-[15px] text-ink-dim">
               Nothing sent to this member yet.
             </p>
           ) : (
@@ -190,15 +190,15 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
                 className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3 last:border-b-0"
               >
                 <Badge tone={statusTone(log.status)}>{log.status}</Badge>
-                <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-dim">
+                <span className="font-mono text-[12px] uppercase tracking-[0.1em] text-ink-dim">
                   {log.channel}
                 </span>
-                <span className="flex-1 truncate text-[13px] text-ink">{log.report.title}</span>
-                <span className="font-mono text-[11px] text-ink-dim">
+                <span className="flex-1 truncate text-[15px] text-ink">{log.report.title}</span>
+                <span className="font-mono text-[12px] text-ink-dim">
                   {formatDateTime(log.sentAt)}
                 </span>
                 {log.error && (
-                  <span className="w-full font-mono text-[11px] text-down">{log.error}</span>
+                  <span className="w-full font-mono text-[12px] text-down">{log.error}</span>
                 )}
               </div>
             ))
@@ -207,12 +207,12 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
       </section>
 
       <section className="mt-8">
-        <h2 className="mb-3 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+        <h2 className="mb-3 font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
           Report views
         </h2>
         <div className="rounded-lg border border-line bg-panel">
           {member.reportViews.length === 0 ? (
-            <p className="px-5 py-8 text-center font-mono text-[13px] text-ink-dim">
+            <p className="px-5 py-8 text-center font-mono text-[15px] text-ink-dim">
               This member has not opened a report yet.
             </p>
           ) : (
@@ -221,13 +221,13 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
                 key={view.id}
                 className="flex flex-wrap items-center gap-3 border-b border-line px-5 py-3 last:border-b-0"
               >
-                <span className="font-mono text-[11px] text-accent">
+                <span className="font-mono text-[12px] text-accent-ink">
                   {reportTypeLabel(view.report.type)}
                 </span>
-                <span className="flex-1 truncate text-[13px] text-ink">{view.report.title}</span>
+                <span className="flex-1 truncate text-[15px] text-ink">{view.report.title}</span>
                 {view.downloaded && <Badge tone="accent">Downloaded</Badge>}
-                <span className="font-mono text-[11px] text-ink-dim">{view.ipAddress ?? '—'}</span>
-                <span className="font-mono text-[11px] text-ink-dim">
+                <span className="font-mono text-[12px] text-ink-dim">{view.ipAddress ?? '—'}</span>
+                <span className="font-mono text-[12px] text-ink-dim">
                   {formatDateTime(view.viewedAt)}
                 </span>
               </div>
@@ -242,8 +242,8 @@ export default async function AdminMemberDetailPage({ params }: { params: { id: 
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-dim">{label}</dt>
-      <dd className="mt-1 break-words font-mono text-[13px] text-ink">{value}</dd>
+      <dt className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">{label}</dt>
+      <dd className="mt-1 break-words font-mono text-[15px] text-ink">{value}</dd>
     </div>
   )
 }

@@ -61,7 +61,7 @@ export function TopicManager({ topics }: { topics: TopicRow[] }) {
   return (
     <section className="panel mb-6 p-6">
       <h2 className="font-display text-lg text-ink">Topics</h2>
-      <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-ink-dim">
+      <p className="mt-2 max-w-xl text-[16px] leading-relaxed text-ink-dim">
         The subjects the desk covers. Several authors can write in the same topic — that is
         what lets a visitor browse Energy and find everyone covering it.
       </p>
@@ -97,9 +97,9 @@ export function TopicManager({ topics }: { topics: TopicRow[] }) {
           {topics.map((topic) => (
             <li key={topic.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
               <div className="min-w-0 flex-1">
-                <span className="text-[15px] text-ink">{topic.name}</span>
-                <span className="ml-2 font-mono text-[11px] text-ink-dim">/{topic.slug}</span>
-                <p className="font-mono text-[11px] text-ink-dim">
+                <span className="text-[17px] text-ink">{topic.name}</span>
+                <span className="ml-2 font-mono text-[12px] text-ink-dim">/{topic.slug}</span>
+                <p className="font-mono text-[12px] text-ink-dim">
                   {topic.sectionCount} section{topic.sectionCount === 1 ? '' : 's'}
                 </p>
               </div>

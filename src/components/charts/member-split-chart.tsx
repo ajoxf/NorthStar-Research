@@ -118,9 +118,9 @@ export function MemberSplitChart({ split }: { split: MemberSplit }) {
                   style={{ background: arc.colour }}
                   aria-hidden
                 />
-                <span className="min-w-0 flex-1 text-[13px] text-ink-dim">{arc.label}</span>
-                <span className="font-mono text-[13px] text-ink">{arc.value}</span>
-                <span className="w-10 text-right font-mono text-[11px] text-ink-dim">
+                <span className="min-w-0 flex-1 text-[15px] text-ink-dim">{arc.label}</span>
+                <span className="font-mono text-[15px] text-ink">{arc.value}</span>
+                <span className="w-10 text-right font-mono text-[12px] text-ink-dim">
                   {Math.round((arc.value / total) * 100)}%
                 </span>
               </li>

@@ -25,6 +25,17 @@
      hard-coded colour in the system, and it was lime on every brand — including the
      blue one, where it turned the button acid green under the cursor. */
   --accent-hover: 226 255 110;  /* a shade up from #D6FD3A, for the same lift on hover */
+  /*
+   * The accent's two jobs, split so a light ground can tell them apart.
+   *
+   * On black, lime works as both a fill and as text. On white it only works as a fill —
+   * lime text there is around 1.2:1 and cannot be read. So anything that draws the accent
+   * as a line of text or a thin marker uses --accent-ink, and the label sitting on an
+   * accent fill uses --on-accent. On the dark ground both are exactly what they replaced:
+   * the accent itself, and the page black.
+   */
+  --accent-ink: 214 253 58;
+  --on-accent: 0 0 0;
   --imprint: 216 207 192;
   --up: 0 224 138;
   --down: 255 77 94;
@@ -59,7 +70,66 @@
   --font-plex-mono: 'IBM Plex Mono', ui-monospace, monospace;
   --font-inter: 'Satoshi', 'Inter', system-ui, sans-serif;
 
+  /* The chart ramp. See src/components/charts/chart-parts.tsx for how it was chosen. */
+  --chart-strong: 214 253 58;
+  --chart-mid: 155 190 46;
+  --chart-weak: 107 132 32;
+
   color-scheme: dark;
+}
+
+/*
+ * The admin console's light theme.
+ *
+ * Not a second colour system: the same tokens every admin surface already draws with,
+ * redefined on the console's wrapper, which is how a subtree is re-skinned anywhere on
+ * this site. The marketing site never carries the attribute, so its two-ground design is
+ * untouched.
+ *
+ * The block is written twice — once for an explicit choice of light, once for "system"
+ * on a device that prefers light — because a media query cannot be joined to a selector
+ * list. The theme cookie is read on the server, so the right one is in the first paint
+ * and there is no flash of the dark console on the way to the light one.
+ *
+ * Contrast, on white: --ink 17.7:1, --ink-dim 7.6:1, --accent-ink 6.6:1, --down 6.9:1,
+ * --up 5.5:1. Lime survives as a fill behind black text, which is 17:1, and nowhere else.
+ */
+[data-admin-theme='light'] {
+  --bg: 255 255 255;
+  --bg-panel: 248 249 250;
+  --bg-panel-2: 241 243 245;
+  --line: 222 226 231;
+  --ink: 17 24 39;
+  --ink-dim: 75 85 99;
+  --accent-hover: 196 238 32;
+  --accent-ink: 77 102 0;
+  --on-accent: 0 0 0;
+  --up: 4 120 87;
+  --down: 190 18 60;
+  --chart-strong: 77 102 0;
+  --chart-mid: 128 160 30;
+  --chart-weak: 190 216 98;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: light) {
+  [data-admin-theme='system'] {
+    --bg: 255 255 255;
+    --bg-panel: 248 249 250;
+    --bg-panel-2: 241 243 245;
+    --line: 222 226 231;
+    --ink: 17 24 39;
+    --ink-dim: 75 85 99;
+    --accent-hover: 196 238 32;
+    --accent-ink: 77 102 0;
+    --on-accent: 0 0 0;
+    --up: 4 120 87;
+    --down: 190 18 60;
+    --chart-strong: 77 102 0;
+    --chart-mid: 128 160 30;
+    --chart-weak: 190 216 98;
+    color-scheme: light;
+  }
 }
 
 @layer base {
@@ -80,7 +150,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid rgb(var(--accent));
+    outline: 2px solid rgb(var(--accent-ink));
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -101,7 +171,7 @@
   /* Small uppercase tracked label. Sans, matching the reference design's meta row —
      monospace is now reserved for numeric and tabular data only. */
   .eyebrow {
-    @apply font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-accent;
+    @apply font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-accent-ink;
   }
 
   .panel {

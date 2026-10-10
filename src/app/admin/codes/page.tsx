@@ -56,7 +56,7 @@ export default async function AdminCodesPage() {
       <div className="mb-8">
         <span className="eyebrow">Gifted &amp; paid access</span>
         <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Access codes</h1>
-        <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+        <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
           {liveGifted} gifted code{liveGifted === 1 ? '' : 's'} still live
           {lapsed > 0 && ` · ${lapsed} expired unredeemed`}. Validity is set per batch —{' '}
           {CODE_VALIDITY_DAYS} days unless you choose otherwise.
@@ -70,8 +70,8 @@ export default async function AdminCodesPage() {
           worse than none.
         */}
         {warningDue > 0 && (
-          <p className="mt-4 flex items-start gap-2 rounded-lg border border-line bg-panel p-3.5 text-[13px] leading-relaxed text-ink-dim">
-            <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+          <p className="mt-4 flex items-start gap-2 rounded-lg border border-line bg-panel p-3.5 text-[15px] leading-relaxed text-ink-dim">
+            <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-ink" aria-hidden />
             <span>
               <strong className="font-medium text-ink">
                 {warningDue} code{warningDue === 1 ? '' : 's'} expiring within{' '}
@@ -110,7 +110,7 @@ export default async function AdminCodesPage() {
             {offers.map(([discount, count]) => (
               <li
                 key={discount}
-                className="rounded-full border border-line px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-dim"
+                className="rounded-full border border-line px-3 py-1.5 font-mono text-[12px] uppercase tracking-[0.1em] text-ink-dim"
               >
                 {count} × {discount === 100 ? 'free' : discount === 0 ? 'full price' : `${discount}% off`}
               </li>
@@ -137,7 +137,7 @@ export default async function AdminCodesPage() {
           <tbody>
             {codes.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-[15px] text-ink-dim">
+                <td colSpan={7} className="px-4 py-8 text-center text-[17px] text-ink-dim">
                   No codes yet. Create some above, or they appear here automatically when
                   somebody pays.
                 </td>
@@ -145,12 +145,12 @@ export default async function AdminCodesPage() {
             ) : (
               codes.map((code) => (
                 <tr key={code.id} className="border-b border-line/60 last:border-0">
-                  <td className="px-4 py-3 font-mono text-[15px] text-ink">{code.code}</td>
-                  <td className="px-4 py-3 text-[14px] text-ink-dim">
+                  <td className="px-4 py-3 font-mono text-[17px] text-ink">{code.code}</td>
+                  <td className="px-4 py-3 text-[16px] text-ink-dim">
                     {code.cregisOrderId ? `Paid · ${code.email ?? ''}` : code.note || 'Gifted'}
                   </td>
                   {/* A label, never a price: no checkout amount is derived from it. */}
-                  <td className="whitespace-nowrap px-4 py-3 font-mono text-[14px] text-ink-dim">
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-[16px] text-ink-dim">
                     {code.discountPercent === null
                       ? '—'
                       : code.discountPercent === 100
@@ -168,10 +168,10 @@ export default async function AdminCodesPage() {
                       <Badge tone="accent">unused</Badge>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">
+                  <td className="whitespace-nowrap px-4 py-3 text-[16px] text-ink-dim">
                     {formatDate(code.createdAt)}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">
+                  <td className="whitespace-nowrap px-4 py-3 text-[16px] text-ink-dim">
                     <span className="mr-2">
                       {code.expiresAt ? formatDate(code.expiresAt) : 'No expiry'}
                     </span>
@@ -188,7 +188,7 @@ export default async function AdminCodesPage() {
                   {/* The address captured at redemption, falling back to the member
                       record. Both are written now; the column survives a member being
                       renamed or merged. */}
-                  <td className="px-4 py-3 text-[14px] text-ink-dim">
+                  <td className="px-4 py-3 text-[16px] text-ink-dim">
                     {code.redeemedEmail ?? code.redeemedByMember?.email ?? '—'}
                   </td>
                 </tr>

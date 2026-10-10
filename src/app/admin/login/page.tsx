@@ -19,11 +19,11 @@ export default async function AdminLoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-panel-2 px-5">
       <div className="w-full max-w-sm">
         <div className="mb-8">
-          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-dim">
+          <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-dim">
             NordStar Pro
           </p>
           <h1 className="mt-2 font-mono text-xl text-ink">Admin console</h1>
-          <p className="mt-2 font-mono text-[12px] text-ink-dim">Internal tool — staff only.</p>
+          <p className="mt-2 font-mono text-[14px] text-ink-dim">Internal tool — staff only.</p>
         </div>
 
         <AdminLoginForm />

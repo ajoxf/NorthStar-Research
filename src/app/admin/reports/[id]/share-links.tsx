@@ -43,8 +43,8 @@ export function ShareLinks({
 
   return (
     <div className="rounded-lg border border-line bg-panel p-5">
-      <h2 className="text-[15px] text-ink">Share this report</h2>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-ink-dim">
+      <h2 className="text-[17px] text-ink">Share this report</h2>
+      <p className="mt-1.5 text-[15px] leading-relaxed text-ink-dim">
         Both links respect the paywall. Nobody reads the report without an active membership.
       </p>
 
@@ -55,7 +55,7 @@ export function ShareLinks({
           value={code}
           onChange={(event) => setCode(event.target.value.toUpperCase())}
           placeholder="NSR-XXXX-XXXX"
-          className="font-mono text-[13px]"
+          className="font-mono text-[15px]"
           autoComplete="off"
         />
         <Hint>
@@ -70,17 +70,17 @@ export function ShareLinks({
         WhatsApp share and anything copied from here can never say different things.
       */}
       <div className="mt-5">
-        <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-dim">
+        <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
           Ready to send
         </p>
-        <pre className="mt-1.5 whitespace-pre-wrap rounded-lg border border-line bg-panel-2 px-3.5 py-3 text-[13px] leading-relaxed text-ink-dim">
+        <pre className="mt-1.5 whitespace-pre-wrap rounded-lg border border-line bg-panel-2 px-3.5 py-3 text-[15px] leading-relaxed text-ink-dim">
 {message}
         </pre>
         <a
           href={whatsappShareUrl(message)}
           target="_blank"
           rel="noreferrer noopener"
-          className="mt-2 inline-flex items-center gap-1.5 rounded border border-line px-2.5 py-1.5 font-mono text-[11px] text-ink-dim transition-colors hover:border-up/50 hover:text-up"
+          className="mt-2 inline-flex items-center gap-1.5 rounded border border-line px-2.5 py-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:border-up/50 hover:text-up"
         >
           Share on WhatsApp
         </a>
@@ -109,8 +109,8 @@ function CopyRow({ label, value, note }: { label: string; value: string; note: s
     <div>
       <div className="flex items-start justify-between gap-3 rounded-lg border border-line bg-panel-2 px-3.5 py-3">
         <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-dim">{label}</p>
-          <p className="mt-1 break-all font-mono text-[12px] text-ink">{value}</p>
+          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">{label}</p>
+          <p className="mt-1 break-all font-mono text-[14px] text-ink">{value}</p>
         </div>
 
         <button
@@ -134,7 +134,7 @@ function CopyRow({ label, value, note }: { label: string; value: string; note: s
           <span className="sr-only">Copy — {label}</span>
         </button>
       </div>
-      <p className="mt-1.5 text-[12px] leading-relaxed text-ink-dim">{note}</p>
+      <p className="mt-1.5 text-[14px] leading-relaxed text-ink-dim">{note}</p>
     </div>
   )
 }

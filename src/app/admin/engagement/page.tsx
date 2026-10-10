@@ -59,11 +59,11 @@ export default async function EngagementPage({
       <div className="mb-8">
         <span className="eyebrow">Engagement</span>
         <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Who is reading</h1>
-        <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+        <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
           Every member, ranked by the share of what they were sent that they actually opened in
           the portal. Reading is the one engagement signal a mail client cannot distort — for a
           single edition, open{' '}
-          <Link href="/admin/reports" className="text-accent underline underline-offset-4">
+          <Link href="/admin/reports" className="text-accent-ink underline underline-offset-4">
             any report
           </Link>{' '}
           and see who read it.
@@ -75,9 +75,9 @@ export default async function EngagementPage({
           <Link
             key={entry.key}
             href={entry.key === 'all' ? '/admin/engagement' : `/admin/engagement?filter=${entry.key}`}
-            className={`rounded-full border px-3 py-1.5 font-mono text-[12px] transition-colors ${
+            className={`rounded-full border px-3 py-1.5 font-mono text-[14px] transition-colors ${
               filter === entry.key
-                ? 'border-accent/40 bg-accent/10 text-accent'
+                ? 'border-accent/40 bg-accent/10 text-accent-ink'
                 : 'border-line text-ink-dim hover:text-ink'
             }`}
           >
@@ -87,7 +87,7 @@ export default async function EngagementPage({
 
         <a
           href={`/api/admin/engagement.csv${filter === 'all' ? '' : `?filter=${filter}`}`}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 font-mono text-[14px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
         >
           <Download className="h-3 w-3" aria-hidden />
           CSV
@@ -95,11 +95,11 @@ export default async function EngagementPage({
       </div>
 
       {active && (
-        <p className="mb-4 text-[13px] leading-relaxed text-ink-dim">{active.note}</p>
+        <p className="mb-4 text-[15px] leading-relaxed text-ink-dim">{active.note}</p>
       )}
 
       {shown.length === 0 ? (
-        <p className="rounded-lg border border-line bg-panel px-4 py-8 text-center text-[14px] text-ink-dim">
+        <p className="rounded-lg border border-line bg-panel px-4 py-8 text-center text-[16px] text-ink-dim">
           Nobody in this group.
         </p>
       ) : (
@@ -112,12 +112,12 @@ export default async function EngagementPage({
               <div className="min-w-0 flex-1">
                 <Link
                   href={`/admin/members?search=${encodeURIComponent(row.email)}`}
-                  className="break-all text-[14px] text-ink hover:text-accent"
+                  className="break-all text-[16px] text-ink hover:text-accent-ink"
                 >
                   {row.name ?? row.email}
                 </Link>
                 {row.name && (
-                  <p className="break-all font-mono text-[11px] text-ink-dim">{row.email}</p>
+                  <p className="break-all font-mono text-[12px] text-ink-dim">{row.email}</p>
                 )}
               </div>
 
@@ -130,17 +130,17 @@ export default async function EngagementPage({
               <div className="flex shrink-0 items-center gap-3">
                 <div className="h-1.5 w-24 overflow-hidden rounded-full bg-line">
                   <div
-                    className="h-full rounded-full bg-accent"
+                    className="h-full rounded-full bg-accent-ink"
                     style={{ width: `${Math.round((row.rate ?? 0) * 100)}%` }}
                   />
                 </div>
-                <span className="w-10 text-right font-mono text-[13px] text-ink">
+                <span className="w-10 text-right font-mono text-[15px] text-ink">
                   {row.rate === null ? '—' : `${Math.round(row.rate * 100)}%`}
                 </span>
-                <span className="w-16 text-right font-mono text-[11px] text-ink-dim">
+                <span className="w-16 text-right font-mono text-[12px] text-ink-dim">
                   {row.read}/{row.sent}
                 </span>
-                <span className="hidden w-24 text-right font-mono text-[11px] text-ink-dim sm:inline">
+                <span className="hidden w-24 text-right font-mono text-[12px] text-ink-dim sm:inline">
                   {row.lastReadAt ? formatDate(row.lastReadAt) : 'never'}
                 </span>
                 <Badge tone={row.status === 'active' ? 'up' : 'muted'}>{row.status}</Badge>
@@ -150,7 +150,7 @@ export default async function EngagementPage({
         </ul>
       )}
 
-      <p className="mt-4 max-w-2xl text-[13px] leading-relaxed text-ink-dim">
+      <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-dim">
         <span className="text-ink">Read</span> means a signed-in member opened the report in the
         portal. Failed deliveries are excluded from the denominator — nobody can read an email
         that never arrived, and counting it against them would make a delivery problem look like

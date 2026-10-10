@@ -87,7 +87,7 @@ export function CodeGenerator() {
   return (
     <div className="panel p-6">
       <h2 className="font-display text-lg text-ink">Create access codes</h2>
-      <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-ink-dim">
+      <p className="mt-2 max-w-xl text-[16px] leading-relaxed text-ink-dim">
         Each code lets one person activate a membership without paying here. Redeeming it gives
         them one month from the day they use it. Set how long the code itself stays usable —{' '}
         {CODE_VALIDITY_DAYS} days unless you change it.
@@ -115,7 +115,7 @@ export function CodeGenerator() {
             id="discount"
             value={discountPercent}
             onChange={(event) => setDiscountPercent(Number(event.target.value))}
-            className="h-11 w-full rounded-lg sm:w-36 border border-line bg-panel-2 px-3 text-[15px] text-ink"
+            className="h-11 w-full rounded-lg sm:w-36 border border-line bg-panel-2 px-3 text-[17px] text-ink"
           >
             <option value={100}>100% — free</option>
             <option value={75}>75% off</option>
@@ -140,7 +140,7 @@ export function CodeGenerator() {
               onChange={(event) => setValidityText(event.target.value)}
               className="w-full sm:w-20"
             />
-            <span className="shrink-0 text-[14px] text-ink-dim">days</span>
+            <span className="shrink-0 text-[16px] text-ink-dim">days</span>
           </div>
         </div>
 
@@ -175,7 +175,7 @@ export function CodeGenerator() {
           onChange={(event) => setNeverExpires(event.target.checked)}
           className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
         />
-        <span className="text-[14px] leading-relaxed text-ink-dim">
+        <span className="text-[16px] leading-relaxed text-ink-dim">
           <span className="text-ink">Never expires.</span> The code works until it is used. Worth
           knowing: an unused code with no expiry is an open-ended membership sitting in somebody
           else&rsquo;s inbox.
@@ -184,12 +184,12 @@ export function CodeGenerator() {
 
       {/* Said next to the control, not only in a doc comment: a percentage beside a
           "create" button is otherwise a fair thing to read as pricing. */}
-      <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+      <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
         The discount is a label for your own records — it does not change what anyone is
         charged. Every code unlocks the same membership when it is redeemed.
       </p>
 
-      {error ? <p className="mt-4 text-[14px] text-down">{error}</p> : null}
+      {error ? <p className="mt-4 text-[16px] text-down">{error}</p> : null}
 
       {codes.length > 0 ? (
         <div className="mt-6 rounded-lg border border-accent/30 bg-accent/[0.06] p-4">
@@ -211,13 +211,13 @@ export function CodeGenerator() {
             </Button>
           </div>
 
-          <ul className="mt-3 grid gap-1 font-mono text-[15px] text-ink sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-3 grid gap-1 font-mono text-[17px] text-ink sm:grid-cols-2 lg:grid-cols-3">
             {codes.map((code) => (
               <li key={code}>{code}</li>
             ))}
           </ul>
 
-          <p className="mt-3 text-[13px] text-ink-dim">
+          <p className="mt-3 text-[15px] text-ink-dim">
             Send each person one code and the link to <span className="text-ink">/redeem</span>.
             They are listed in the table below too, so nothing is lost if you navigate away.
           </p>

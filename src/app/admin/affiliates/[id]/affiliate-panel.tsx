@@ -93,7 +93,7 @@ export function AffiliatePanel({
       <section className="panel mt-8 p-5 sm:p-6">
         <h2 className="eyebrow mb-4">Referral link</h2>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <code className="min-w-0 flex-1 break-all rounded-lg border border-line bg-panel-2 px-4 py-3 font-mono text-[13px] text-ink">
+          <code className="min-w-0 flex-1 break-all rounded-lg border border-line bg-panel-2 px-4 py-3 font-mono text-[15px] text-ink">
             {affiliate.link}
           </code>
           <Button variant="secondary" onClick={copyLink} className="shrink-0">
@@ -155,7 +155,7 @@ export function AffiliatePanel({
                 id="rewardKind"
                 name="rewardKind"
                 defaultValue={affiliate.rewardKind}
-                className="h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-[15px] text-ink"
+                className="h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-[17px] text-ink"
               >
                 <option value="percent">% of first payment</option>
                 <option value="fixed">Fixed $ per sale</option>
@@ -244,14 +244,14 @@ export function AffiliatePanel({
         <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
           <h2 className="eyebrow">Awards</h2>
         </div>
-        <p className="mb-5 text-[13px] leading-relaxed text-ink-dim">
+        <p className="mb-5 text-[15px] leading-relaxed text-ink-dim">
           Earned automatically when a referral pays. Marking one settled records that{' '}
           <span className="text-ink">you have already paid it</span> — this system does not move
           money.
         </p>
 
         {awards.length === 0 ? (
-          <p className="text-[15px] text-ink-dim">Nothing earned yet.</p>
+          <p className="text-[17px] text-ink-dim">Nothing earned yet.</p>
         ) : (
           <ul className="divide-y divide-line">
             {awards.map((award) => (
@@ -260,14 +260,14 @@ export function AffiliatePanel({
                 className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
               >
                 <div className="min-w-0">
-                  <div className="font-mono text-[15px] text-ink">{award.amount}</div>
-                  <div className="truncate text-[13px] text-ink-dim">
+                  <div className="font-mono text-[17px] text-ink">{award.amount}</div>
+                  <div className="truncate text-[15px] text-ink-dim">
                     {award.reason} · {award.createdAt}
                   </div>
                 </div>
 
                 {award.settled ? (
-                  <span className="shrink-0 font-mono text-[11px] uppercase tracking-[0.12em] text-up">
+                  <span className="shrink-0 font-mono text-[12px] uppercase tracking-[0.12em] text-up">
                     Settled
                   </span>
                 ) : (

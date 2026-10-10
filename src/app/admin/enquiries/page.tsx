@@ -67,7 +67,7 @@ export default async function EnquiriesPage({
         <div className="mb-8">
           <span className="eyebrow">Demand</span>
           <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Enquiries</h1>
-          <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+          <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
             People who asked what membership costs, from when the site quoted individually.
             Send them the figure and a payment link from here — the price comes from the default
             package,{' '}
@@ -81,8 +81,8 @@ export default async function EnquiriesPage({
           arrives here. Kept because what is already here is real demand from real people,
           and the reply-with-a-payment-link flow still works for every one of them.
         */}
-        <p className="mb-6 flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3.5 text-[13px] leading-relaxed text-ink-dim">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden />
+        <p className="mb-6 flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3.5 text-[15px] leading-relaxed text-ink-dim">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-ink" aria-hidden />
           <span>
             <strong className="font-medium text-ink">No new enquiries arrive.</strong> The price
             is on the site and the form that fed this page has been removed. These are the people
@@ -95,9 +95,9 @@ export default async function EnquiriesPage({
             <Link
               key={entry}
               href={entry === 'open' ? '/admin/enquiries' : `/admin/enquiries?filter=${entry}`}
-              className={`rounded-full border px-3 py-1.5 font-mono text-[12px] transition-colors ${
+              className={`rounded-full border px-3 py-1.5 font-mono text-[14px] transition-colors ${
                 filter === entry
-                  ? 'border-accent/40 bg-accent/10 text-accent'
+                  ? 'border-accent/40 bg-accent/10 text-accent-ink'
                   : 'border-line text-ink-dim hover:text-ink'
               }`}
             >
@@ -112,7 +112,7 @@ export default async function EnquiriesPage({
         </div>
 
         {enquiries.length === 0 ? (
-          <p className="rounded-lg border border-line bg-panel px-4 py-10 text-center text-[14px] leading-relaxed text-ink-dim">
+          <p className="rounded-lg border border-line bg-panel px-4 py-10 text-center text-[16px] leading-relaxed text-ink-dim">
             Nothing here yet. Requests from the join page land in this list.
           </p>
         ) : (
@@ -122,23 +122,23 @@ export default async function EnquiriesPage({
                 <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[15px] text-ink">{enquiry.name}</span>
+                      <span className="text-[17px] text-ink">{enquiry.name}</span>
                       <Badge tone={toneFor(enquiry.status)}>{enquiry.status}</Badge>
                     </div>
 
-                    <p className="mt-1 break-all font-mono text-[12px] text-ink-dim">
+                    <p className="mt-1 break-all font-mono text-[14px] text-ink-dim">
                       {enquiry.email}
                       {enquiry.phoneNumber && ` · ${enquiry.phoneNumber}`}
                       {enquiry.whatsappNumber && ` · WhatsApp ${enquiry.whatsappNumber}`}
                     </p>
 
                     {enquiry.note && (
-                      <p className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-ink">
+                      <p className="mt-2 whitespace-pre-wrap text-[16px] leading-relaxed text-ink">
                         {enquiry.note}
                       </p>
                     )}
 
-                    <p className="mt-2 font-mono text-[11px] text-ink-dim">
+                    <p className="mt-2 font-mono text-[12px] text-ink-dim">
                       asked {formatDateTime(enquiry.createdAt)}
                       {enquiry.invitedAt && ` · quoted ${formatDateTime(enquiry.invitedAt)}`}
                       {enquiry.referralSlug && ` · via ${enquiry.referralSlug}`}

@@ -12,6 +12,10 @@
  * monotone lightness, adjacent gaps over 0.06, single hue (2° spread), and the light end
  * clearing the surface at 4.64:1.
  *
+ * Every value is a token rather than a hex, so the admin console's light theme redraws the
+ * charts along with everything else. On the light ground the ramp runs the other way —
+ * darkest = most engaged — because there the dark end is the one that stands off the page.
+ *
  * `FAILED` is a status colour, reserved and never reused as "series 4". It clears 3:1 on
  * the same surface and always ships beside a label.
  *
@@ -24,16 +28,16 @@
 
 export const CHART = {
   /** Ordinal ramp, brightest = most engaged. */
-  strong: '#D6FD3A',
-  mid: '#9BBE2E',
-  weak: '#6B8420',
+  strong: 'rgb(var(--chart-strong))',
+  mid: 'rgb(var(--chart-mid))',
+  weak: 'rgb(var(--chart-weak))',
   /** Reserved status. Never a series colour. */
-  failed: '#FF4D5E',
+  failed: 'rgb(var(--down))',
   /** The panel these are drawn on; also the colour of the gaps between segments. */
-  surface: '#0B0B0B',
-  grid: '#1F1F1F',
-  ink: '#FFFFFF',
-  inkDim: '#A3A3A3',
+  surface: 'rgb(var(--bg-panel))',
+  grid: 'rgb(var(--line))',
+  ink: 'rgb(var(--ink))',
+  inkDim: 'rgb(var(--ink-dim))',
 } as const
 
 export function ChartFrame({
@@ -47,8 +51,8 @@ export function ChartFrame({
 }) {
   return (
     <div className="min-w-0 rounded-lg border border-line bg-panel p-5">
-      <h3 className="text-[15px] text-ink">{title}</h3>
-      {note && <p className="mt-1 text-[12px] leading-relaxed text-ink-dim">{note}</p>}
+      <h3 className="text-[17px] text-ink">{title}</h3>
+      {note && <p className="mt-1 text-[14px] leading-relaxed text-ink-dim">{note}</p>}
       <div className="mt-4">{children}</div>
     </div>
   )
@@ -71,7 +75,7 @@ export function Legend({ items }: { items: { label: string; colour: string }[] }
             style={{ background: item.colour }}
             aria-hidden
           />
-          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-ink-dim">
+          <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-ink-dim">
             {item.label}
           </span>
         </li>
@@ -82,7 +86,7 @@ export function Legend({ items }: { items: { label: string; colour: string }[] }
 
 export function EmptyChart({ message }: { message: string }) {
   return (
-    <p className="py-8 text-center font-mono text-[12px] text-ink-dim">{message}</p>
+    <p className="py-8 text-center font-mono text-[14px] text-ink-dim">{message}</p>
   )
 }
 

@@ -116,7 +116,7 @@ export default async function EarningsPage() {
       <h1 className="mt-4 font-display text-[32px] font-medium leading-[1.05] tracking-[-0.04em]">
         Earnings
       </h1>
-      <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+      <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
         A share of every sale, attributed to whoever sold it. Fees and tax come off before
         the split, and an earning is held {DEFAULT_HOLDBACK_DAYS} days after the payment
         clears so a refund lands on the ledger rather than on somebody you have already
@@ -128,7 +128,7 @@ export default async function EarningsPage() {
       </div>
 
       {(posted.posted > 0 || posted.unreadable > 0) && (
-        <p className="mt-6 rounded-lg border border-line bg-panel px-4 py-3 text-[13px] leading-relaxed text-ink-dim">
+        <p className="mt-6 rounded-lg border border-line bg-panel px-4 py-3 text-[15px] leading-relaxed text-ink-dim">
           {posted.posted > 0 && `Posted ${posted.posted} new earning${posted.posted === 1 ? '' : 's'}. `}
           {posted.house > 0 && `${posted.house} paid order${posted.house === 1 ? '' : 's'} belong to no contributor — house revenue. `}
           {posted.unreadable > 0 && (

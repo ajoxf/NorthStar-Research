@@ -22,6 +22,7 @@ import {
   TRIAL_DEFAULTS,
   RESEARCH_TRIAL_NAME,
   RESEARCH_TRIAL_SLUG,
+  newSectionsOpenTrial,
   researchTrialOffer,
   trialSettings,
 } from '@/lib/trial'
@@ -108,7 +109,7 @@ export default async function PaymentSettingsPage() {
       <div className="mx-auto max-w-4xl px-5 py-12">
         <Link
           href="/admin/payments"
-          className="mb-6 inline-flex items-center gap-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:text-ink"
+          className="mb-6 inline-flex items-center gap-1.5 font-mono text-[14px] text-ink-dim transition-colors hover:text-ink"
         >
           <ArrowLeft className="h-3 w-3" aria-hidden />
           Payments
@@ -117,7 +118,7 @@ export default async function PaymentSettingsPage() {
         <div className="mb-10">
           <span className="eyebrow">Configuration</span>
           <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Payment settings</h1>
-          <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+          <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
             Stripe takes card subscriptions and renews them automatically. Cregis takes crypto,
             which cannot auto-renew, so those members renew by hand. Both settle to the same
             renewal date, which is the only thing that gates access.
@@ -132,7 +133,7 @@ export default async function PaymentSettingsPage() {
         <Section title="Price" note="What the site charges. Applies to card and crypto alike.">
           <PricingForm state={pricingState} />
 
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+          <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
             Saving changes the price on the homepage, the join page and both checkouts at once.
             {pricingState.stripeReady && pricingState.sellByCard
               ? ' A matching Stripe price is created for you — Stripe prices cannot be edited, so a new amount is always a new price, and the old one is archived.'
@@ -147,11 +148,11 @@ export default async function PaymentSettingsPage() {
                   key={pkg.id}
                   className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-line bg-panel px-4 py-3 last:border-b-0"
                 >
-                  <span className="text-[14px] text-ink">
+                  <span className="text-[16px] text-ink">
                     {pkg.name}
-                    {pkg.isDefault && <span className="ml-2 text-[12px] text-accent">default</span>}
+                    {pkg.isDefault && <span className="ml-2 text-[14px] text-accent-ink">default</span>}
                   </span>
-                  <span className="font-mono text-[13px] text-ink-dim">{priceLine(pkg)}</span>
+                  <span className="font-mono text-[15px] text-ink-dim">{priceLine(pkg)}</span>
                 </li>
               ))}
             </ul>
@@ -170,13 +171,13 @@ export default async function PaymentSettingsPage() {
         >
           <TrialForm state={trialState} />
 
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+          <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
             A membership trial grants everything a member reads, the full archive included; a
             section trial grants that section. Neither takes a card nor creates a subscription
             that renews, and both expire on their own. Trialists appear in{' '}
             <Link
               href="/admin/members?source=trial"
-              className="text-accent underline underline-offset-4"
+              className="text-accent-ink underline underline-offset-4"
             >
               Members
             </Link>{' '}
@@ -201,16 +202,16 @@ export default async function PaymentSettingsPage() {
           <div className="mt-5 rounded-lg border border-line bg-panel px-4 py-1">
             <CopyableUrl label="Webhook endpoint" value={urls.stripeWebhook} />
           </div>
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+          <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
             Register that URL in Stripe → Developers → Webhooks, subscribed to{' '}
-            <span className="font-mono text-[12px] text-ink">
+            <span className="font-mono text-[14px] text-ink">
               {REQUIRED_STRIPE_EVENTS.join(', ')}
             </span>
             . The signing secret it gives you is{' '}
-            <code className="font-mono text-[12px]">STRIPE_WEBHOOK_SECRET</code>. Without it,
+            <code className="font-mono text-[14px]">STRIPE_WEBHOOK_SECRET</code>. Without it,
             payments succeed and no membership is ever created.
           </p>
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+          <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
             The Stripe key is not editable from this console: it can move money out of the
             account — charges, refunds, payouts — so it stays in Vercel rather than travelling
             through whichever browser is signed in as an admin. Environment variables are read at
@@ -229,14 +230,14 @@ export default async function PaymentSettingsPage() {
           */}
           <CregisForm state={cregisFormState} />
 
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+          <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
             Editable here because this account is deposit-only. Saved values are encrypted, take
             effect immediately with no redeploy, override the matching environment variable, and
             are never displayed again — the fields show where each value came from, not what it
             is.
           </p>
 
-          <h3 className="mb-3 mt-8 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
+          <h3 className="mb-3 mt-8 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
             In effect now
           </h3>
           <SettingTable rows={cregis} />
@@ -252,15 +253,15 @@ export default async function PaymentSettingsPage() {
             a rotating pool. Us calling *Cregis* is allowlisted at their end, which is
             what the relay exists to satisfy.
           */}
-          <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+          <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
             Cregis allowlists the address that calls their API, and Vercel has no fixed outbound
             IP, so production sends that one call through a relay on fixed-IP hosting
-            (<code className="font-mono text-[12px]">CREGIS_RELAY_URL</code>). If checkouts start
+            (<code className="font-mono text-[14px]">CREGIS_RELAY_URL</code>). If checkouts start
             failing on authorisation while the credentials are unchanged, the relay host&rsquo;s
             address has probably moved and needs re-allowlisting with Cregis.
           </p>
           {relayConfigured && (
-            <p className="mt-2 text-[13px] leading-relaxed text-ink-dim">
+            <p className="mt-2 text-[15px] leading-relaxed text-ink-dim">
               The relay is configured, which means it — not the base URL above — decides which
               Cregis host this app talks to. Editing the base URL will not change where checkouts
               go while the relay is in front.
@@ -282,9 +283,9 @@ export default async function PaymentSettingsPage() {
         */}
         <Section title="Site address" note="Every URL above is built from this. Set by APP_BASE_URL in Vercel.">
           <div className="rounded-lg border border-line bg-panel px-4 py-3">
-            <p className="break-all font-mono text-[13px] text-ink">{urls.base}</p>
+            <p className="break-all font-mono text-[15px] text-ink">{urls.base}</p>
             {baseLooksWrong && (
-              <p className="mt-2 text-[13px] leading-relaxed text-accent">
+              <p className="mt-2 text-[15px] leading-relaxed text-accent-ink">
                 This is not {CANONICAL_BASE_URL}. If this is production, fix APP_BASE_URL before
                 anything else — the webhook URLs registered with your processors will not match
                 what this deployment actually serves.
@@ -311,20 +312,20 @@ function Section({
   return (
     <section className="mb-12">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="text-[19px] text-ink">{title}</h2>
+        <h2 className="text-[21px] text-ink">{title}</h2>
         {action && (
           <a
             href={action.href}
             target="_blank"
             rel="noreferrer noopener"
-            className="inline-flex items-center gap-1.5 font-mono text-[12px] text-accent hover:underline"
+            className="inline-flex items-center gap-1.5 font-mono text-[14px] text-accent-ink hover:underline"
           >
             {action.label}
             <ExternalLink className="h-3 w-3" aria-hidden />
           </a>
         )}
       </div>
-      {note && <p className="mb-4 max-w-2xl text-[14px] leading-relaxed text-ink-dim">{note}</p>}
+      {note && <p className="mb-4 max-w-2xl text-[16px] leading-relaxed text-ink-dim">{note}</p>}
       {children}
     </section>
   )
@@ -340,16 +341,16 @@ function SettingTable({ rows }: { rows: SettingRow[] }) {
         >
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[14px] text-ink">{row.label}</span>
-              <code className="font-mono text-[11px] text-ink-dim">{row.key}</code>
+              <span className="text-[16px] text-ink">{row.label}</span>
+              <code className="font-mono text-[12px] text-ink-dim">{row.key}</code>
             </div>
-            <p className="mt-1 text-[13px] leading-relaxed text-ink-dim">{row.what}</p>
+            <p className="mt-1 text-[15px] leading-relaxed text-ink-dim">{row.what}</p>
             {row.detail && (
               <p
                 className={
                   row.detail.includes('TEST key')
-                    ? 'mt-1.5 font-mono text-[12px] text-down'
-                    : 'mt-1.5 break-all font-mono text-[12px] text-ink-dim'
+                    ? 'mt-1.5 font-mono text-[14px] text-down'
+                    : 'mt-1.5 break-all font-mono text-[14px] text-ink-dim'
                 }
               >
                 {row.detail}
@@ -377,8 +378,8 @@ function StatusBadge({ status, optional }: { status: SettingRow['status']; optio
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-panel px-4 py-3">
-      <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">{label}</dt>
-      <dd className="mt-1 text-[14px] text-ink">{value}</dd>
+      <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">{label}</dt>
+      <dd className="mt-1 text-[16px] text-ink">{value}</dd>
     </div>
   )
 }
@@ -445,9 +446,10 @@ async function buildTrialState(): Promise<TrialState> {
   // switches below show the offer that is actually live rather than all-off.
   await migrateLegacyTrialSettings()
 
-  const [settings, research, items] = await Promise.all([
+  const [settings, research, newSectionsOpen, items] = await Promise.all([
     trialSettings(),
     researchTrialOffer(),
+    newSectionsOpenTrial(),
     db.item.findMany({
       where: { archivedAt: null },
       select: {
@@ -495,5 +497,6 @@ async function buildTrialState(): Promise<TrialState> {
 
   return {
     grantable: [researchRow, ...grantable],
+    newSectionsOpen,
   }
 }

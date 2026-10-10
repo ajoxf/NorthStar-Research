@@ -57,7 +57,7 @@ export default async function AdminSectionsPage() {
         <div className="mb-8">
           <span className="eyebrow">Experts &amp; coverage</span>
           <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Sections</h1>
-          <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+          <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
             A section is one topic by one author — &ldquo;Energy by Sarah Chen&rdquo; — and it is
             the thing a member subscribes to. One author per section on purpose: every payment
             then belongs to one person, so there is no split to agree.

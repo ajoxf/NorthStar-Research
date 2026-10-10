@@ -3,22 +3,34 @@ import { z } from 'zod'
 
 import { adminInput } from '@/app/api/admin/_admin-route'
 import { db } from '@/lib/db'
-import { addMonths } from '@/lib/grant'
+import { grantEndsAt, type GrantLength } from '@/lib/grant'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const schema = z.object({
-  sectionId: z.string().min(1),
-  /**
-   * How long the grant runs for, or null for open-ended.
-   *
-   * Null is a real answer here, not a missing one — a comp that never lapses — which is
-   * why the form offers it as its own choice rather than as an empty field. Giving away
-   * permanent access should be something somebody picked on purpose.
-   */
-  months: z.number().int().min(1).max(60).nullable(),
-})
+const schema = z
+  .object({
+    sectionId: z.string().min(1),
+    /**
+     * How long the grant runs for in months, or null for open-ended.
+     *
+     * Null is a real answer here, not a missing one — a comp that never lapses — which is
+     * why the form offers it as its own choice rather than as an empty field. Giving away
+     * permanent access should be something somebody picked on purpose.
+     */
+    months: z.number().int().min(1).max(60).nullable().optional(),
+    /**
+     * Or in days, for the 7- and 14-day comps a month cannot express. Up to two years,
+     * which is the same ceiling in spirit as 60 months is for the presets: far enough out
+     * to cover any real comp, close enough that a typo of 7000 is refused, not granted.
+     */
+    days: z.number().int().min(1).max(730, 'A grant in days runs for at most 730.').optional(),
+  })
+  // Exactly one of the two. Both is ambiguous, and neither would silently mean
+  // open-ended — which is precisely the thing that must only ever be chosen.
+  .refine((input) => (input.days === undefined) !== (input.months === undefined), {
+    message: 'Give the length in months or in days — one of the two.',
+  })
 
 /**
  * Grant a member one section by hand.
@@ -68,7 +80,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
    */
   const from =
     existing?.renewsAt && existing.renewsAt.getTime() > now.getTime() ? existing.renewsAt : now
-  const renewsAt = input.data.months === null ? null : addMonths(from, input.data.months)
+  const length: GrantLength =
+    input.data.days !== undefined
+      ? { days: input.data.days }
+      : input.data.months == null
+        ? null
+        : { months: input.data.months }
+  const renewsAt = grantEndsAt(from, length)
 
   const data = {
     status: 'active' as const,

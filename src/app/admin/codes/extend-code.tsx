@@ -142,7 +142,7 @@ export function ExtendCode({
         disabled={pending}
         aria-expanded={open}
         aria-label={`Extend ${code}`}
-        className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-1 font-mono text-[11px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink disabled:opacity-50"
+        className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-1 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink disabled:opacity-50"
       >
         {pending ? <Spinner /> : <CalendarPlus className="h-3 w-3" aria-hidden />}
         Extend
@@ -156,7 +156,7 @@ export function ExtendCode({
             className="fixed z-50 w-52 rounded-lg border border-line bg-panel p-1.5 shadow-lg shadow-black/40"
           >
             {expiresAt === null ? (
-              <p className="px-2 py-2 text-[13px] leading-relaxed text-ink-dim">
+              <p className="px-2 py-2 text-[15px] leading-relaxed text-ink-dim">
                 This code already never expires. There is nothing to extend.
               </p>
             ) : (
@@ -167,7 +167,7 @@ export function ExtendCode({
                     type="button"
                     disabled={pending}
                     onClick={() => extend({ extendDays: days })}
-                    className="block w-full rounded px-2 py-1.5 text-left text-[13px] text-ink hover:bg-panel-2 disabled:opacity-50"
+                    className="block w-full rounded px-2 py-1.5 text-left text-[15px] text-ink hover:bg-panel-2 disabled:opacity-50"
                   >
                     Add {days} days
                   </button>
@@ -196,7 +196,7 @@ export function ExtendCode({
                     inputMode="numeric"
                     placeholder="Days"
                     aria-label={`Days to add to ${code}`}
-                    className="h-8 w-20 text-[13px]"
+                    className="h-8 w-20 text-[15px]"
                   />
                   <Button type="submit" size="sm" disabled={pending || !custom.trim()}>
                     Add
@@ -208,7 +208,7 @@ export function ExtendCode({
                   type="button"
                   disabled={pending}
                   onClick={() => extend({ neverExpires: true })}
-                  className="block w-full rounded px-2 py-1.5 text-left text-[13px] text-ink hover:bg-panel-2 disabled:opacity-50"
+                  className="block w-full rounded px-2 py-1.5 text-left text-[15px] text-ink hover:bg-panel-2 disabled:opacity-50"
                 >
                   Never expires
                 </button>
@@ -217,7 +217,7 @@ export function ExtendCode({
                   gets them from today, and a code with a month left gets 7 on top.
                   Extending never takes time away.
                 */}
-                <p className="px-2 pb-1 pt-2 text-[12px] leading-relaxed text-ink-dim">
+                <p className="px-2 pb-1 pt-2 text-[14px] leading-relaxed text-ink-dim">
                   Counted from today if it has already lapsed, otherwise added on.
                 </p>
               </>

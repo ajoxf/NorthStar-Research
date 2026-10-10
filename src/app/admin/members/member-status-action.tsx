@@ -61,7 +61,7 @@ export function ActivateMemberButton({ memberId, email }: { memberId: string; em
       type="button"
       onClick={activate}
       disabled={pending}
-      className="inline-flex items-center gap-1.5 rounded border border-line px-2 py-1 font-mono text-[11px] text-ink-dim transition-colors hover:border-up/50 hover:text-up disabled:opacity-50"
+      className="inline-flex items-center gap-1.5 rounded border border-line px-2 py-1 font-mono text-[12px] text-ink-dim transition-colors hover:border-up/50 hover:text-up disabled:opacity-50"
     >
       {pending ? <Spinner /> : <Check className="h-3 w-3" aria-hidden />}
       Activate

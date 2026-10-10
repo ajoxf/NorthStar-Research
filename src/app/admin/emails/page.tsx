@@ -57,7 +57,7 @@ export default async function AdminEmailsPage() {
       <div className="mb-8">
         <span className="eyebrow">Transactional mail</span>
         <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Emails</h1>
-        <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+        <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
           Every message the product sends, rendered with sample data. Nothing on this page
           sends anything.
         </p>
@@ -70,7 +70,7 @@ export default async function AdminEmailsPage() {
       </dl>
 
       {live ? (
-        <p className="mb-10 flex items-start gap-2 text-[13px] leading-relaxed text-ink-dim">
+        <p className="mb-10 flex items-start gap-2 text-[15px] leading-relaxed text-ink-dim">
           <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-up" aria-hidden />
           <span>
             Mail is being delivered through {provider}. The From address must belong to a
@@ -78,22 +78,22 @@ export default async function AdminEmailsPage() {
           </span>
         </p>
       ) : (
-        <p className="mb-10 flex items-start gap-2 rounded-lg border border-down/35 bg-down/10 p-4 text-[13px] leading-relaxed text-ink">
+        <p className="mb-10 flex items-start gap-2 rounded-lg border border-down/35 bg-down/10 p-4 text-[15px] leading-relaxed text-ink">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-down" aria-hidden />
           <span>
             <strong className="font-medium">No mail is being delivered.</strong> The console
             provider is active, which logs each message to the server output and reports it as
             sent — so the delivery log will look healthy while members receive nothing. Set{' '}
-            <code className="font-mono text-[12px] text-accent">EMAIL_PROVIDER=resend</code> and{' '}
-            <code className="font-mono text-[12px] text-accent">RESEND_API_KEY</code> to send for
+            <code className="font-mono text-[14px] text-accent-ink">EMAIL_PROVIDER=resend</code> and{' '}
+            <code className="font-mono text-[14px] text-accent-ink">RESEND_API_KEY</code> to send for
             real.
           </span>
         </p>
       )}
 
       <section className="mb-12">
-        <h2 className="mb-1 text-[19px] text-ink">Is it actually sending?</h2>
-        <p className="mb-4 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+        <h2 className="mb-1 text-[21px] text-ink">Is it actually sending?</h2>
+        <p className="mb-4 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
           Send yourself the real welcome email. Whatever the provider answers is shown
           unedited — that sentence is usually the whole diagnosis.
         </p>
@@ -101,8 +101,8 @@ export default async function AdminEmailsPage() {
       </section>
 
       <section className="mb-12">
-        <h2 className="mb-1 text-[19px] text-ink">Opens and clicks</h2>
-        <p className="mb-4 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+        <h2 className="mb-1 text-[21px] text-ink">Opens and clicks</h2>
+        <p className="mb-4 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
           Whether Resend is calling this deployment back, and what happens when it does. This is
           what fills the Opened column — without it, every send stays at &ldquo;sent&rdquo; forever.
         </p>
@@ -115,16 +115,16 @@ export default async function AdminEmailsPage() {
 
       <section className="mb-12">
         <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h2 className="text-[19px] text-ink">Recent sends</h2>
+          <h2 className="text-[21px] text-ink">Recent sends</h2>
           {failures > 0 && (
-            <span className="font-mono text-[12px] text-down">
+            <span className="font-mono text-[14px] text-down">
               {failures} of the last {recent.length} failed
             </span>
           )}
         </div>
 
         {recent.length === 0 ? (
-          <p className="rounded-lg border border-line bg-panel px-4 py-3.5 text-[14px] leading-relaxed text-ink-dim">
+          <p className="rounded-lg border border-line bg-panel px-4 py-3.5 text-[16px] leading-relaxed text-ink-dim">
             Nothing recorded yet. Every welcome, access code, receipt, sign-in link and renewal
             reminder will appear here from now on, with whatever the provider said about it.
             Report sends are not listed — those are in each report&rsquo;s own delivery log.
@@ -137,17 +137,17 @@ export default async function AdminEmailsPage() {
                 className="border-b border-line bg-panel px-4 py-3 last:border-b-0"
               >
                 <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-                  <span className="min-w-0 break-all text-[14px] text-ink">{entry.toEmail}</span>
+                  <span className="min-w-0 break-all text-[16px] text-ink">{entry.toEmail}</span>
                   <Badge tone={entry.status === 'sent' ? 'up' : 'down'}>{entry.status}</Badge>
                 </div>
-                <p className="mt-1 font-mono text-[11px] text-ink-dim">
+                <p className="mt-1 font-mono text-[12px] text-ink-dim">
                   {entry.kind.replace(/_/g, ' ')} · {entry.provider ?? 'unknown'} ·{' '}
                   {formatDate(entry.createdAt)}
                 </p>
                 {entry.error && (
                   // Verbatim, and never truncated in the UI: the tail of a provider error
                   // is often the part that names the actual cause.
-                  <p className="mt-1.5 break-words text-[13px] leading-relaxed text-down">
+                  <p className="mt-1.5 break-words text-[15px] leading-relaxed text-down">
                     {entry.error}
                   </p>
                 )}
@@ -166,8 +166,8 @@ export default async function AdminEmailsPage() {
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="bg-panel px-4 py-3">
-      <dt className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">{label}</dt>
-      <dd className="mt-1 break-words text-[14px] text-ink">{value}</dd>
+      <dt className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">{label}</dt>
+      <dd className="mt-1 break-words text-[16px] text-ink">{value}</dd>
     </div>
   )
 }
