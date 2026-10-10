@@ -64,7 +64,7 @@ export default async function WithdrawalsPage() {
     <div className="mx-auto max-w-4xl px-5 py-12">
       <Link
         href="/admin/earnings"
-        className="font-mono text-[12px] text-ink-dim hover:text-ink"
+        className="font-mono text-[14px] text-ink-dim hover:text-ink"
       >
         ← Earnings
       </Link>
@@ -72,14 +72,14 @@ export default async function WithdrawalsPage() {
       <h1 className="mt-4 font-display text-[32px] font-medium leading-[1.05] tracking-[-0.04em]">
         Withdrawals
       </h1>
-      <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+      <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
         Every withdrawal is approved before it can be marked sent — a request on its own
         moves nothing. Marking one sent records that the money has left and takes it off
         the contributor&rsquo;s balance; it does not perform the transfer, which is still
         done by hand through the gateway.
       </p>
       {waiting > 0 && (
-        <p className="mt-4 rounded-lg border border-accent/35 bg-accent/10 px-4 py-3 text-[14px] text-ink">
+        <p className="mt-4 rounded-lg border border-accent/35 bg-accent/10 px-4 py-3 text-[16px] text-ink">
           {waiting} withdrawal{waiting === 1 ? '' : 's'} waiting for approval.
         </p>
       )}

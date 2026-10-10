@@ -71,14 +71,14 @@ export default async function AdminPaymentsPage({
         <div className="flex flex-wrap gap-2">
           <Link
             href="/admin/payments/packages"
-            className="inline-flex items-center gap-1.5 rounded border border-line px-3 py-2 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+            className="inline-flex items-center gap-1.5 rounded border border-line px-3 py-2 font-mono text-[14px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
           >
             <Tag className="h-3.5 w-3.5" aria-hidden />
             Packages
           </Link>
           <Link
             href="/admin/payments/settings"
-            className="inline-flex items-center gap-1.5 rounded border border-line px-3 py-2 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+            className="inline-flex items-center gap-1.5 rounded border border-line px-3 py-2 font-mono text-[14px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
           >
             <Settings className="h-3.5 w-3.5" aria-hidden />
             Settings
@@ -100,9 +100,9 @@ export default async function AdminPaymentsPage({
           <Link
             key={option}
             href={`/admin/payments?status=${option}`}
-            className={`rounded-full border px-3 py-1 font-mono text-[12px] uppercase tracking-[0.1em] ${
+            className={`rounded-full border px-3 py-1 font-mono text-[14px] uppercase tracking-[0.1em] ${
               status === option
-                ? 'border-accent/40 bg-accent/10 text-accent'
+                ? 'border-accent/40 bg-accent/10 text-accent-ink'
                 : 'border-line text-ink-dim hover:text-ink'
             }`}
           >
@@ -126,25 +126,25 @@ export default async function AdminPaymentsPage({
           <tbody>
             {orders.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-[15px] text-ink-dim">
+                <td colSpan={6} className="px-4 py-8 text-center text-[17px] text-ink-dim">
                   No checkout attempts yet.
                 </td>
               </tr>
             ) : (
               orders.map((order) => (
                 <tr key={order.id} className="border-b border-line/60 last:border-0">
-                  <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">
+                  <td className="whitespace-nowrap px-4 py-3 text-[16px] text-ink-dim">
                     {formatDate(order.createdAt)}
                   </td>
-                  <td className="px-4 py-3 text-[14px] text-ink">{order.email}</td>
-                  <td className="px-4 py-3 text-[14px] capitalize text-ink-dim">{order.provider}</td>
-                  <td className="whitespace-nowrap px-4 py-3 font-mono text-[14px] text-ink">
+                  <td className="px-4 py-3 text-[16px] text-ink">{order.email}</td>
+                  <td className="px-4 py-3 text-[16px] capitalize text-ink-dim">{order.provider}</td>
+                  <td className="whitespace-nowrap px-4 py-3 font-mono text-[16px] text-ink">
                     {order.amount} {order.currency}
                   </td>
                   <td className="px-4 py-3">
                     <Badge tone={TONE[order.status] ?? 'muted'}>{order.status}</Badge>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">
+                  <td className="whitespace-nowrap px-4 py-3 text-[16px] text-ink-dim">
                     {order.paidAt ? formatDate(order.paidAt) : '—'}
                   </td>
                 </tr>
@@ -154,11 +154,11 @@ export default async function AdminPaymentsPage({
         </table>
       </div>
 
-      <p className="mt-4 max-w-2xl text-[13px] leading-relaxed text-ink-dim">
+      <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ink-dim">
         A row stays at <span className="text-ink">pending</span> until the processor confirms it.
         If somebody says they paid but their row is still pending, the money did not reach us —
         check the processor before granting access by hand from{' '}
-        <Link href="/admin/codes" className="text-accent underline underline-offset-4">
+        <Link href="/admin/codes" className="text-accent-ink underline underline-offset-4">
           Codes
         </Link>
         .

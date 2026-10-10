@@ -30,7 +30,7 @@ export function CopyShareMessage({ message }: { message: string }) {
           // report's own page shows the message as selectable text.
         }
       }}
-      className="inline-flex shrink-0 items-center gap-1 rounded border border-line px-2 py-0.5 font-mono text-[11px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+      className="inline-flex shrink-0 items-center gap-1 rounded border border-line px-2 py-0.5 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
     >
       {copied ? (
         <Check className="h-3 w-3 text-up" aria-hidden />

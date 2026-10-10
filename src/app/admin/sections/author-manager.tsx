@@ -124,7 +124,7 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="font-display text-lg text-ink">Authors</h2>
-          <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-ink-dim">
+          <p className="mt-2 max-w-xl text-[16px] leading-relaxed text-ink-dim">
             The experts whose work you publish. A profile, not a login — they cannot sign in,
             upload, or see members. Everything here appears on their public page.
           </p>
@@ -200,8 +200,8 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
                 onChange={(e) => setForm({ ...form, comingSoon: e.target.checked })}
               />
               <span className="min-w-0">
-                <span className="block text-[14px] text-ink">List as &ldquo;Coming soon&rdquo;</span>
-                <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
+                <span className="block text-[16px] text-ink">List as &ldquo;Coming soon&rdquo;</span>
+                <span className="mt-1 block text-[15px] leading-relaxed text-ink-dim">
                   Shows them on the contributors page before they have anything to sell, marked
                   plainly as forthcoming. The badge disappears by itself as soon as their first
                   subject goes on sale — there is nothing to switch off afterwards.
@@ -294,12 +294,12 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
                   from the admin screen rather than only on the public page. */}
               <AuthorAvatar name={author.name} photoUrl={author.photoUrl} size={36} />
               <div className="min-w-0 flex-1">
-                <span className="text-[15px] text-ink">{author.name}</span>
-                <span className="ml-2 font-mono text-[11px] text-ink-dim">/{author.slug}</span>
-                <p className="truncate text-[13px] text-ink-dim">
+                <span className="text-[17px] text-ink">{author.name}</span>
+                <span className="ml-2 font-mono text-[12px] text-ink-dim">/{author.slug}</span>
+                <p className="truncate text-[15px] text-ink-dim">
                   {author.headline ?? 'No headline yet'}
                 </p>
-                <p className="font-mono text-[11px] text-ink-dim">
+                <p className="font-mono text-[12px] text-ink-dim">
                   {author.sectionCount} section{author.sectionCount === 1 ? '' : 's'}
                 </p>
               </div>

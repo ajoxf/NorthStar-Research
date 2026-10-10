@@ -64,6 +64,32 @@ export function addMonths(from: Date, months: number): Date {
   return end
 }
 
+/**
+ * Add whole days, as calendar days rather than as 24-hour blocks.
+ *
+ * `setDate` rather than adding milliseconds, so a 7-day comp started at 09:00 still ends at
+ * 09:00 on the far side of a clock change instead of an hour early or late.
+ */
+export function addDays(from: Date, days: number): Date {
+  const end = new Date(from)
+  end.setDate(end.getDate() + days)
+  return end
+}
+
+/**
+ * How long a hand grant runs: months, days, or open-ended (null).
+ *
+ * Months stays the common case — those are the presets — and days exists for the comp a
+ * month cannot express: a week to try something, a fortnight to make up for an outage.
+ */
+export type GrantLength = { months: number } | { days: number } | null
+
+/** When a hand grant of this length, measured from `from`, ends. Null means never. */
+export function grantEndsAt(from: Date, length: GrantLength): Date | null {
+  if (length === null) return null
+  return 'days' in length ? addDays(from, length.days) : addMonths(from, length.months)
+}
+
 /** What a redeemed code grants: a section when it names one, otherwise all-access. */
 export function grantFor(
   code: { sectionId: string | null },

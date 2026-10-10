@@ -45,7 +45,7 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
     <div className="mx-auto max-w-4xl px-4 py-10 sm:px-5 sm:py-12">
       <Link
         href="/admin/affiliates"
-        className="mb-6 inline-flex items-center gap-1.5 font-mono text-[12px] text-ink-dim hover:text-ink"
+        className="mb-6 inline-flex items-center gap-1.5 font-mono text-[14px] text-ink-dim hover:text-ink"
       >
         <ArrowLeft className="h-3 w-3" aria-hidden />
         All affiliates
@@ -57,7 +57,7 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
           {affiliate.status}
         </Badge>
       </div>
-      <p className="mt-1.5 break-all font-mono text-[12px] text-ink-dim">{affiliate.email}</p>
+      <p className="mt-1.5 break-all font-mono text-[14px] text-ink-dim">{affiliate.email}</p>
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Clicks" value={affiliate.referrals.length} />
@@ -103,7 +103,7 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
             <tbody>
               {affiliate.referrals.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-[15px] text-ink-dim">
+                  <td colSpan={4} className="px-4 py-8 text-center text-[17px] text-ink-dim">
                     No clicks on this link yet.
                   </td>
                 </tr>
@@ -116,13 +116,13 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
                       </Badge>
                     </td>
                     {/* Anonymous until they sign up — a click is a tally, not a tracker. */}
-                    <td className="break-all px-4 py-3 text-[14px] text-ink-dim">
+                    <td className="break-all px-4 py-3 text-[16px] text-ink-dim">
                       {referral.email ?? '—'}
                     </td>
-                    <td className="px-4 py-3 font-mono text-[14px] text-ink-dim">
+                    <td className="px-4 py-3 font-mono text-[16px] text-ink-dim">
                       {referral.amountUsd ? `$${referral.amountUsd}` : '—'}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">
+                    <td className="whitespace-nowrap px-4 py-3 text-[16px] text-ink-dim">
                       {formatDate(referral.visitedAt)}
                     </td>
                   </tr>
@@ -147,8 +147,8 @@ function Stat({
 }) {
   return (
     <div className="rounded-lg border border-line bg-panel px-4 py-3">
-      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
-      <div className={`mt-1 font-mono text-xl ${accent ? 'text-accent' : 'text-ink'}`}>{value}</div>
+      <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
+      <div className={`mt-1 font-mono text-xl ${accent ? 'text-accent-ink' : 'text-ink'}`}>{value}</div>
     </div>
   )
 }

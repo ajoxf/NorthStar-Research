@@ -39,6 +39,24 @@ export const TRIAL_ITEM_KEY = 'trial.itemSlug'
  */
 export const TRIAL_MIGRATED_KEY = 'trial.migratedToItems'
 
+/**
+ * Whether a section created from now on starts with its trial open.
+ *
+ * **On unless somebody turns it off** — the reverse of the per-item column's own default.
+ * The column defaults off so that a row created by a repair or a backfill never starts
+ * giving away a fortnight nobody decided on. Creating a section in the console is a
+ * decision, and for a marketplace that converts on trials the default decision is yes.
+ *
+ * Only ever applied at creation. Changing it moves no existing section; the console's
+ * "open trials on every section" is the deliberate way to do that.
+ */
+export const TRIAL_NEW_SECTIONS_KEY = 'trial.newSectionsOpen'
+
+/** Unset or unreadable reads as on; only an explicit "false" turns it off. */
+export function parseNewSectionsOpen(raw: string | null | undefined): boolean {
+  return raw !== 'false'
+}
+
 /** What a trial grants when nobody has said otherwise. */
 export const TRIAL_DEFAULTS = { days: 14, itemSlug: 'nexus-ramp' } as const
 

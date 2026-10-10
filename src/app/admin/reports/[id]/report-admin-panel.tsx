@@ -158,10 +158,10 @@ export function ReportAdminPanel({
   return (
     <>
       <section className="mt-8 rounded-lg border border-line bg-panel p-6">
-        <h2 className="mb-1 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+        <h2 className="mb-1 font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
           {report.published ? 'Re-send' : 'Publish'}
         </h2>
-        <p className="mb-5 text-[14px] leading-relaxed text-ink-dim">
+        <p className="mb-5 text-[16px] leading-relaxed text-ink-dim">
           {report.published
             ? 'This report is live. Re-sending delivers only to active members who have not already received it — nobody gets a duplicate.'
             : 'Publishing makes this report visible to members and immediately emails every active member a link to it.'}
@@ -169,7 +169,7 @@ export function ReportAdminPanel({
 
         {confirmPublish ? (
           <div className="rounded-lg border border-accent/40 bg-accent/10 p-4">
-            <p className="mb-4 text-[14px] text-ink">
+            <p className="mb-4 text-[16px] text-ink">
               This sends to your entire active member list. Continue?
             </p>
             <div className="flex flex-wrap gap-3">
@@ -197,7 +197,7 @@ export function ReportAdminPanel({
 
             <Link
               href={`/reports/${report.id}`}
-              className="font-mono text-[12px] text-accent hover:underline"
+              className="font-mono text-[14px] text-accent-ink hover:underline"
             >
               Preview as a member
             </Link>
@@ -216,10 +216,10 @@ export function ReportAdminPanel({
         ones is how the wrong button gets pressed.
       */}
       <section className="mt-5 rounded-lg border border-down/30 bg-down/[0.06] p-6">
-        <h2 className="mb-1 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+        <h2 className="mb-1 font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
           Delete
         </h2>
-        <p className="mb-5 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+        <p className="mb-5 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
           Removes the report and its PDF for good. Only possible while no member has opened it
           and nothing has been sent — after that the views and delivery records are the audit
           trail, so un-publish instead and members lose access immediately.
@@ -240,7 +240,7 @@ export function ReportAdminPanel({
       </section>
 
       <form onSubmit={saveChanges} className="mt-5 rounded-lg border border-line bg-panel p-6">
-        <h2 className="mb-5 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+        <h2 className="mb-5 font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
           Edit content
         </h2>
 
@@ -299,7 +299,7 @@ export function ReportAdminPanel({
             name="htmlContent"
             rows={12}
             defaultValue={report.htmlContent ?? ''}
-            className="font-mono text-[13px]"
+            className="font-mono text-[15px]"
           />
           <Hint>
             {report.hasPdf
@@ -315,7 +315,7 @@ export function ReportAdminPanel({
             name="instruments"
             rows={10}
             defaultValue={report.instruments}
-            className="font-mono text-[13px]"
+            className="font-mono text-[15px]"
           />
           <Hint>Leave blank to hide the tabbed instrument view for this report.</Hint>
         </div>

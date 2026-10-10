@@ -12,6 +12,11 @@ import { Hint, Input, Label, Select, Textarea } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 import { amountString, formatPrice, parsePriceCents } from '@/lib/package-shape'
 import { sectionName } from '@/lib/section-shape'
+import {
+  SECTION_AUDIENCES,
+  SECTION_AUDIENCE_LABEL,
+  sectionAudienceLabel,
+} from '@/lib/section-audience'
 
 export type SectionRow = {
   id: string
@@ -163,7 +168,7 @@ export function SectionManager({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="font-display text-lg text-ink">Sections</h2>
-          <p className="mt-2 max-w-xl text-[14px] leading-relaxed text-ink-dim">
+          <p className="mt-2 max-w-xl text-[16px] leading-relaxed text-ink-dim">
             What a member subscribes to. One topic, one author, one price.
           </p>
         </div>
@@ -176,7 +181,7 @@ export function SectionManager({
       </div>
 
       {blocked && (
-        <p className="mt-4 text-[13px] leading-relaxed text-ink-dim">
+        <p className="mt-4 text-[15px] leading-relaxed text-ink-dim">
           Add {topics.length === 0 ? 'a topic' : null}
           {topics.length === 0 && authors.length === 0 ? ' and ' : null}
           {authors.length === 0 ? 'an author' : null} above first — a section is made of both.
@@ -221,8 +226,8 @@ export function SectionManager({
           </div>
 
           {preview && (
-            <p className="mt-4 rounded-lg border border-accent/30 bg-accent/[0.06] px-4 py-3 text-[14px] text-ink">
-              This section will be called <span className="text-accent">{preview}</span>
+            <p className="mt-4 rounded-lg border border-accent/30 bg-accent/[0.06] px-4 py-3 text-[16px] text-ink">
+              This section will be called <span className="text-accent-ink">{preview}</span>
             </p>
           )}
 
@@ -257,8 +262,11 @@ export function SectionManager({
                 onChange={(e) => setForm({ ...form, audience: e.target.value })}
               >
                 <option value="">Not saying yet</option>
-                <option value="retail">Retail</option>
-                <option value="institutional">Institutional</option>
+                {SECTION_AUDIENCES.map((audience) => (
+                  <option key={audience} value={audience}>
+                    {SECTION_AUDIENCE_LABEL[audience]}
+                  </option>
+                ))}
               </Select>
               <Hint>
                 A label on the card and a filter visitors can use. It does not control who
@@ -349,15 +357,15 @@ export function SectionManager({
                 own line, which is the right thing to give up at that width.
               */}
               <div className="min-w-[260px] flex-1">
-                <span className="text-[15px] text-ink">
+                <span className="text-[17px] text-ink">
                   {sectionName({
                     displayName: section.displayName,
                     topic: section.topic,
                     author: section.author,
                   })}
                 </span>
-                <span className="ml-2 font-mono text-[11px] text-ink-dim">/{section.slug}</span>
-                <p className="font-mono text-[11px] text-ink-dim">
+                <span className="ml-2 font-mono text-[12px] text-ink-dim">/{section.slug}</span>
+                <p className="font-mono text-[12px] text-ink-dim">
                   {formatPrice(section.priceCents, section.currency)}/{section.interval} ·{' '}
                   {section.reportCount} report{section.reportCount === 1 ? '' : 's'} ·{' '}
                   {/*
@@ -387,7 +395,7 @@ export function SectionManager({
                 */}
                 <Select
                   aria-label="Who this section is priced for"
-                  className="h-8 w-[132px] py-0 text-[12px]"
+                  className="h-8 w-[132px] py-0 text-[14px]"
                   disabled={busy}
                   value={section.audience ?? ''}
                   onChange={(e) => {
@@ -397,13 +405,16 @@ export function SectionManager({
                       'PATCH',
                       // '' is the unclassified option, and the API reads null as "clear it".
                       { audience: value === '' ? null : value },
-                      value === '' ? 'Audience cleared' : `Marked ${value}`,
+                      value === '' ? 'Audience cleared' : `Marked ${sectionAudienceLabel(value)}`,
                     )
                   }}
                 >
                   <option value="">Unclassified</option>
-                  <option value="retail">Retail</option>
-                  <option value="institutional">Institutional</option>
+                  {SECTION_AUDIENCES.map((audience) => (
+                    <option key={audience} value={audience}>
+                      {SECTION_AUDIENCE_LABEL[audience]}
+                    </option>
+                  ))}
                 </Select>
                 <PriceEditor
                   section={section}
@@ -691,8 +702,8 @@ function TrialEditor({ section }: { section: SectionRow }) {
           onChange={(event) => setEnabled(event.target.checked)}
         />
         <span>
-          <span className="block text-[14px] text-ink">Offer a free trial of this subject</span>
-          <span className="mt-1 block text-[13px] leading-relaxed text-ink-dim">
+          <span className="block text-[16px] text-ink">Offer a free trial of this subject</span>
+          <span className="mt-1 block text-[15px] leading-relaxed text-ink-dim">
             No card. It grants this one section and stops on its own. Somebody who has ever
             held this subject cannot trial it again.
           </span>

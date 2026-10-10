@@ -42,19 +42,19 @@ function PreviewCard({ preview }: { preview: EmailPreview }) {
   return (
     <section id={preview.key} className="scroll-mt-6">
       <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-[19px] text-ink">{preview.name}</h2>
+        <h2 className="text-[21px] text-ink">{preview.name}</h2>
         {preview.audience === 'desk' && <Badge tone="neutral">Internal — to the desk</Badge>}
       </div>
 
-      <p className="mb-4 max-w-2xl text-[14px] leading-relaxed text-ink-dim">{preview.trigger}</p>
+      <p className="mb-4 max-w-2xl text-[16px] leading-relaxed text-ink-dim">{preview.trigger}</p>
 
       <div className="overflow-hidden rounded-lg border border-line">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-panel px-4 py-3">
           <div className="min-w-0">
-            <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">
+            <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">
               Subject
             </span>
-            <p className="truncate text-[14px] text-ink">{preview.subject}</p>
+            <p className="truncate text-[16px] text-ink">{preview.subject}</p>
           </div>
 
           {/*
@@ -75,7 +75,7 @@ function PreviewCard({ preview }: { preview: EmailPreview }) {
         {view === 'html' ? (
           <EmailFrame title={`${preview.name} email preview`} html={preview.html} />
         ) : (
-          <pre className="max-h-[520px] overflow-auto bg-black px-4 py-4 font-mono text-[12px] leading-relaxed text-ink-dim">
+          <pre className="max-h-[520px] overflow-auto bg-black px-4 py-4 font-mono text-[14px] leading-relaxed text-ink-dim">
             {preview.text}
           </pre>
         )}
@@ -100,7 +100,7 @@ function ViewTab({
       type="button"
       onClick={onClick}
       className={cn(
-        'flex items-center gap-1.5 rounded px-2.5 py-1 font-mono text-[11px] transition-colors',
+        'flex items-center gap-1.5 rounded px-2.5 py-1 font-mono text-[12px] transition-colors',
         active ? 'bg-panel-2 text-ink' : 'text-ink-dim hover:text-ink',
       )}
     >

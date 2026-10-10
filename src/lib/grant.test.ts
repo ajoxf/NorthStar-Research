@@ -2,8 +2,10 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import {
+  addDays,
   entitlementFields,
   extendedRenewal,
+  grantEndsAt,
   grantFor,
   memberSubscriptionFields,
   monthsGranted,
@@ -215,5 +217,29 @@ describe('grantFor — what a package hands over', () => {
   it('a package with nothing ticked grants no items — and no accidents', () => {
     const grant = grantFor({ sectionId: null }, { interval: 'month', packageId: 'pkg_all' }, null)
     assert.deepEqual(grant.itemIds, [])
+  })
+})
+
+describe('grantEndsAt', () => {
+  const from = new Date('2026-10-10T09:00:00Z')
+
+  it('runs a day-based comp for exactly that many days', () => {
+    assert.equal(grantEndsAt(from, { days: 7 })?.toISOString(), '2026-10-17T09:00:00.000Z')
+    assert.equal(grantEndsAt(from, { days: 14 })?.toISOString(), '2026-10-24T09:00:00.000Z')
+  })
+
+  it('keeps months as calendar months', () => {
+    assert.equal(grantEndsAt(from, { months: 3 })?.toISOString(), '2027-01-10T09:00:00.000Z')
+  })
+
+  it('treats null as open-ended', () => {
+    assert.equal(grantEndsAt(from, null), null)
+  })
+
+  it('crosses a month end by calendar day', () => {
+    assert.equal(
+      addDays(new Date('2026-01-28T12:00:00Z'), 7).toISOString(),
+      '2026-02-04T12:00:00.000Z',
+    )
   })
 })

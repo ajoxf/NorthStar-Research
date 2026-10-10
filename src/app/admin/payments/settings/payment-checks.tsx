@@ -57,7 +57,7 @@ export function PaymentChecks() {
             </>
           )}
         </Button>
-        <p className="text-[13px] text-ink-dim">
+        <p className="text-[15px] text-ink-dim">
           Read-only. Retrieves your price and webhook list — creates no charge or order.
         </p>
       </div>
@@ -75,7 +75,7 @@ export function PaymentChecks() {
 function CheckGroup({ title, results }: { title: string; results: CheckResult[] }) {
   return (
     <div>
-      <h3 className="mb-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">{title}</h3>
+      <h3 className="mb-2 font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">{title}</h3>
       <ul className="space-y-2">
         {results.map((result, index) => (
           <li
@@ -89,8 +89,8 @@ function CheckGroup({ title, results }: { title: string; results: CheckResult[] 
           >
             <StatusIcon status={result.status} />
             <div className="min-w-0">
-              <p className="text-[14px] text-ink">{result.label}</p>
-              <p className="mt-0.5 text-[13px] leading-relaxed text-ink-dim">{result.detail}</p>
+              <p className="text-[16px] text-ink">{result.label}</p>
+              <p className="mt-0.5 text-[15px] leading-relaxed text-ink-dim">{result.detail}</p>
             </div>
           </li>
         ))}
@@ -102,7 +102,7 @@ function CheckGroup({ title, results }: { title: string; results: CheckResult[] 
 function StatusIcon({ status }: { status: CheckResult['status'] }) {
   if (status === 'ok') return <Check className="mt-0.5 h-4 w-4 shrink-0 text-up" aria-hidden />
   if (status === 'warn')
-    return <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
+    return <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" aria-hidden />
   return <X className="mt-0.5 h-4 w-4 shrink-0 text-down" aria-hidden />
 }
 
@@ -119,8 +119,8 @@ export function CopyableUrl({ label, value }: { label: string; value: string }) 
   return (
     <div className="flex items-start justify-between gap-3 border-b border-line py-3 last:border-b-0">
       <div className="min-w-0">
-        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink-dim">{label}</p>
-        <p className="mt-1 break-all font-mono text-[12px] text-ink">{value}</p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-dim">{label}</p>
+        <p className="mt-1 break-all font-mono text-[14px] text-ink">{value}</p>
       </div>
       <button
         type="button"
@@ -133,7 +133,7 @@ export function CopyableUrl({ label, value }: { label: string; value: string }) 
             // Clipboard access can be refused; the text is on screen and selectable.
           }
         }}
-        className="shrink-0 rounded border border-line px-2.5 py-1.5 font-mono text-[11px] text-ink-dim transition-colors hover:text-ink"
+        className="shrink-0 rounded border border-line px-2.5 py-1.5 font-mono text-[12px] text-ink-dim transition-colors hover:text-ink"
       >
         {copied ? (
           <Check className="h-3 w-3 text-up" aria-hidden />

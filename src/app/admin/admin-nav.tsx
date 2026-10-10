@@ -62,7 +62,7 @@ export function AdminNav({
             // page you are on to everybody who can see it and to nobody who cannot.
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'font-mono text-[12px] transition-colors',
+              'font-mono text-[14px] transition-colors',
               vertical
                 ? 'relative flex items-center rounded-md px-3 py-2'
                 : 'shrink-0 whitespace-nowrap rounded px-2.5 py-1.5',
@@ -82,7 +82,7 @@ export function AdminNav({
                 aria-hidden
                 className={cn(
                   'absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full',
-                  active ? 'bg-accent' : 'bg-transparent',
+                  active ? 'bg-accent-ink' : 'bg-transparent',
                 )}
               />
             )}

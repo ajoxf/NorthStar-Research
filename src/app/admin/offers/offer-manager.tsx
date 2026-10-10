@@ -132,8 +132,8 @@ export function OfferManager({
     <section className="rounded-2xl border border-line bg-panel p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-[20px] text-ink">Discounts</h2>
-          <p className="mt-1 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+          <h2 className="text-[22px] text-ink">Discounts</h2>
+          <p className="mt-1 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
             A sale applies by itself and shows a reduced price wherever the thing is sold. A
             code only applies when somebody types it. Neither edits a price — the list price
             stays what it is, so ending a campaign puts it back by itself.
@@ -246,7 +246,7 @@ export function OfferManager({
           </div>
 
           <fieldset className="mt-5">
-            <legend className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-dim">
+            <legend className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-dim">
               What it applies to
             </legend>
             {/*
@@ -263,7 +263,7 @@ export function OfferManager({
                 onChange={(e) => setForm({ ...form, appliesToEverything: e.target.checked })}
                 className="mt-1 h-4 w-4 accent-accent"
               />
-              <span className="text-[14px] text-ink">Everything on sale</span>
+              <span className="text-[16px] text-ink">Everything on sale</span>
             </label>
 
             {!form.appliesToEverything && (
@@ -285,7 +285,7 @@ export function OfferManager({
           </fieldset>
 
           {example.length > 0 && (
-            <p className="mt-5 rounded-lg border border-line bg-panel px-4 py-3 text-[13px] leading-relaxed text-ink-dim">
+            <p className="mt-5 rounded-lg border border-line bg-panel px-4 py-3 text-[15px] leading-relaxed text-ink-dim">
               {example.map((item) => (
                 <span key={item.id} className="block">
                   {item.name}:{' '}
@@ -312,7 +312,7 @@ export function OfferManager({
       )}
 
       {offers.length === 0 ? (
-        <p className="mt-6 text-[14px] text-ink-dim">
+        <p className="mt-6 text-[16px] text-ink-dim">
           No discounts yet. Everything sells at its list price.
         </p>
       ) : (
@@ -357,9 +357,9 @@ function Picker({
 }) {
   return (
     <div>
-      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-dim">{title}</p>
+      <p className="font-mono text-[12px] uppercase tracking-[0.18em] text-ink-dim">{title}</p>
       {items.length === 0 ? (
-        <p className="mt-2 text-[13px] text-ink-dim">None on sale.</p>
+        <p className="mt-2 text-[15px] text-ink-dim">None on sale.</p>
       ) : (
         <ul className="mt-2 space-y-2">
           {items.map((item) => (
@@ -371,9 +371,9 @@ function Picker({
                   onChange={() => onToggle(item.id)}
                   className="mt-1 h-4 w-4 accent-accent"
                 />
-                <span className="text-[14px] text-ink">
+                <span className="text-[16px] text-ink">
                   {item.name}{' '}
-                  <span className="font-mono text-[11px] text-ink-dim">
+                  <span className="font-mono text-[12px] text-ink-dim">
                     {formatPrice(item.priceCents, item.currency)}
                   </span>
                 </span>
@@ -430,14 +430,14 @@ function OfferLine({
   return (
     <li className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
       <div className="min-w-[260px] flex-1">
-        <span className="text-[15px] text-ink">{offer.name}</span>
-        <span className="ml-2 font-mono text-[12px] text-accent">{offer.percentOff}% off</span>
+        <span className="text-[17px] text-ink">{offer.name}</span>
+        <span className="ml-2 font-mono text-[14px] text-accent-ink">{offer.percentOff}% off</span>
         {offer.code ? (
-          <span className="ml-2 font-mono text-[11px] text-ink-dim">code {offer.code}</span>
+          <span className="ml-2 font-mono text-[12px] text-ink-dim">code {offer.code}</span>
         ) : (
-          <span className="ml-2 font-mono text-[11px] text-ink-dim">public sale</span>
+          <span className="ml-2 font-mono text-[12px] text-ink-dim">public sale</span>
         )}
-        <p className="mt-0.5 font-mono text-[11px] text-ink-dim">
+        <p className="mt-0.5 font-mono text-[12px] text-ink-dim">
           {scope} ·{' '}
           {offer.duration === 'forever' ? 'every payment' : 'first payment'} · {offer.redeemedCount}{' '}
           used

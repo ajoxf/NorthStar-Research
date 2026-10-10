@@ -41,7 +41,7 @@ export default async function AdminAffiliatesPage() {
       <div className="mb-8">
         <span className="eyebrow">Referrals &amp; rewards</span>
         <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Affiliates</h1>
-        <p className="mt-3 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
+        <p className="mt-3 max-w-2xl text-[18px] leading-relaxed text-ink-dim">
           Each affiliate gets a link. A click is attributed for {ATTRIBUTION_DAYS} days, and an
           award is earned when the person <span className="text-ink">pays</span> — never when they
           sign up. Awards are a record of what is owed; paying them happens outside this system.
@@ -52,7 +52,7 @@ export default async function AdminAffiliatesPage() {
 
       <div className="mt-8 space-y-3">
         {affiliates.length === 0 ? (
-          <div className="panel px-5 py-12 text-center text-[15px] text-ink-dim">
+          <div className="panel px-5 py-12 text-center text-[17px] text-ink-dim">
             No affiliates yet. Create one above and share the link it gives you.
           </div>
         ) : (
@@ -73,13 +73,13 @@ export default async function AdminAffiliatesPage() {
                 <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2.5">
-                      <h2 className="text-[17px] text-ink">{affiliate.name}</h2>
+                      <h2 className="text-[19px] text-ink">{affiliate.name}</h2>
                       <Badge tone={statusTone(affiliate.status)}>{affiliate.status}</Badge>
                     </div>
-                    <p className="mt-1 break-all font-mono text-[12px] text-ink-dim">
+                    <p className="mt-1 break-all font-mono text-[14px] text-ink-dim">
                       {referralLink(base, affiliate.slug)}
                     </p>
-                    <p className="mt-1.5 text-[13px] text-ink-dim">
+                    <p className="mt-1.5 text-[15px] text-ink-dim">
                       {describeReward(affiliate.rewardKind, affiliate.rewardAmount)}
                       {affiliate.visitorDiscountPercent
                         ? ` · visitor gets ${affiliate.visitorDiscountPercent}% off`
@@ -119,8 +119,8 @@ function Metric({
 }) {
   return (
     <div className="text-right">
-      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
-      <div className={`mt-0.5 font-mono text-[17px] ${accent ? 'text-accent' : 'text-ink'}`}>
+      <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
+      <div className={`mt-0.5 font-mono text-[19px] ${accent ? 'text-accent-ink' : 'text-ink'}`}>
         {value}
       </div>
     </div>

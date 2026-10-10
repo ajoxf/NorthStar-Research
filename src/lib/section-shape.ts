@@ -1,6 +1,7 @@
 import { z } from 'zod'
 
 import { MAX_PRICE_CENTS, MIN_PRICE_CENTS } from '@/lib/package-shape'
+import { SECTION_AUDIENCES } from '@/lib/section-audience'
 
 /**
  * Topics, authors and sections — the shapes, the names and the validation.
@@ -245,7 +246,7 @@ export const sectionInputSchema = z.object({
    * section's cadence should not be made to classify it on the way past, and a required
    * field would make "retail" the answer to a question nobody was actually asked.
    */
-  audience: z.enum(['retail', 'institutional']).nullable().optional(),
+  audience: z.enum(SECTION_AUDIENCES).nullable().optional(),
   sortOrder: z.number().int().min(0).max(999).default(0),
 })
 

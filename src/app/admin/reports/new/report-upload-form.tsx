@@ -283,10 +283,10 @@ export function ReportUploadForm({
           className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-line bg-panel-2 px-5 py-8 text-center transition-colors hover:border-accent/50"
         >
           <Upload className="mb-3 h-5 w-5 text-ink-dim" aria-hidden />
-          <span className="text-[14px] text-ink">
+          <span className="text-[16px] text-ink">
             {fileName ?? 'Choose the report PDF'}
           </span>
-          <span className="mt-1 font-mono text-[11px] text-ink-dim">PDF only</span>
+          <span className="mt-1 font-mono text-[12px] text-ink-dim">PDF only</span>
           <input
             id="pdf"
             name="pdf"
@@ -304,7 +304,7 @@ export function ReportUploadForm({
             onChange={(event) => setCompress(event.target.checked)}
             className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-accent"
           />
-          <span className="text-[13px] leading-relaxed text-ink-dim">
+          <span className="text-[15px] leading-relaxed text-ink-dim">
             <span className="text-ink">Shrink the charts before uploading</span> — resamples chart
             images to 1,400px. Text, pages and the reading view are untouched. Typically about
             75% smaller with no visible difference, even zoomed in.
@@ -315,11 +315,11 @@ export function ReportUploadForm({
           <div className="mt-3">
             <div className="h-1 overflow-hidden rounded-full bg-panel-2">
               <div
-                className="h-full bg-accent transition-[width] duration-200"
+                className="h-full bg-accent-ink transition-[width] duration-200"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="mt-2 font-mono text-[11px] text-ink-dim">
+            <p className="mt-2 font-mono text-[12px] text-ink-dim">
               {stage === 'compressing'
                 ? `Shrinking charts… ${Math.round(progress)}%`
                 : progress < 100
@@ -330,7 +330,7 @@ export function ReportUploadForm({
         )}
 
         {saving && (
-          <p className="mt-2 font-mono text-[11px] text-up">
+          <p className="mt-2 font-mono text-[12px] text-up">
             {saving.saved !== undefined
               ? `${saving.note} — ${Math.round(saving.saved * 100)}% smaller`
               : saving.note}
@@ -352,7 +352,7 @@ export function ReportUploadForm({
             name="htmlContent"
             rows={8}
             placeholder="<p>Leave blank to generate this from the PDF text.</p>"
-            className="font-mono text-[13px]"
+            className="font-mono text-[15px]"
           />
           <Hint>
             This is what members actually read on a phone. Basic HTML: headings, paragraphs,
@@ -369,7 +369,7 @@ export function ReportUploadForm({
             <button
               type="button"
               onClick={() => setInstruments(INSTRUMENT_TEMPLATE)}
-              className="font-mono text-[11px] text-accent hover:underline"
+              className="font-mono text-[12px] text-accent-ink hover:underline"
             >
               Insert template
             </button>
@@ -381,7 +381,7 @@ export function ReportUploadForm({
             value={instruments}
             onChange={(event) => setInstruments(event.target.value)}
             placeholder="Optional. Powers the tabbed instrument view at the top of the report."
-            className="font-mono text-[13px]"
+            className="font-mono text-[15px]"
           />
           <Hint>Optional. Each entry becomes a tab in the reader.</Hint>
         </div>

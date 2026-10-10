@@ -74,7 +74,7 @@ export default async function AdminMembersPage({
     <div className="mx-auto max-w-6xl px-5 py-10">
       <div className="mb-6">
         <h1 className="font-mono text-xl text-ink">Members</h1>
-        <p className="mt-1 font-mono text-[12px] text-ink-dim">
+        <p className="mt-1 font-mono text-[14px] text-ink-dim">
           {total} matching {total === 1 ? 'member' : 'members'}
           {members.length < total && ` · showing the ${members.length} most recent`}
         </p>
@@ -94,7 +94,7 @@ export default async function AdminMembersPage({
       />
 
       {isFiltered(segment) && (
-        <p className="mt-3 flex flex-wrap items-center gap-2 text-[13px] text-ink-dim">
+        <p className="mt-3 flex flex-wrap items-center gap-2 text-[15px] text-ink-dim">
           <span>Segment:</span>
           {[
             segment.status !== 'all' ? segment.status : null,
@@ -105,11 +105,11 @@ export default async function AdminMembersPage({
           ]
             .filter(Boolean)
             .map((label) => (
-              <span key={label as string} className="rounded border border-line px-2 py-0.5 font-mono text-[11px] text-ink">
+              <span key={label as string} className="rounded border border-line px-2 py-0.5 font-mono text-[12px] text-ink">
                 {label}
               </span>
             ))}
-          <Link href="/admin/members" className="text-accent underline underline-offset-4">
+          <Link href="/admin/members" className="text-accent-ink underline underline-offset-4">
             Clear
           </Link>
         </p>
@@ -118,7 +118,7 @@ export default async function AdminMembersPage({
       <div className="mt-5 overflow-x-auto rounded-lg border border-line bg-panel">
         <table className="w-full min-w-[880px] text-left">
           <thead>
-            <tr className="border-b border-line font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">
+            <tr className="border-b border-line font-mono text-[12px] uppercase tracking-[0.12em] text-ink-dim">
               <th className="px-5 py-3 font-medium">Member</th>
               <th className="px-5 py-3 font-medium">Status</th>
               {/* What they can read, which Status does not answer — see member-filters. */}
@@ -133,7 +133,7 @@ export default async function AdminMembersPage({
           <tbody>
             {members.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-5 py-12 text-center font-mono text-[13px] text-ink-dim">
+                <td colSpan={8} className="px-5 py-12 text-center font-mono text-[15px] text-ink-dim">
                   {total === 0 && !isFiltered(segment)
                     ? 'No members yet. They appear here as soon as a payment confirms.'
                     : 'No members match those filters.'}
@@ -143,10 +143,10 @@ export default async function AdminMembersPage({
               members.map((member) => (
                 <tr key={member.id} className="border-b border-line last:border-b-0 hover:bg-panel-2">
                   <td className="px-5 py-3.5">
-                    <Link href={`/admin/members/${member.id}`} className="block hover:text-accent">
-                      <span className="block text-[14px] text-ink">{member.email}</span>
+                    <Link href={`/admin/members/${member.id}`} className="block hover:text-accent-ink">
+                      <span className="block text-[16px] text-ink">{member.email}</span>
                       {fullName(member) && (
-                        <span className="block font-mono text-[11px] text-ink-dim">
+                        <span className="block font-mono text-[12px] text-ink-dim">
                           {fullName(member)}
                         </span>
                       )}
@@ -178,12 +178,12 @@ export default async function AdminMembersPage({
                     {isAllAccess(member) ? (
                       <Badge tone="accent">Everything</Badge>
                     ) : member._count.entitlements > 0 ? (
-                      <span className="font-mono text-[12px] text-ink-dim">
+                      <span className="font-mono text-[14px] text-ink-dim">
                         {member._count.entitlements} section
                         {member._count.entitlements === 1 ? '' : 's'}
                       </span>
                     ) : (
-                      <span className="font-mono text-[12px] text-ink-dim/60">Nothing</span>
+                      <span className="font-mono text-[14px] text-ink-dim/60">Nothing</span>
                     )}
                   </td>
                   {/*
@@ -200,16 +200,16 @@ export default async function AdminMembersPage({
                       ))}
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-dim">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[14px] text-ink-dim">
                     {formatDate(member.createdAt)}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-dim">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[14px] text-ink-dim">
                     {member.lastLoginAt ? formatDate(member.lastLoginAt) : '—'}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-dim">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[14px] text-ink-dim">
                     {member.lastReportViewedAt ? formatDate(member.lastReportViewedAt) : '—'}
                   </td>
-                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[12px] text-ink-dim">
+                  <td className="whitespace-nowrap px-5 py-3.5 font-mono text-[14px] text-ink-dim">
                     {member._count.deliveryLogs} / {member._count.reportViews}
                   </td>
                 </tr>

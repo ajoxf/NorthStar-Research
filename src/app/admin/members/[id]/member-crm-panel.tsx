@@ -74,7 +74,7 @@ export function MemberCrmPanel({ member }: { member: CrmMember }) {
 
   return (
     <section className="mt-8 rounded-lg border border-line bg-panel p-6">
-      <h2 className="mb-5 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+      <h2 className="mb-5 font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
         CRM record
       </h2>
 
@@ -134,12 +134,12 @@ export function MemberCrmPanel({ member }: { member: CrmMember }) {
         <Label htmlFor="tag">Tags</Label>
         <div className="mb-2.5 flex flex-wrap gap-2">
           {tags.length === 0 && (
-            <span className="font-mono text-[12px] text-ink-dim">No tags yet.</span>
+            <span className="font-mono text-[14px] text-ink-dim">No tags yet.</span>
           )}
           {tags.map((tag) => (
             <span
               key={tag}
-              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel-2 py-1 pl-3 pr-2 font-mono text-[11px] text-ink"
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-panel-2 py-1 pl-3 pr-2 font-mono text-[12px] text-ink"
             >
               {tag}
               <button

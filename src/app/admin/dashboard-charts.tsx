@@ -24,7 +24,7 @@ export async function DashboardCharts() {
 
   return (
     <section className="mt-8">
-      <h2 className="mb-3 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+      <h2 className="mb-3 font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
         Dashboard
       </h2>
 

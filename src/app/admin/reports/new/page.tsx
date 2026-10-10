@@ -26,7 +26,7 @@ export default async function NewReportPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-10">
       <h1 className="font-mono text-xl text-ink">Upload a report</h1>
-      <p className="mt-1 font-mono text-[12px] text-ink-dim">
+      <p className="mt-1 font-mono text-[14px] text-ink-dim">
         Uploading creates a draft. Nothing is sent to members until you publish it.
       </p>
 

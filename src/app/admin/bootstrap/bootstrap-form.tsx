@@ -82,7 +82,7 @@ export function BootstrapForm() {
         )}
       </Button>
 
-      <p className="mt-4 text-[12px] leading-relaxed text-ink-dim">
+      <p className="mt-4 text-[14px] leading-relaxed text-ink-dim">
         Afterwards, delete ADMIN_BOOTSTRAP_SECRET from Vercel. This page will refuse to run again
         regardless, but removing it keeps the surface clean.
       </p>

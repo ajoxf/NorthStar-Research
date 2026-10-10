@@ -47,21 +47,21 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
     <div className="mx-auto max-w-3xl px-5 py-10">
       <Link
         href="/admin/reports"
-        className="mb-6 inline-flex items-center gap-1.5 font-mono text-[12px] text-ink-dim hover:text-ink"
+        className="mb-6 inline-flex items-center gap-1.5 font-mono text-[14px] text-ink-dim hover:text-ink"
       >
         <ArrowLeft className="h-3 w-3" aria-hidden />
         All reports
       </Link>
 
       <div className="mb-2 flex flex-wrap items-center gap-3">
-        <span className="font-mono text-[12px] text-accent">{reportTypeLabel(report.type)}</span>
+        <span className="font-mono text-[14px] text-accent-ink">{reportTypeLabel(report.type)}</span>
         <Badge tone={report.published ? 'up' : 'muted'}>
           {report.published ? 'Published' : 'Draft'}
         </Badge>
       </div>
 
       <h1 className="text-2xl text-ink">{report.title}</h1>
-      <p className="mt-1.5 font-mono text-[12px] text-ink-dim">
+      <p className="mt-1.5 font-mono text-[14px] text-ink-dim">
         Publish date {formatDate(report.publishDate)}
         {report.publishedAt && ` · sent ${formatDate(report.publishedAt)}`}
       </p>
@@ -79,7 +79,7 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
       */}
       <Link
         href={`/admin/reports/${report.id}/audience`}
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 font-mono text-[12px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+        className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-line px-3.5 py-2 font-mono text-[14px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
       >
         <Users className="h-3.5 w-3.5" aria-hidden />
         See who read it
@@ -95,8 +95,8 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
       */}
       {!report.pdfBlobUrl && (
         <div className="mt-6 rounded-xl border border-down/40 bg-down/10 p-5">
-          <h2 className="text-[16px] text-ink">This report has no document</h2>
-          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-ink-dim">
+          <h2 className="text-[18px] text-ink">This report has no document</h2>
+          <p className="mt-2 max-w-2xl text-[16px] leading-relaxed text-ink-dim">
             Members will have nothing to read. Upload the edition PDF below before publishing —
             the reader builds the whole reading experience from it.
           </p>
@@ -152,7 +152,7 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
 function Stat({ label, value, tone }: { label: string; value: number; tone?: 'down' }) {
   return (
     <div className="rounded-lg border border-line bg-panel px-4 py-3">
-      <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
+      <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
       <div className={`mt-1 font-mono text-xl ${tone === 'down' ? 'text-down' : 'text-ink'}`}>
         {value}
       </div>

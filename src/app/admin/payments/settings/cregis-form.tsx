@@ -146,7 +146,7 @@ export function CregisForm({ state }: { state: CregisFormState }) {
           value={callbackIps}
           onChange={(event) => setCallbackIps(event.target.value)}
           placeholder="Optional. One address per line, or comma separated."
-          className="font-mono text-[13px]"
+          className="font-mono text-[15px]"
         />
         <Hint>
           Optional and off by default. When set, only these addresses may deliver a payment
@@ -187,7 +187,7 @@ export function CregisForm({ state }: { state: CregisFormState }) {
               'Cleared — the environment variables are in use again',
             )
           }}
-          className="text-[13px] text-ink-dim underline underline-offset-4 transition-colors hover:text-ink"
+          className="text-[15px] text-ink-dim underline underline-offset-4 transition-colors hover:text-ink"
         >
           Clear and use Vercel again
         </button>

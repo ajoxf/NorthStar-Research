@@ -6,7 +6,7 @@ import { ArrowRightLeft, Plus, X } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button, Spinner } from '@/components/ui/button'
-import { Label, Select } from '@/components/ui/field'
+import { FieldError, Input, Label, Select } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 import {
   ACCESS_SOURCE_LABEL,
@@ -69,7 +69,21 @@ export function AccessPanel({
   >(null)
   const [refusal, setRefusal] = React.useState<string | null>(null)
   const [sectionId, setSectionId] = React.useState('')
-  const [months, setMonths] = React.useState('1')
+  /*
+   * The length, as one select value: `d7`, `m3`, `open`, or `custom` — the last of which
+   * reveals a box for any number of days. One control rather than a number and a unit,
+   * because the presets are what gets used and a preset should be a single click.
+   */
+  const [duration, setDuration] = React.useState('m1')
+  const [customDays, setCustomDays] = React.useState('')
+  const customDaysValid = /^\d+$/.test(customDays) && Number(customDays) >= 1 && Number(customDays) <= 730
+
+  function lengthBody(): { months: number | null } | { days: number } {
+    if (duration === 'open') return { months: null }
+    if (duration === 'custom') return { days: Number(customDays) }
+    const count = Number(duration.slice(1))
+    return duration.startsWith('d') ? { days: count } : { months: count }
+  }
 
   async function send(url: string, method: string, body: unknown, done: string) {
     setBusy(true)
@@ -110,7 +124,7 @@ export function AccessPanel({
 
   return (
     <section className="mt-8">
-      <h2 className="mb-3 font-mono text-[13px] uppercase tracking-[0.12em] text-ink-dim">
+      <h2 className="mb-3 font-mono text-[15px] uppercase tracking-[0.12em] text-ink-dim">
         Access
       </h2>
 
@@ -122,7 +136,7 @@ export function AccessPanel({
         is longer on purpose.
       */}
       <div
-        className={`rounded-lg border p-4 text-[14px] leading-relaxed ${
+        className={`rounded-lg border p-4 text-[16px] leading-relaxed ${
           allAccessIsLoadBearing
             ? 'border-accent/40 bg-accent/10 text-ink'
             : 'border-line bg-panel text-ink-dim'
@@ -157,10 +171,10 @@ export function AccessPanel({
       {allAccess && (
         <div className="mt-4 rounded-lg border border-line bg-panel p-4">
           {refusal ? (
-            <p className="text-[14px] leading-relaxed text-ink-dim">{refusal}</p>
+            <p className="text-[16px] leading-relaxed text-ink-dim">{refusal}</p>
           ) : preview ? (
             <>
-              <p className="text-[14px] leading-relaxed text-ink">
+              <p className="text-[16px] leading-relaxed text-ink">
                 They keep{' '}
                 <strong>
                   {preview.sections.length} section{preview.sections.length === 1 ? '' : 's'}
@@ -170,7 +184,7 @@ export function AccessPanel({
                   ? `, until ${formatDate(new Date(preview.renewsAt))} as now.`
                   : ', open-ended as now.'}
               </p>
-              <ul className="mt-2 list-inside list-disc text-[13px] text-ink-dim">
+              <ul className="mt-2 list-inside list-disc text-[15px] text-ink-dim">
                 {preview.sections.map((section) => (
                   <li key={section.id}>{section.name}</li>
                 ))}
@@ -199,7 +213,7 @@ export function AccessPanel({
             </>
           ) : (
             <>
-              <p className="text-[14px] leading-relaxed text-ink-dim">
+              <p className="text-[16px] leading-relaxed text-ink-dim">
                 Move them onto the sections they bought, keeping their current renewal date.
               </p>
               <Button
@@ -242,8 +256,8 @@ export function AccessPanel({
 
       {rows.length > 0 && (
         <div className="mt-4 overflow-x-auto rounded-lg border border-line">
-          <table className="w-full min-w-[640px] text-left text-[13px]">
-            <thead className="bg-panel font-mono text-[11px] uppercase tracking-[0.1em] text-ink-dim">
+          <table className="w-full min-w-[640px] text-left text-[15px]">
+            <thead className="bg-panel font-mono text-[12px] uppercase tracking-[0.1em] text-ink-dim">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Section</th>
                 <th className="px-4 py-2.5 font-medium">State</th>
@@ -260,7 +274,7 @@ export function AccessPanel({
                     {/* A product is not a section. The portal gate counts only sections,
                         so an operator reading this list needs to know which is which. */}
                     {!row.isSection && (
-                      <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.1em] text-ink-dim">
+                      <span className="ml-2 font-mono text-[11px] uppercase tracking-[0.1em] text-ink-dim">
                         product
                       </span>
                     )}
@@ -276,7 +290,7 @@ export function AccessPanel({
                         {/* The countdown, because a date alone makes an operator do the
                             arithmetic on every row of a list they are triaging. */}
                         {row.daysLeft !== null && (
-                          <span className="ml-2 font-mono text-[11px]">
+                          <span className="ml-2 font-mono text-[12px]">
                             {row.daysLeft >= 0 ? `${row.daysLeft}d left` : `${-row.daysLeft}d ago`}
                           </span>
                         )}
@@ -340,7 +354,7 @@ export function AccessPanel({
         </Button>
       ) : (
         <div className="mt-4 rounded-lg border border-line bg-panel p-4">
-          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
+          <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
             <div>
               <Label htmlFor="grant-section">Section</Label>
               <Select
@@ -357,31 +371,53 @@ export function AccessPanel({
               </Select>
             </div>
             <div>
-              <Label htmlFor="grant-months">For how long</Label>
+              <Label htmlFor="grant-length">For how long</Label>
               <Select
-                id="grant-months"
-                value={months}
-                onChange={(event) => setMonths(event.target.value)}
+                id="grant-length"
+                value={duration}
+                onChange={(event) => setDuration(event.target.value)}
               >
-                <option value="1">1 month</option>
-                <option value="3">3 months</option>
-                <option value="6">6 months</option>
-                <option value="12">12 months</option>
+                <option value="d7">7 days</option>
+                <option value="d14">14 days</option>
+                <option value="m1">1 month</option>
+                <option value="m3">3 months</option>
+                <option value="m6">6 months</option>
+                <option value="m12">12 months</option>
+                <option value="custom">Number of days…</option>
                 {/* Its own option rather than a blank field, so open-ended access is
                     always something somebody chose on purpose. */}
                 <option value="open">Open-ended</option>
               </Select>
             </div>
           </div>
+          {duration === 'custom' && (
+            <div className="mt-3 sm:ml-auto sm:w-[180px]">
+              <Label htmlFor="grant-days">Days</Label>
+              <Input
+                id="grant-days"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={730}
+                step={1}
+                placeholder="e.g. 10"
+                value={customDays}
+                onChange={(event) => setCustomDays(event.target.value)}
+              />
+              {customDays !== '' && !customDaysValid && (
+                <FieldError>A whole number of days, from 1 to 730.</FieldError>
+              )}
+            </div>
+          )}
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
               size="sm"
-              disabled={busy || !sectionId}
+              disabled={busy || !sectionId || (duration === 'custom' && !customDaysValid)}
               onClick={async () => {
                 const ok = await send(
                   `/api/admin/members/${memberId}/access`,
                   'POST',
-                  { sectionId, months: months === 'open' ? null : Number(months) },
+                  { sectionId, ...lengthBody() },
                   'Section granted',
                 )
                 if (ok) {

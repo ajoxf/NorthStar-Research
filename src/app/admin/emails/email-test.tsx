@@ -87,7 +87,7 @@ export function EmailTest({ defaultTo }: { defaultTo: string }) {
 
       {result && (
         <div
-          className={`mt-4 flex items-start gap-2 rounded-lg border p-4 text-[13px] leading-relaxed ${
+          className={`mt-4 flex items-start gap-2 rounded-lg border p-4 text-[15px] leading-relaxed ${
             result.ok ? 'border-up/35 bg-up/10 text-ink' : 'border-down/35 bg-down/10 text-ink'
           }`}
         >
@@ -105,7 +105,7 @@ export function EmailTest({ defaultTo }: { defaultTo: string }) {
                 If it does not arrive, it was accepted and then dropped or filtered — check the
                 provider&rsquo;s own dashboard for that message, then the spam folder.
                 {result.messageId && (
-                  <span className="mt-1 block break-all font-mono text-[12px] text-ink-dim">
+                  <span className="mt-1 block break-all font-mono text-[14px] text-ink-dim">
                     {result.messageId}
                   </span>
                 )}

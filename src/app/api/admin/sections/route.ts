@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { adminInput } from '@/app/api/admin/_admin-route'
 import { db } from '@/lib/db'
 import { sectionInputSchema, sectionName, sectionSlug, uniqueSlug } from '@/lib/section-shape'
+import { newSectionsOpenTrial } from '@/lib/trial'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -58,9 +59,15 @@ export async function POST(request: Request) {
    * The `section-` prefix matches scripts/backfill-items.mjs, so a section's item and a
    * product's can never collide on a slug.
    */
+  // Read before the transaction rather than inside it: a settings read has no business
+  // holding a write transaction open.
+  const trialEnabled = await newSectionsOpenTrial()
+
   const section = await db.$transaction(async (tx) => {
     const item = await tx.item.create({
-      data: { kind: 'section', slug: `section-${slug}`, name },
+      // The trial switch from the house default, decided here and nowhere else — a section
+      // made by a repair or a backfill keeps the column's own default of off.
+      data: { kind: 'section', slug: `section-${slug}`, name, trialEnabled },
     })
     return tx.section.create({
       data: {
