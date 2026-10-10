@@ -129,7 +129,7 @@ export class TwilioWhatsAppProvider implements NotificationProvider {
     return { status: 'failed', provider: this.name, error: 'Twilio provider does not send email.' }
   }
 
-  async sendAffiliateInvite(): Promise<DeliveryResult> {
+  async sendPortalInvite(): Promise<DeliveryResult> {
     return { status: 'failed', provider: this.name, error: 'Twilio provider does not send email.' }
   }
 }

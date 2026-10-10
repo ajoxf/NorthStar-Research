@@ -10,6 +10,7 @@ import type {
   ReceiptDetails,
   Recipient,
   ReportSummary,
+  PortalInvite,
 } from '@/lib/notifications/types'
 
 export type { DeliveryResult, LatestReport, NotificationProvider, ReceiptDetails, Recipient, ReportSummary }
@@ -129,9 +130,9 @@ class CompositeProvider implements NotificationProvider {
     )
   }
 
-  sendAffiliateInvite(recipient: { email: string; name?: string | null }, signInUrl: string) {
-    return sendAndRecord('affiliate_invite', recipient.email, () =>
-      this.email.sendAffiliateInvite(recipient, signInUrl),
+  sendPortalInvite(recipient: { email: string; name?: string | null }, invite: PortalInvite) {
+    return sendAndRecord(invite.role === 'expert' ? 'expert_invite' : 'affiliate_invite', recipient.email, () =>
+      this.email.sendPortalInvite(recipient, invite),
     )
   }
 

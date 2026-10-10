@@ -51,6 +51,15 @@ export default async function AdminSectionsPage() {
 
   const live = sections.filter((section) => section.archivedAt === null).length
 
+  // Who signs in as each expert, for the portal-access line under their profile.
+  const portalIds = authors.map((author) => author.memberId).filter((id): id is string => Boolean(id))
+  const portalMembers = new Map(
+    (portalIds.length
+      ? await db.member.findMany({ where: { id: { in: portalIds } }, select: { id: true, email: true, lastLoginAt: true } })
+      : []
+    ).map((member) => [member.id, member]),
+  )
+
   return (
     <ToastProvider>
       <div className="mx-auto max-w-5xl px-5 py-12">
@@ -97,6 +106,10 @@ export default async function AdminSectionsPage() {
             comingSoon: author.comingSoon,
             archived: author.archivedAt !== null,
             sectionCount: author._count.sections,
+            portal: (() => {
+              const member = author.memberId ? portalMembers.get(author.memberId) : undefined
+              return member ? { email: member.email, signedIn: member.lastLoginAt !== null } : null
+            })(),
           }))}
         />
 

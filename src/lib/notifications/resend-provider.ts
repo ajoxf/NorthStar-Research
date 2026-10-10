@@ -4,7 +4,6 @@ import { optionalEnv, requireEnv } from '@/lib/env'
 import { DEFAULT_EMAIL_FROM } from '@/lib/notifications/from'
 import { withRateLimitRetry } from '@/lib/notifications/retry'
 import {
-  affiliateInviteEmail,
   codeExpiringEmail,
   magicLinkEmail,
   receiptEmail,
@@ -14,6 +13,7 @@ import {
   reportEmail,
   pricingInviteEmail,
   sampleReportRequestEmail,
+  portalInviteEmail,
 } from '@/lib/notifications/templates'
 import type {
   DeliveryResult,
@@ -22,6 +22,7 @@ import type {
   NotificationProvider,
   Recipient,
   ReportSummary,
+  PortalInvite,
 } from '@/lib/notifications/types'
 
 /**
@@ -176,8 +177,8 @@ export class ResendProvider implements NotificationProvider {
     return this.send(recipient.email, subject, html, text)
   }
 
-  async sendAffiliateInvite(recipient: { email: string; name?: string | null }, signInUrl: string): Promise<DeliveryResult> {
-    const { subject, html, text } = affiliateInviteEmail({ name: recipient.name, email: recipient.email, signInUrl })
+  async sendPortalInvite(recipient: { email: string; name?: string | null }, invite: PortalInvite): Promise<DeliveryResult> {
+    const { subject, html, text } = portalInviteEmail({ ...invite, name: recipient.name, email: recipient.email })
     return this.send(recipient.email, subject, html, text)
   }
 }

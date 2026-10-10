@@ -4,6 +4,7 @@ import type {
   ReceiptDetails,
   Recipient,
   ReportSummary,
+  PortalInvite,
 } from '@/lib/notifications/types'
 import { receiptEmail, redemptionCodeEmail, reportEmail, welcomeEmail } from '@/lib/notifications/templates'
 
@@ -142,8 +143,8 @@ export class ConsoleProvider implements NotificationProvider {
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
 
-  async sendAffiliateInvite(recipient: { email: string }, signInUrl: string): Promise<DeliveryResult> {
-    console.info(`[notifications:console] AFFILIATE INVITE → ${recipient.email} | ${signInUrl}`)
+  async sendPortalInvite(recipient: { email: string }, invite: PortalInvite): Promise<DeliveryResult> {
+    console.info(`[notifications:console] ${invite.role.toUpperCase()} INVITE → ${recipient.email} | ${invite.signInUrl}`)
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
 }
