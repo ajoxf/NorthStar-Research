@@ -15,6 +15,7 @@ const LINKS = [
   { href: '/admin/payments', label: 'Payments' },
   { href: '/admin/codes', label: 'Codes' },
   { href: '/admin/offers', label: 'Discounts' },
+  { href: '/admin/earnings', label: 'Earnings' },
   { href: '/admin/affiliates', label: 'Affiliates' },
   { href: '/admin/emails', label: 'Emails' },
 ]

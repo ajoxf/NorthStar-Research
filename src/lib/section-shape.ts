@@ -201,6 +201,19 @@ export const authorInputSchema = z.object({
   sortOrder: z.number().int().min(0).max(999).default(0),
   /** List them before their work is ready. See comingSoonVisible. */
   comingSoon: z.boolean().default(false),
+  /**
+   * This contributor's share of net revenue, as whole percent. Null is the house default.
+   *
+   * Nullable and optional all the way through, so editing somebody's biography cannot
+   * silently rewrite their contract — a field absent from the body leaves the rate alone.
+   */
+  revenueSharePercent: z
+    .number()
+    .int()
+    .min(0, 'A share cannot be negative.')
+    .max(100, 'A share cannot exceed the whole net.')
+    .nullable()
+    .optional(),
 })
 
 export const sectionInputSchema = z.object({

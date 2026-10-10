@@ -45,6 +45,11 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       ...(f.credentials !== undefined ? { credentials: f.credentials } : {}),
       ...(f.sortOrder !== undefined ? { sortOrder: f.sortOrder } : {}),
       ...(f.comingSoon !== undefined ? { comingSoon: f.comingSoon } : {}),
+      // Same rule: undefined leaves the contract alone, null returns them to the house
+      // default. Editing a biography must not silently reprice anybody.
+      ...(f.revenueSharePercent !== undefined
+        ? { revenueSharePercent: f.revenueSharePercent }
+        : {}),
       ...(archived === undefined ? {} : { archivedAt: archived ? new Date() : null }),
     },
   })
