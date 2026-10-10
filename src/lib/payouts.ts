@@ -2,7 +2,7 @@ import 'server-only'
 
 import { db } from '@/lib/db'
 import { withdrawable } from '@/lib/earnings'
-import { balanceFor } from '@/lib/ledger'
+import { balanceFor, balanceForAffiliate } from '@/lib/ledger'
 import { canTransition, type PayoutStatusValue } from '@/lib/payout-flow'
 
 /**
@@ -25,20 +25,29 @@ export type PayoutResult = { ok: true } | { ok: false; error: string; status?: n
  * of the holdback: money inside it may yet be refunded, and paying it out turns a clawback
  * into a debt to chase rather than an entry to write.
  */
-export async function requestPayout(input: {
-  authorId: string
-  amountCents: number
-  destination?: string | null
-  note?: string | null
-  requestedByMemberId: string
-}): Promise<PayoutResult & { payoutId?: string }> {
-  const author = await db.author.findUnique({
-    where: { id: input.authorId },
-    select: { id: true },
-  })
-  if (!author) return { ok: false, error: 'No such contributor.', status: 404 }
-
-  const balance = await balanceFor(input.authorId)
+export async function requestPayout(
+  input: ({ authorId: string; affiliateId?: never } | { affiliateId: string; authorId?: never }) & {
+    amountCents: number
+    destination?: string | null
+    note?: string | null
+    requestedByMemberId: string
+  },
+): Promise<PayoutResult & { payoutId?: string }> {
+  // One balance, one queue: an expert's earnings or an affiliate's commission.
+  let party: { authorId: string } | { affiliateId: string }
+  let balance
+  if (input.authorId) {
+    const author = await db.author.findUnique({ where: { id: input.authorId }, select: { id: true } })
+    if (!author) return { ok: false, error: 'No such contributor.', status: 404 }
+    party = { authorId: input.authorId }
+    balance = await balanceFor(input.authorId)
+  } else {
+    const affiliateId = input.affiliateId as string
+    const affiliate = await db.affiliate.findUnique({ where: { id: affiliateId }, select: { id: true } })
+    if (!affiliate) return { ok: false, error: 'No such affiliate.', status: 404 }
+    party = { affiliateId }
+    balance = await balanceForAffiliate(affiliateId)
+  }
 
   /*
    * Money already requested but not yet resolved is not available again.
@@ -48,7 +57,7 @@ export async function requestPayout(input: {
    * contributor had been paid twice.
    */
   const pending = await db.payout.aggregate({
-    where: { authorId: input.authorId, status: { in: ['requested', 'approved'] } },
+    where: { ...party, status: { in: ['requested', 'approved'] } },
     _sum: { amountCents: true },
   })
   const spokenFor = pending._sum.amountCents ?? 0
@@ -68,7 +77,7 @@ export async function requestPayout(input: {
 
   const payout = await db.payout.create({
     data: {
-      authorId: input.authorId,
+      ...party,
       amountCents: input.amountCents,
       destination: input.destination ?? null,
       note: input.note ?? null,

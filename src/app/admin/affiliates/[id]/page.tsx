@@ -32,7 +32,7 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
   // Commission owed from before the ledger moves onto it once; then everything reads the ledger.
   await carryOverAwards(affiliate.id)
   // Counted, not read off the capped lists below, so a busy link is not undercounted.
-  const [clicks, conversions, balance, carriedRows] = await Promise.all([
+  const [clicks, conversions, balance, carriedRows, portalMember] = await Promise.all([
     db.referral.count({ where: { affiliateId: affiliate.id } }),
     db.referral.count({ where: { affiliateId: affiliate.id, status: 'converted' } }),
     balanceForAffiliate(affiliate.id),
@@ -40,6 +40,9 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
       where: { affiliateId: affiliate.id, note: { startsWith: CARRIED_NOTE } },
       select: { note: true },
     }),
+    affiliate.memberId
+      ? db.member.findUnique({ where: { id: affiliate.memberId }, select: { email: true, lastLoginAt: true } })
+      : null,
   ])
   const carried = new Set(carriedRows.map((row) => row.note?.slice(CARRIED_NOTE.length)))
 
@@ -91,6 +94,14 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
           link: referralLink(base, affiliate.slug),
           rewardDescription: describeReward(affiliate.rewardKind, affiliate.rewardAmount, affiliate.commissionOn),
         }}
+        portal={
+          portalMember
+            ? {
+                email: portalMember.email,
+                lastSignIn: portalMember.lastLoginAt ? formatDate(portalMember.lastLoginAt) : null,
+              }
+            : null
+        }
         awards={affiliate.awards.map((award) => ({
           id: award.id,
           amount: formatAward(award.kind, award.amount),

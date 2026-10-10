@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { emailSchema } from '@/lib/validation'
 
+import { landingFor } from '@/lib/affiliate-account'
 import { db } from '@/lib/db'
 import { startSession, verifyPassword } from '@/lib/auth'
 
@@ -43,6 +44,6 @@ export async function POST(request: Request) {
     role: member.role,
     // The client decides where to land: admins to the console, members to the report
     // they originally clicked (the `next` param) or their dashboard.
-    redirectTo: member.role === 'admin' ? '/admin' : '/dashboard',
+    redirectTo: await landingFor(member, '/dashboard'),
   })
 }

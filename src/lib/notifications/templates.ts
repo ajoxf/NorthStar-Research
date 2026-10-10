@@ -391,6 +391,30 @@ export function pricingInviteEmail(input: {
   }
 }
 
+export function affiliateInviteEmail(input: { name?: string | null; email: string; signInUrl: string }) {
+  const greeting = input.name ? `Hello ${escapeHtml(input.name)},` : 'Hello,'
+  const body = `
+    <p style="margin:0 0 18px;color:${INK};font-size:16px;">${greeting}</p>
+    <p style="margin:0 0 18px;color:${INK_DIM};font-size:15px;line-height:1.6;">
+      You have a page of your own on NordStar Pro now: your referral link, how many people it
+      has brought in, what you have earned, and a button to ask for a withdrawal.
+    </p>
+    ${button(input.signInUrl, 'Open your affiliate page')}
+    <p style="margin:18px 0 0;color:${INK_DIM};font-size:13px;line-height:1.6;">
+      Sign in as <strong style="color:${INK};">${escapeHtml(input.email)}</strong> — ask for an
+      email sign-in link on that page, or continue with Google if this is a Google address.
+    </p>
+  `
+  return {
+    subject: 'Your NordStar Pro affiliate page',
+    html: shell('Your NordStar Pro affiliate page', body),
+    text:
+      `${input.name ? `Hello ${input.name},` : 'Hello,'}\n\nYou have an affiliate page on NordStar Pro: your link, ` +
+      `your referrals, your earnings and withdrawals.\n\nOpen it: ${input.signInUrl}\n\n` +
+      `Sign in as ${input.email} — ask for an email sign-in link, or continue with Google.\n`,
+  }
+}
+
 export function sampleReportRequestEmail(request: {
   name: string
   email: string

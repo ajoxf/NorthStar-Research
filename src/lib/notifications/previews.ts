@@ -1,5 +1,6 @@
 import { appBaseUrl } from '@/lib/env'
 import {
+  affiliateInviteEmail,
   codeExpiringEmail,
   magicLinkEmail,
   receiptEmail,
@@ -109,6 +110,14 @@ export function emailPreviews(): EmailPreview[] {
       trigger: 'When somebody asks for an email link instead of a password.',
       audience: 'member',
       render: () => magicLinkEmail(`${base}/api/auth/magic?token=SAMPLE`, 15, 'Sam'),
+    },
+    {
+      key: 'affiliate-invite',
+      name: 'Affiliate invitation',
+      trigger: 'When an operator invites an affiliate to their page from the affiliate screen.',
+      audience: 'member',
+      render: () =>
+        affiliateInviteEmail({ name: 'Sam', email: 'sam@example.com', signInUrl: `${base}/login?next=/affiliate` }),
     },
     {
       key: 'code-expiring',

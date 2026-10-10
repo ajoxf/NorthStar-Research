@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { LoginForm } from '@/app/(auth)/login/login-form'
+import { landingFor } from '@/lib/affiliate-account'
 import { getCurrentMember } from '@/lib/auth'
 import { trialOffers } from '@/lib/trial'
 
@@ -32,7 +33,7 @@ export default async function LoginPage({
       ? searchParams.next
       : null
 
-  if (member) redirect(next ?? (member.role === 'admin' ? '/admin' : '/dashboard'))
+  if (member) redirect(next ?? (await landingFor(member, '/dashboard')))
 
   /*
    * Offered only while a trial is actually open, so this never points at a page that 404s.

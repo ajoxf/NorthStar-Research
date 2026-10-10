@@ -42,9 +42,12 @@ type Award = {
  */
 export function AffiliatePanel({
   affiliate,
+  portal,
   awards,
 }: {
   affiliate: Affiliate
+  /** The member account that opens this affiliate's page, when one is linked. */
+  portal: { email: string; lastSignIn: string | null } | null
   awards: Award[]
 }) {
   const router = useRouter()
@@ -52,6 +55,7 @@ export function AffiliatePanel({
   const [pending, setPending] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [copied, setCopied] = React.useState(false)
+  const [portalError, setPortalError] = React.useState<string | null>(null)
 
   async function patch(body: Record<string, unknown>, success: string) {
     setError(null)
@@ -75,6 +79,47 @@ export function AffiliatePanel({
     } catch {
       setError('That change could not be saved.')
       return false
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function invite(email: string | null) {
+    setPortalError(null)
+    setPending(true)
+    try {
+      const response = await fetch(`/api/admin/affiliates/${affiliate.id}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(email ? { email } : {}),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setPortalError(data.error ?? 'The invitation could not be sent.')
+        return
+      }
+      setPortalError(null)
+      if (data.sent) toast('Invitation sent', 'success')
+      else toast(data.note ?? 'Linked, but no invitation went out.', 'error')
+      router.refresh()
+    } catch {
+      setPortalError('The invitation could not be sent.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  async function unlink() {
+    if (!window.confirm(`Take the affiliate page away from ${portal?.email}? Their account and history stay.`)) return
+    setPending(true)
+    try {
+      const response = await fetch(`/api/admin/affiliates/${affiliate.id}/invite`, { method: 'DELETE' })
+      if (response.ok) {
+        toast('Portal access removed', 'success')
+        router.refresh()
+      } else {
+        setPortalError('That could not be changed.')
+      }
     } finally {
       setPending(false)
     }
@@ -119,6 +164,49 @@ export function AffiliatePanel({
             ? ` · people using this link get ${affiliate.visitorDiscountPercent}% off their first payment`
             : ''}
         </Hint>
+      </section>
+
+      <section className="panel mt-5 p-5 sm:p-6">
+        <h2 className="eyebrow mb-4">Portal access</h2>
+        {portal ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[17px] text-ink-dim">
+              Opens their page as <span className="break-all text-ink">{portal.email}</span>
+              {portal.lastSignIn ? ` · last signed in ${portal.lastSignIn}` : ' · not signed in yet'}
+            </p>
+            <div className="flex shrink-0 gap-3">
+              <Button variant="secondary" size="sm" disabled={pending} onClick={() => invite(portal.email)}>
+                Resend invitation
+              </Button>
+              <Button variant="secondary" size="sm" disabled={pending} onClick={unlink}>
+                Remove access
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <form
+            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault()
+              const email = String(new FormData(event.currentTarget).get('portalEmail') ?? '').trim()
+              void invite(email || null)
+            }}
+          >
+            <div className="flex-1">
+              <Label htmlFor="portalEmail">Member account email</Label>
+              <Input id="portalEmail" name="portalEmail" type="email" defaultValue={affiliate.email} />
+              <Hint>
+                Their own page: link, counts, earnings and withdrawals. Uses the account with this email, or
+                creates one that holds nothing.
+              </Hint>
+            </div>
+            <Button type="submit" disabled={pending} className="sm:mb-6">
+              Invite to their page
+            </Button>
+          </form>
+        )}
+        <FieldError>{portalError}</FieldError>
       </section>
 
       <section className="panel mt-5 p-5 sm:p-6">
