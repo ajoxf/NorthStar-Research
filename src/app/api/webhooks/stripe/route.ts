@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
-import { addBillingPeriod, appBaseUrl } from '@/lib/env'
-import { codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
+import { addBillingPeriod } from '@/lib/env'
+import { fulfilPaidOrder } from '@/lib/fulfilment'
 import { getNotificationProvider } from '@/lib/notifications'
 import { type Stripe } from '@/lib/payments/stripe'
 import { stripeProvider } from '@/lib/payments/stripe-provider'
 import { resolveSubscription } from '@/lib/subscription-target'
-import { recordReferralConversion } from '@/lib/referral-attribution'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -58,7 +57,7 @@ export async function POST(request: Request) {
   return NextResponse.json({ received: true })
 }
 
-/** First successful payment: create the contact and issue a one-time redemption code. */
+/** First successful payment: grant it, or issue a code to somebody without an account. See fulfilment.ts. */
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const email = (session.customer_email ?? session.client_reference_id ?? '').toLowerCase()
   if (!email) {
@@ -104,126 +103,39 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return
   }
 
-  const code = generateRedemptionCode()
-  // The order is authoritative; the session metadata catches a callback that arrives
-  // before the order row landed.
-  const sectionId = existingOrder?.sectionId ?? session.metadata?.sectionId ?? null
-
-  await db.$transaction(async (tx) => {
-    await tx.checkoutOrder.upsert({
-      where: { cregisOrderId: session.id },
-      create: {
+  /*
+   * The order this session paid for. checkout.ts writes it before Stripe is called, so it
+   * is normally here. If it is not — the request died between Stripe answering and the
+   * row being written — record one from the session, which grants the built-in plan as
+   * this path always has, and say so loudly: a paid buyer must not be refused, and an
+   * operator should look.
+   */
+  const order =
+    existingOrder ??
+    (await db.checkoutOrder.create({
+      data: {
         cregisOrderId: session.id,
         provider: 'stripe',
         email,
         amount: ((session.amount_total ?? 19900) / 100).toFixed(2),
         currency: (session.currency ?? 'usd').toUpperCase(),
-        status: 'paid',
-        paidAt: new Date(),
-        rawCallback: session as never,
-        stripeSubscriptionId: subscriptionId ?? null,
+        status: 'pending',
       },
-      update: {
-        status: 'paid',
-        paidAt: new Date(),
-        rawCallback: session as never,
-        stripeSubscriptionId: subscriptionId ?? undefined,
-      },
-    })
+    }))
+  if (!existingOrder) {
+    console.error(`[stripe:webhook] session ${session.id} had no order on record — recorded one now; check it`)
+  }
 
-    await tx.redemptionCode.create({
-      // Expiry runs from payment: the buyer has the code the moment this callback lands.
-      data: {
-        code,
-        cregisOrderId: session.id,
-        email,
-        status: 'unused',
-        // Bought at list price, so no discount to record.
-        discountPercent: 0,
-        expiresAt: codeExpiresAt(),
-        // Read off the order this session created, not off the session: the order is
-        // where the package the buyer chose was recorded, and it is what carries that
-        // choice forward to the membership they end up with.
-        packageId: existingOrder?.packageId ?? null,
-        /*
-         * Which section was bought, carried code-first.
-         *
-         * Read from the session metadata as well as the order: the order is written when
-         * checkout starts and is authoritative, but a session created before that row
-         * landed would otherwise lose the section and silently grant all-access.
-         */
-        sectionId,
-      },
-    })
-
-    /*
-     * A section purchase must not rewrite the member's own membership.
-     *
-     * `stripeSubscriptionId` and `packageId` on Member describe the all-access
-     * subscription. An existing all-access member buying a section would otherwise have
-     * theirs overwritten by the section's, and the billing portal would then manage — or
-     * cancel — the wrong one. The section's subscription is carried on the order instead,
-     * and attached to the entitlement at redemption.
-     */
-    const boughtSection = Boolean(sectionId)
-    await tx.member.upsert({
-      where: { email },
-      create: {
-        email,
-        source: 'stripe_checkout',
-        subscriptionStatus: 'pending',
-        billingProvider: 'stripe',
-        stripeCustomerId: customerId ?? null,
-        stripeSubscriptionId: boughtSection ? null : (subscriptionId ?? null),
-        packageId: boughtSection ? null : (existingOrder?.packageId ?? null),
-      },
-      update: {
-        billingProvider: 'stripe',
-        stripeCustomerId: customerId ?? undefined,
-        ...(boughtSection
-          ? {}
-          : {
-              stripeSubscriptionId: subscriptionId ?? undefined,
-              packageId: existingOrder?.packageId ?? undefined,
-            }),
-      },
-    })
+  await fulfilPaidOrder({
+    order,
+    provider: 'stripe',
+    providerRef: session.id,
+    methodLabel: 'Card',
+    amount: ((session.amount_total ?? 0) / 100).toFixed(2),
+    currency: (session.currency ?? order.currency).toUpperCase(),
+    rawCallback: session,
+    stripe: { customerId: customerId ?? null, subscriptionId: subscriptionId ?? null },
   })
-
-  // A receipt for a payment that actually happened. Stripe emails its own receipt only
-  // if that is switched on in the dashboard, and it carries Stripe's branding rather
-  // than ours — this one is ours and always sends.
-  try {
-    const receipt = await getNotificationProvider().sendReceiptEmail(
-      { email },
-      {
-        amount: ((session.amount_total ?? 19900) / 100).toFixed(2),
-        currency: (session.currency ?? 'usd').toUpperCase(),
-        method: 'Card',
-        reference: session.id,
-        paidAt: new Date(),
-      },
-    )
-    if (receipt.status === 'failed') {
-      console.error(`[stripe:webhook] receipt failed for ${email}: ${receipt.error}`)
-    }
-  } catch (error) {
-    console.error('[stripe:webhook] receipt threw', error)
-  }
-
-  // Credit the affiliate, if this buyer came through one. Never throws — see the note in
-  // referral-attribution.ts: the payment is real whatever bookkeeping does.
-  await recordReferralConversion(email, Math.round((session.amount_total ?? 19900) / 100))
-
-  const redeemUrl = `${appBaseUrl()}/redeem?code=${encodeURIComponent(code)}`
-  try {
-    const result = await getNotificationProvider().sendRedemptionCodeEmail({ email }, code, redeemUrl)
-    if (result.status === 'failed') {
-      console.error(`[stripe:webhook] code ${code} issued but email failed: ${result.error}`)
-    }
-  } catch (error) {
-    console.error(`[stripe:webhook] code ${code} issued but email threw`, error)
-  }
 }
 
 /**
@@ -231,6 +143,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
  * plus a section, or two packages — so the subscription, not the customer, says what an
  * invoice or a cancellation is about. See resolveSubscription in src/lib/subscription-target.ts.
  */
+function invoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  return (typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id) ?? null
+}
+
+/**
+ * The member a subscription event is about.
+ *
+ * By Stripe customer first. Each Checkout creates a customer, so somebody who has bought
+ * by card before keeps their first customer id and a later subscription arrives under a
+ * new one; for those, the order that started the subscription names the buyer.
+ */
+async function memberForSubscription(customerId: string, subscriptionId: string | null) {
+  const byCustomer = await db.member.findFirst({ where: { stripeCustomerId: customerId } })
+  if (byCustomer || !subscriptionId) return byCustomer
+  const order = await db.checkoutOrder.findFirst({
+    where: { stripeSubscriptionId: subscriptionId },
+    select: { email: true },
+  })
+  return order ? db.member.findUnique({ where: { email: order.email } }) : null
+}
+
 function logUnknown(event: string, subscriptionId: string | null | undefined, reason: string) {
   console.warn(`[stripe:webhook] ${event} for ${subscriptionId ?? 'no subscription'}: ${reason}. Nothing changed.`)
 }
@@ -245,7 +178,7 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
   const customerId = typeof invoice.customer === 'string' ? invoice.customer : invoice.customer?.id
   if (!customerId) return
 
-  const member = await db.member.findFirst({ where: { stripeCustomerId: customerId } })
+  const member = await memberForSubscription(customerId, invoiceSubscriptionId(invoice))
   if (!member) {
     // Normal on the very first invoice: the member redeems their code moments later, and
     // redemption sets the initial period itself.
@@ -339,7 +272,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
   if (!customerId) return
 
-  const member = await db.member.findFirst({ where: { stripeCustomerId: customerId } })
+  const member = await memberForSubscription(customerId, subscription.id)
   if (!member) return
 
   // Every row on this subscription, because a package's items share one.
@@ -391,7 +324,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
   if (!customerId) return
 
-  const member = await db.member.findFirst({ where: { stripeCustomerId: customerId } })
+  const member = await memberForSubscription(customerId, subscription.id)
   if (!member) return
 
   /*

@@ -103,6 +103,26 @@ export async function startCheckout(input: {
       packageId: item.kind === 'package' ? item.id : null,
       offerId: priced.offerId,
       status: 'pending',
+      /*
+       * The line, written with the order. One today; the cart writes several. Fulfilment,
+       * attribution and refunds read lines, so every new order has them from the start.
+       */
+      lines: {
+        create: [
+          {
+            position: 0,
+            kind: item.kind === 'section' ? 'section' : item.id ? 'package' : 'plan',
+            sectionId: item.kind === 'section' ? item.id : null,
+            packageId: item.kind === 'package' ? item.id : null,
+            name: item.name,
+            interval: item.interval,
+            listCents: priced.listCents,
+            chargeCents: priced.chargeCents,
+            offerId: priced.offerId,
+            authorId: item.authorId,
+          },
+        ],
+      },
     },
   })
 
@@ -143,6 +163,7 @@ async function resolveItem(target: CheckoutTarget): Promise<CheckoutItem> {
       interval: section.interval,
       stripePriceId: section.stripePriceId,
       stripeProductId: section.stripeProductId,
+      authorId: section.authorId,
     }
   }
 
@@ -155,6 +176,7 @@ async function resolveItem(target: CheckoutTarget): Promise<CheckoutItem> {
     currency: pkg.currency,
     interval: pkg.interval,
     stripePriceId: pkg.stripePriceId,
+    authorId: pkg.authorId,
   }
 }
 

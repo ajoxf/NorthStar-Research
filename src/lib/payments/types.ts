@@ -47,6 +47,8 @@ export type CheckoutItem =
       interval: BillingInterval
       stripePriceId: string | null
       stripeProductId: string | null
+      /** The subject matter expert who writes it. Snapshotted onto the order line. */
+      authorId: string
     }
   | {
       kind: 'package'
@@ -57,6 +59,8 @@ export type CheckoutItem =
       currency: string
       interval: BillingInterval
       stripePriceId: string | null
+      /** A package has at most one expert; null is house revenue. */
+      authorId: string | null
     }
 
 export type StartCheckoutInput = {
