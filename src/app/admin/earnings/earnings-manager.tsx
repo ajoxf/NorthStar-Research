@@ -89,6 +89,20 @@ function AuthorCard({ author }: { author: AuthorEarnings }) {
         return false
       }
       toast(success, 'success')
+      // A refund that completed part of an order also takes back the access it paid for.
+      // Said either way, and loudly when something is left to do by hand in Stripe.
+      if (data.access?.note) toast(data.access.note, 'error')
+      else if (data.access?.ended > 0) {
+        toast(
+          `Access taken back on ${data.access.ended} item${data.access.ended === 1 ? '' : 's'}` +
+            (data.access.renewal === 'cancelled'
+              ? ' and the card subscription cancelled'
+              : data.access.renewal === 'removed'
+                ? ' and removed from the card subscription'
+                : ''),
+          'info',
+        )
+      }
       router.refresh()
       return true
     } finally {
@@ -460,7 +474,9 @@ function RefundButton({
         <strong className="font-medium text-ink">This refunds nobody.</strong> Issue the refund
         in Stripe or send the crypto back first, then record it here so the contributor&rsquo;s
         share is taken back. This covers this contributor&rsquo;s part of the order only — up
-        to {formatPrice(refundableCents, currency)} is left on it.
+        to {formatPrice(refundableCents, currency)} is left on it. Refunding all of it also ends
+        the access it paid for, and stops a card subscription renewing it; a partial refund
+        leaves access alone.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-[160px_1fr]">
         <Input

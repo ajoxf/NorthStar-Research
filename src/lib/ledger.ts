@@ -16,6 +16,8 @@ import {
   type Balance,
 } from '@/lib/earnings'
 import { parsePriceCents } from '@/lib/package-shape'
+import { endRefundedAccess, type AccessOutcome } from '@/lib/refund-access'
+import { partsCompleted } from '@/lib/refund-access-shape'
 
 /**
  * Writing and reading the contributor ledger.
@@ -247,7 +249,7 @@ export async function recordRefund(input: {
   reason?: string | null
   recordedByMemberId?: string | null
   refundedAt?: Date
-}): Promise<{ ok: true; reversedCents: number } | { ok: false; error: string }> {
+}): Promise<{ ok: true; reversedCents: number; access: AccessOutcome } | { ok: false; error: string }> {
   const order = await db.checkoutOrder.findUnique({
     where: { id: input.orderId },
     select: {
@@ -372,7 +374,22 @@ export async function recordRefund(input: {
     return plan.reduce((sum, entry) => sum + entry.reversalCents, 0)
   })
 
-  return { ok: true, reversedCents: reversed }
+  /*
+   * Access follows the money. A refund that completes a part of the order — that expert's
+   * lines refunded in full, or the house lines — takes back the period those lines paid
+   * for. Partial refunds take back nothing: a goodwill amount is not a cancellation. Done
+   * after the refund is recorded, and outside its transaction, because it may call Stripe,
+   * and the record of money returned must not depend on Stripe answering.
+   */
+  const refundedAfter = refundedByPortion(portions, [...order.refunds, { amountCents: input.amountCents, authorId: scope }])
+  const completed = partsCompleted(portions, refundedCents, refundedAfter)
+  const wholeOrderDone = portions.every((portion, index) => refundedAfter[index] >= portion.grossCents)
+  const access: AccessOutcome =
+    completed.length > 0
+      ? await endRefundedAccess(order.id, completed.map((portion) => portion.authorId), wholeOrderDone)
+      : { ended: 0, renewal: 'none' }
+
+  return { ok: true, reversedCents: reversed, access }
 }
 
 /**

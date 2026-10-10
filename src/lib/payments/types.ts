@@ -118,6 +118,14 @@ export interface PaymentProvider<Event = unknown> {
   /** Open one hosted checkout for an order's lines. Throws on failure; see checkout.ts for the mapping. */
   startCheckout(input: StartCheckoutInput): Promise<StartCheckoutResult>
 
+  /**
+   * Stop a recurring subscription charging for what was refunded: remove the items for
+   * these products, or end the subscription when `all` — or when nothing else would be
+   * left on it. Only rails that bill on repeat implement this; a one-off rail has nothing
+   * to stop. Throws if the rail cannot be reached, so the caller can say so.
+   */
+  stopRenewal?(subscriptionRef: string, productIds: string[] | 'all'): Promise<'cancelled' | 'removed' | 'nothing'>
+
   /** Authenticate an inbound callback from this rail. Never trust a payload this refused. */
   verifyWebhook(rawBody: string, headers: Headers): Promise<WebhookVerification<Event>>
 }
