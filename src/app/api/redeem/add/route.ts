@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { getCurrentMember } from '@/lib/auth'
 import { isCodeExpired, normaliseCode } from '@/lib/codes'
 import { db } from '@/lib/db'
+import { grantOrderLines } from '@/lib/fulfilment'
 import { addPeriod } from '@/lib/package-shape'
 import { extendedRenewal, monthsGranted } from '@/lib/grant'
 import { sectionName } from '@/lib/section-shape'
@@ -57,6 +58,42 @@ export async function POST(request: Request) {
       { status: 410 },
     )
   }
+  /*
+   * A code for a cart of several items: grant every line of its order. It names no single
+   * section, and the refusal below — meant for a full-membership code — would otherwise
+   * turn away somebody who paid for exactly what they are trying to add.
+   */
+  const order = row.orderId
+    ? await db.checkoutOrder.findUnique({
+        where: { id: row.orderId },
+        select: { id: true, provider: true, stripeSubscriptionId: true, _count: { select: { lines: true } } },
+      })
+    : null
+  if (order && order._count.lines > 1) {
+    const now = new Date()
+    try {
+      const granted = await db.$transaction(async (tx) => {
+        const claimed = await tx.redemptionCode.updateMany({
+          where: { code, status: 'unused', OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] },
+          data: { status: 'redeemed', redeemedAt: now, redeemedEmail: member.email, redeemedByMemberId: member.id },
+        })
+        if (claimed.count === 0) throw new Error('claimed')
+        const holder = await tx.member.findUniqueOrThrow({
+          where: { id: member.id },
+          select: { id: true, packageId: true, subscriptionRenewsAt: true, subscriptionStartedAt: true },
+        })
+        return grantOrderLines(tx, holder, order.id, {
+          provider: order.provider,
+          subscriptionId: order.stripeSubscriptionId,
+          now,
+        })
+      })
+      return NextResponse.json({ ok: true, section: `${granted} items`, renewsAt: null })
+    } catch {
+      return NextResponse.json({ error: 'That code is no longer valid. It may have just been used.' }, { status: 409 })
+    }
+  }
+
   if (!row.section) {
     return NextResponse.json(
       {

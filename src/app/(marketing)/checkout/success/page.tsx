@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { MailCheck } from 'lucide-react'
 
+import { ClearPaidCart } from '@/components/cart/clear-paid'
 import { ButtonLink } from '@/components/ui/button'
 
 export const metadata: Metadata = { title: 'Payment received' }
@@ -30,6 +31,7 @@ export default function CheckoutSuccessPage({
 
   return (
     <div className="mx-auto max-w-lg px-5 py-24 text-center">
+      <ClearPaidCart />
       <div className="mx-auto mb-7 flex h-14 w-14 items-center justify-center rounded-full border border-accent/40 bg-accent/10">
         <MailCheck className="h-6 w-6 text-accent" aria-hidden />
       </div>

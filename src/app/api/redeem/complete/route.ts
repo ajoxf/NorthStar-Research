@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { emailSchema } from '@/lib/validation'
 
 import { db } from '@/lib/db'
+import { grantOrderLines } from '@/lib/fulfilment'
 import {
   entitlementFields,
   extendedRenewal,
@@ -95,8 +96,20 @@ export async function POST(request: Request) {
   // gifted code, which carries none, falls back to whatever is currently on sale.
   const codeGrant = await db.redemptionCode.findUnique({
     where: { code },
-    select: { packageId: true, sectionId: true, grantMonths: true, grantsOpenEnded: true },
+    select: {
+      packageId: true,
+      sectionId: true,
+      grantMonths: true,
+      grantsOpenEnded: true,
+      order: { select: { id: true, provider: true, stripeSubscriptionId: true, _count: { select: { lines: true } } } },
+    },
   })
+  /*
+   * A code issued for a cart of several items names no single section or package. Read the
+   * ordinary way it would look like a gifted code and grant the default membership, which
+   * is not what was bought. It grants the order's lines instead — see grantOrderLines.
+   */
+  const multiLineOrder = codeGrant?.order && codeGrant.order._count.lines > 1 ? codeGrant.order : null
   const chosen = codeGrant?.packageId ? await packageById(codeGrant.packageId) : null
   const pkg = chosen ?? (await defaultPackage())
   const packageId = isFallbackPackage(pkg) ? null : pkg.id
@@ -191,7 +204,9 @@ export async function POST(request: Request) {
       const renewsAt = addPeriod(grant.interval, now)
       // How long this code grants, decided once and used by every entitlement it writes.
       const months = monthsGranted(codeGrant ?? { grantMonths: null, grantsOpenEnded: false }, grant.interval)
-      const subscription = memberSubscriptionFields(grant, now, renewsAt)
+      // Empty for a cart: its lines are granted below, and only a plan line among them
+      // touches the member's own membership columns.
+      const subscription = multiLineOrder ? {} : memberSubscriptionFields(grant, now, renewsAt)
 
       const created = await tx.member.upsert({
         where: { email },
@@ -221,6 +236,15 @@ export async function POST(request: Request) {
           ...subscription,
         },
       })
+
+      if (multiLineOrder) {
+        await grantOrderLines(tx, created, multiLineOrder.id, {
+          provider: multiLineOrder.provider,
+          subscriptionId: multiLineOrder.stripeSubscriptionId,
+          now,
+        })
+        return created
+      }
 
       /*
        * The entitlement, for a section grant.

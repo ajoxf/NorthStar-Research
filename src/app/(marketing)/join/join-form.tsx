@@ -7,9 +7,10 @@ import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
 import { authorInitials } from '@/lib/section-shape'
-import { formatPrice } from '@/lib/package-shape'
+import { FALLBACK_PACKAGE, formatPrice } from '@/lib/package-shape'
 import { cn, isValidEmail } from '@/lib/utils'
 import { UploadedImage } from '@/components/uploaded-image'
+import { AddToCartButton } from '@/components/cart/cart-buttons'
 
 type Method = 'card' | 'crypto'
 
@@ -370,6 +371,14 @@ export function JoinForm({
             ? `Payment is taken on Stripe's secure page — NordStar Pro never sees your card details. Billed every ${chosen.interval}, cancel any time from your account.`
             : `One ${chosen.interval} of access per payment. Crypto cannot renew automatically, so we will remind you before it ends.`}
         </p>
+
+        {/* Collect several and pay once. Not for the built-in plan, which has no row a cart
+            could point at. */}
+        {chosen.id !== FALLBACK_PACKAGE.id && (
+          <div className="mt-4 border-t border-line-on-light pt-4">
+            <AddToCartButton item={{ kind: 'package', id: chosen.id, name: chosen.name }} tone="light" />
+          </div>
+        )}
       </form>
     </div>
   )

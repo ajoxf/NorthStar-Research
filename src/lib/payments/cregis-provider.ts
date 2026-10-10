@@ -30,13 +30,14 @@ export const cregisProvider: PaymentProvider<CregisCallback> = {
     return null
   },
 
-  async startCheckout({ orderId, email, item, chargeCents }) {
+  async startCheckout({ orderId, email, lines, chargeCents }) {
     const result = await createCheckout({
       orderId,
       email,
       amount: amountString(chargeCents),
-      currency: item.currency,
-      remark: item.name,
+      currency: lines[0].item.currency,
+      // Shown on the Cregis order page. One name, or a count — the lines are on our order.
+      remark: lines.length === 1 ? lines[0].item.name : `${lines.length} items`,
     })
     return { checkoutUrl: result.checkoutUrl, providerRef: result.cregisOrderId }
   },

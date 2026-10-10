@@ -147,11 +147,18 @@ export async function createStripeCoupon(input: {
   percentOff: number
   duration: 'first_payment' | 'forever'
   name: string
+  /**
+   * Limit the coupon to these Stripe Products. Used when one order's offer covers some of
+   * its lines and not others: a session-wide coupon would discount the uncovered lines too,
+   * and the card would be charged less than the order records.
+   */
+  appliesToProducts?: string[]
 }): Promise<string> {
   const coupon = await stripeClient().coupons.create({
     percent_off: input.percentOff,
     duration: input.duration === 'forever' ? 'forever' : 'once',
     name: input.name,
+    ...(input.appliesToProducts ? { applies_to: { products: input.appliesToProducts } } : {}),
   })
   return coupon.id
 }
@@ -228,7 +235,12 @@ export async function createStripeTestCheckout(
 export async function createStripeCheckout(
   email: string,
   options: {
-    priceId?: string | null
+    /**
+     * One Stripe Price per line. A null is the built-in plan's fallback price. Every price
+     * must share one billing interval — Stripe Checkout cannot mix them in a subscription,
+     * and checkout.ts refuses a basket that would ask it to.
+     */
+    priceIds: (string | null)[]
     planName?: string
     packageId?: string
     /** Set when this is a single section rather than the all-access plan. */
@@ -237,15 +249,20 @@ export async function createStripeCheckout(
     couponId?: string | null
     /** Our own offer id, carried into the subscription metadata for the webhook. */
     offerId?: string | null
-  } = {},
+    /** Our CheckoutOrder id, carried into the subscription so its events can name the order. */
+    orderId?: string
+  },
 ): Promise<{ url: string; sessionId: string }> {
   const stripe = stripeClient()
-  const priceId = options.priceId || requireEnv('STRIPE_PRICE_ID', 'Card billing (Stripe)')
+  const lineItems = options.priceIds.map((priceId) => ({
+    price: priceId || requireEnv('STRIPE_PRICE_ID', 'Card billing (Stripe)'),
+    quantity: 1,
+  }))
   const base = appBaseUrl()
 
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
-    line_items: [{ price: priceId, quantity: 1 }],
+    line_items: lineItems,
     customer_email: email,
     // Echoed back on the webhook so the payment can be tied to our CheckoutOrder row.
     client_reference_id: email,
@@ -257,6 +274,7 @@ export async function createStripeCheckout(
         ...(options.packageId ? { packageId: options.packageId } : {}),
         ...(options.sectionId ? { sectionId: options.sectionId } : {}),
         ...(options.offerId ? { offerId: options.offerId } : {}),
+        ...(options.orderId ? { orderId: options.orderId } : {}),
       },
     },
     /*
@@ -294,6 +312,12 @@ export async function createBillingPortalSession(customerId: string): Promise<st
     return_url: `${appBaseUrl()}/account`,
   })
   return session.url
+}
+
+/** The Stripe Product a Price belongs to. */
+export async function stripeProductForPrice(priceId: string): Promise<string> {
+  const price = await stripeClient().prices.retrieve(priceId)
+  return typeof price.product === 'string' ? price.product : price.product.id
 }
 
 /** Verify a webhook came from Stripe. Never trust an unverified payload. */

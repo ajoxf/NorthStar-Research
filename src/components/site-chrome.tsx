@@ -1,5 +1,6 @@
 import Link from 'next/link'
 
+import { CartLink } from '@/components/cart/cart-buttons'
 import { DisclaimerText } from '@/components/disclaimer'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember } from '@/lib/auth'
@@ -51,6 +52,7 @@ export async function SiteHeader() {
         <Wordmark />
 
         <nav className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <CartLink />
           <Link
             href="/faqs"
             className="hidden px-3 py-2 text-sm text-ink-dim underline-offset-8 transition-colors hover:text-ink hover:underline hover:decoration-accent hover:decoration-2 sm:block"
