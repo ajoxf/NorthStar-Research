@@ -141,4 +141,9 @@ export class ConsoleProvider implements NotificationProvider {
     )
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
+
+  async sendAffiliateInvite(recipient: { email: string }, signInUrl: string): Promise<DeliveryResult> {
+    console.info(`[notifications:console] AFFILIATE INVITE → ${recipient.email} | ${signInUrl}`)
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
 }

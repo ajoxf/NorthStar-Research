@@ -181,6 +181,8 @@ enum EmailKind {
   code_expiring
   /// An operator's own probe from the admin console.
   test
+  /// An affiliate invited to their page in the member portal.
+  affiliate_invite
 }
 
 /// What happened to one inbound provider callback.
@@ -516,6 +518,7 @@ model Affiliate {
   offers    Offer[]
 
   @@index([status])
+  @@index([memberId])
 }
 
 /// One person arriving through an affiliate link, and what became of them.

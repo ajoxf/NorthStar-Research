@@ -4,6 +4,7 @@ import { optionalEnv, requireEnv } from '@/lib/env'
 import { DEFAULT_EMAIL_FROM } from '@/lib/notifications/from'
 import { withRateLimitRetry } from '@/lib/notifications/retry'
 import {
+  affiliateInviteEmail,
   codeExpiringEmail,
   magicLinkEmail,
   receiptEmail,
@@ -172,6 +173,11 @@ export class ResendProvider implements NotificationProvider {
     invite: { price: string; interval: string; joinUrl: string; message?: string | null },
   ): Promise<DeliveryResult> {
     const { subject, html, text } = pricingInviteEmail({ ...invite, name: recipient.name })
+    return this.send(recipient.email, subject, html, text)
+  }
+
+  async sendAffiliateInvite(recipient: { email: string; name?: string | null }, signInUrl: string): Promise<DeliveryResult> {
+    const { subject, html, text } = affiliateInviteEmail({ name: recipient.name, email: recipient.email, signInUrl })
     return this.send(recipient.email, subject, html, text)
   }
 }

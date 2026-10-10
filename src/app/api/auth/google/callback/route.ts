@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
+import { landingFor } from '@/lib/affiliate-account'
 import { db } from '@/lib/db'
-import { memberHasAnyAccess, startSession } from '@/lib/auth'
+import { startSession } from '@/lib/auth'
 import { appBaseUrl } from '@/lib/env'
 import { OAUTH_STATE_COOKIE, exchangeGoogleCode, parseOAuthState, safeNext } from '@/lib/oauth'
 
@@ -86,7 +87,5 @@ export async function GET(request: Request) {
 
   const next = safeNext(parsedState.next)
   if (next) return NextResponse.redirect(`${base}${next}`)
-  if (member.role === 'admin') return NextResponse.redirect(`${base}/admin`)
-  if (!(await memberHasAnyAccess(member))) return NextResponse.redirect(`${base}/redeem`)
-  return NextResponse.redirect(`${base}/dashboard`)
+  return NextResponse.redirect(`${base}${await landingFor(member, '/redeem')}`)
 }

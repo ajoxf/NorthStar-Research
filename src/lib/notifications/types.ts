@@ -88,6 +88,11 @@ export interface NotificationProvider {
     recipient: { email: string; name?: string | null },
     invite: { price: string; interval: string; joinUrl: string; message?: string | null },
   ): Promise<DeliveryResult>
+  /**
+   * An affiliate invited to their page in the member portal. Carries a link to the sign-in
+   * page, never a sign-in token: the invitation can sit in an inbox for weeks.
+   */
+  sendAffiliateInvite(recipient: { email: string; name?: string | null }, signInUrl: string): Promise<DeliveryResult>
 
   /**
    * Transactional: welcome a member whose membership has just become active.

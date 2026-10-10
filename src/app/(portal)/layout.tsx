@@ -6,6 +6,7 @@ import { PortalNav } from '@/app/(portal)/portal-nav'
 import { Wordmark } from '@/components/site-chrome'
 import { Badge } from '@/components/ui/badge'
 import { ToastProvider } from '@/components/ui/toast'
+import { isAffiliateMember } from '@/lib/affiliate-account'
 import { getCurrentMember, memberHoldsAnything } from '@/lib/auth'
 import { initials } from '@/lib/utils'
 
@@ -32,7 +33,10 @@ export default async function PortalLayout({ children }: { children: React.React
    * truth. What they may actually open is still decided by memberHasAnyAccess, on the
    * pages that decide it.
    */
-  const holdsSomething = await memberHoldsAnything(member)
+  const [holdsSomething, isAffiliate] = await Promise.all([
+    memberHoldsAnything(member),
+    isAffiliateMember(member.id),
+  ])
 
   return (
     <ToastProvider>
@@ -41,11 +45,12 @@ export default async function PortalLayout({ children }: { children: React.React
           <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
             <div className="flex items-center gap-5">
               <Wordmark href="/dashboard" />
-              <PortalNav isAdmin={member.role === 'admin'} />
+              <PortalNav isAdmin={member.role === 'admin'} isAffiliate={isAffiliate} />
             </div>
 
             <div className="flex items-center gap-3">
-              {!holdsSomething && <Badge tone="down">Inactive</Badge>}
+              {/* An affiliate who does not subscribe is not inactive: their page is live. */}
+              {!holdsSomething && !isAffiliate && <Badge tone="down">Inactive</Badge>}
               <Link
                 href="/account"
                 className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel font-mono text-[11px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"

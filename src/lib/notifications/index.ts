@@ -129,6 +129,12 @@ class CompositeProvider implements NotificationProvider {
     )
   }
 
+  sendAffiliateInvite(recipient: { email: string; name?: string | null }, signInUrl: string) {
+    return sendAndRecord('affiliate_invite', recipient.email, () =>
+      this.email.sendAffiliateInvite(recipient, signInUrl),
+    )
+  }
+
   sendCodeExpiring(
     recipient: { email: string; firstName?: string | null },
     code: string,
