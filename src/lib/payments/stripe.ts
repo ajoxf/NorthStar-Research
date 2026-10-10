@@ -314,6 +314,36 @@ export async function createBillingPortalSession(customerId: string): Promise<st
   return session.url
 }
 
+/**
+ * Stop a subscription charging for the products a refund covered.
+ *
+ * Removing an item rather than cancelling keeps the rest of a cart's subscription billing
+ * as before; when the refunded products are everything on it, or `all` is asked for, the
+ * subscription is cancelled outright. No proration: the refund itself is the money back,
+ * and a prorated credit on top would return it twice.
+ */
+export async function stopStripeRenewal(
+  subscriptionId: string,
+  productIds: string[] | 'all',
+): Promise<'cancelled' | 'removed' | 'nothing'> {
+  const stripe = stripeClient()
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+  if (subscription.status === 'canceled' || subscription.status === 'incomplete_expired') return 'nothing'
+  const items = subscription.items.data
+  const productOf = (item: (typeof items)[number]) =>
+    typeof item.price.product === 'string' ? item.price.product : item.price.product.id
+  const targets = productIds === 'all' ? items : items.filter((item) => productIds.includes(productOf(item)))
+  if (targets.length === 0) return 'nothing'
+  if (targets.length === items.length) {
+    await stripe.subscriptions.cancel(subscriptionId, { prorate: false })
+    return 'cancelled'
+  }
+  for (const item of targets) {
+    await stripe.subscriptionItems.del(item.id, { proration_behavior: 'none' })
+  }
+  return 'removed'
+}
+
 /** The Stripe Product a Price belongs to. */
 export async function stripeProductForPrice(priceId: string): Promise<string> {
   const price = await stripeClient().prices.retrieve(priceId)

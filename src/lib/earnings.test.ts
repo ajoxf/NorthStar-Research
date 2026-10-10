@@ -2,6 +2,11 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import {
+  apportion,
+  refundPlan,
+  refundedByPortion,
+  refundedFromPortion,
+  portionsByAuthor,
   DEFAULT_HOLDBACK_DAYS,
   balanceOf,
   earningFor,
@@ -247,5 +252,101 @@ describe('withdrawable', () => {
   it('refuses zero and negative amounts', () => {
     assert.equal(withdrawable(balance, 0).ok, false)
     assert.equal(withdrawable(balance, -500).ok, false)
+  })
+})
+
+describe('apportion', () => {
+  it('always sums to the total', () => {
+    for (const [total, weights] of [[100, [1, 1, 1]], [1, [3, 3]], [999, [99, 349, 7]], [0, [1, 2]]] as const) {
+      const shares = apportion(total, [...weights])
+      assert.equal(shares.reduce((a, b) => a + b, 0), total)
+    }
+  })
+  it('splits in proportion', () => {
+    assert.deepEqual(apportion(448, [99, 349]), [99, 349])
+    assert.deepEqual(apportion(100, [1, 3]), [25, 75])
+  })
+  it('splits nothing across zero weights', () => {
+    assert.deepEqual(apportion(50, [0, 0]), [0, 0])
+  })
+})
+
+describe('portionsByAuthor', () => {
+  it('shares order-wide fees by line value and groups by author', () => {
+    const portions = portionsByAuthor(
+      [
+        { authorId: 'sarah', chargeCents: 10000 },
+        { authorId: 'dean', chargeCents: 30000 },
+        { authorId: 'sarah', chargeCents: 10000 },
+      ],
+      { taxCents: 0, gatewayFeeCents: 1000, ibFeeCents: 0 },
+    )
+    const sarah = portions.find((p) => p.authorId === 'sarah')!
+    const dean = portions.find((p) => p.authorId === 'dean')!
+    assert.deepEqual([sarah.grossCents, sarah.netCents], [20000, 19600])
+    assert.deepEqual([dean.grossCents, dean.netCents], [30000, 29400])
+  })
+  it('keeps house lines as their own portion', () => {
+    const portions = portionsByAuthor([{ authorId: null, chargeCents: 19900 }], { taxCents: 0, gatewayFeeCents: 0, ibFeeCents: 0 })
+    assert.deepEqual(portions, [{ authorId: null, grossCents: 19900, netCents: 19900 }])
+  })
+})
+
+describe('refundPlan', () => {
+  // A cart: Sarah's $100 line earned her $50; Dean's $300 line earned him $150.
+  const portions = [
+    { authorId: 'sarah', grossCents: 10000, earningCents: 5000 },
+    { authorId: 'dean', grossCents: 30000, earningCents: 15000 },
+  ]
+  const fresh = { refundedCents: [0, 0], reversedCents: [0, 0] }
+
+  it("refunding one expert's line takes back only their share", () => {
+    assert.deepEqual(refundPlan(portions, 10000, 'sarah', fresh), [{ authorId: 'sarah', reversalCents: -5000 }])
+  })
+
+  it('refunding the whole order shares it by what is unrefunded', () => {
+    assert.deepEqual(refundPlan(portions, 20000, null, fresh), [
+      { authorId: 'sarah', reversalCents: -2500 },
+      { authorId: 'dean', reversalCents: -7500 },
+    ])
+  })
+
+  it('a later whole-order refund falls on the parts that are left', () => {
+    // Sarah's line already refunded in full and her $50 reversed.
+    const history = { refundedCents: [10000, 0], reversedCents: [5000, 0] }
+    assert.deepEqual(refundPlan(portions, 30000, null, history), [{ authorId: 'dean', reversalCents: -15000 }])
+  })
+
+  it('never takes more than was earned, and a full refund cancels exactly', () => {
+    const odd = [{ authorId: 'x', grossCents: 999, earningCents: 333 }]
+    let history = { refundedCents: [0], reversedCents: [0] }
+    let total = 0
+    for (const part of [333, 333, 333]) {
+      const [entry] = refundPlan(odd, part, null, history)
+      total += -entry.reversalCents
+      history = { refundedCents: [history.refundedCents[0] + part], reversedCents: [total] }
+    }
+    assert.equal(total, 333)
+  })
+
+  it('takes nothing from house revenue', () => {
+    const withHouse = [...portions, { authorId: null, grossCents: 19900, earningCents: null }]
+    assert.equal(refundPlan(withHouse, 19900, null, { refundedCents: [0, 0, 0], reversedCents: [0, 0, 0] }).length, 2)
+  })
+})
+
+describe('refundedByPortion', () => {
+  const portions = [
+    { authorId: 'sarah', grossCents: 10000, earningCents: 5000 },
+    { authorId: 'dean', grossCents: 30000, earningCents: 15000 },
+  ]
+  it('replays scoped and whole-order refunds in order', () => {
+    const refunds = [
+      { amountCents: 10000, authorId: 'sarah' },
+      { amountCents: 6000, authorId: null },
+    ]
+    // Sarah is already fully refunded, so the whole-order refund lands on Dean.
+    assert.deepEqual(refundedByPortion(portions, refunds), [10000, 6000])
+    assert.equal(refundedFromPortion(portions, 'dean', refunds), 6000)
   })
 })

@@ -893,6 +893,11 @@ model Refund {
   amountCents Int
   currency    String @default("USD")
 
+  /// The subject matter expert whose lines this refund is for, when it is for one expert's
+  /// part of a cart. Only their share is taken back, sized against what their lines were
+  /// charged. Null refunds the order as a whole, shared across every expert on it.
+  authorId String?
+
   /// Why. Shown on the contributor's statement beside the reversal, because "your balance
   /// went down by $86" with no reason attached is the start of an argument.
   reason String?
@@ -909,6 +914,7 @@ model Refund {
 
   @@index([orderId])
   @@index([refundedAt])
+  @@index([authorId])
 }
 
 /// What a ledger row is.

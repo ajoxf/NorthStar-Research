@@ -11,6 +11,8 @@ export const dynamic = 'force-dynamic'
 const schema = z.object({
   orderId: z.string().min(1),
   amountCents: z.number().int().positive('Enter a refund amount greater than zero.'),
+  /** One expert's part of the order. Absent refunds the order as a whole. */
+  authorId: z.string().min(1).optional(),
   reason: z.string().trim().max(500).optional(),
 })
 
@@ -31,10 +33,11 @@ export async function POST(request: Request) {
   const result = await recordRefund({
     orderId: input.data.orderId,
     amountCents: input.data.amountCents,
+    authorId: input.data.authorId ?? null,
     reason: input.data.reason || null,
     recordedByMemberId: admin.id,
   })
 
   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 400 })
-  return NextResponse.json({ ok: true, reversedCents: result.reversedCents })
+  return NextResponse.json({ ok: true, reversedCents: result.reversedCents, access: result.access })
 }

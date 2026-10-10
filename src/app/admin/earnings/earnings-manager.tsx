@@ -27,6 +27,8 @@ export type LedgerRow = {
   orderId: string | null
   /** What is left to refund on the order behind this entry. Null when there is no order. */
   orderRefundableCents: number | null
+  /** The contributor this entry belongs to; a refund recorded from it covers their part only. */
+  authorId?: string
 }
 
 export type AuthorEarnings = {
@@ -87,6 +89,20 @@ function AuthorCard({ author }: { author: AuthorEarnings }) {
         return false
       }
       toast(success, 'success')
+      // A refund that completed part of an order also takes back the access it paid for.
+      // Said either way, and loudly when something is left to do by hand in Stripe.
+      if (data.access?.note) toast(data.access.note, 'error')
+      else if (data.access?.ended > 0) {
+        toast(
+          `Access taken back on ${data.access.ended} item${data.access.ended === 1 ? '' : 's'}` +
+            (data.access.renewal === 'cancelled'
+              ? ' and the card subscription cancelled'
+              : data.access.renewal === 'removed'
+                ? ' and removed from the card subscription'
+                : ''),
+          'info',
+        )
+      }
       router.refresh()
       return true
     } finally {
@@ -406,6 +422,7 @@ function LedgerTable({
               (entry.orderRefundableCents ?? 0) > 0 && (
                 <RefundButton
                   orderId={entry.orderId}
+                  authorId={entry.authorId}
                   refundableCents={entry.orderRefundableCents ?? 0}
                   currency={entry.currency}
                   busy={busy}
@@ -421,12 +438,15 @@ function LedgerTable({
 
 function RefundButton({
   orderId,
+  authorId,
   refundableCents,
   currency,
   busy,
   send,
 }: {
   orderId: string
+  /** The expert whose earning this is. The refund covers their part of the order only. */
+  authorId?: string
   refundableCents: number
   currency: string
   busy: boolean
@@ -453,7 +473,10 @@ function RefundButton({
         */}
         <strong className="font-medium text-ink">This refunds nobody.</strong> Issue the refund
         in Stripe or send the crypto back first, then record it here so the contributor&rsquo;s
-        share is taken back. Up to {formatPrice(refundableCents, currency)} left on this order.
+        share is taken back. This covers this contributor&rsquo;s part of the order only — up
+        to {formatPrice(refundableCents, currency)} is left on it. Refunding all of it also ends
+        the access it paid for, and stops a card subscription renewing it; a partial refund
+        leaves access alone.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-[160px_1fr]">
         <Input
@@ -481,7 +504,7 @@ function RefundButton({
             void send(
               '/api/admin/refunds',
               'POST',
-              { orderId, amountCents: cents, reason: reason || undefined },
+              { orderId, authorId, amountCents: cents, reason: reason || undefined },
               'Refund recorded and the share reversed',
             )
           }}

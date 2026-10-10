@@ -8,6 +8,7 @@ import {
   createStripeCoupon,
   createStripePrice,
   stripeConfigured,
+  stopStripeRenewal,
   stripeProductForPrice,
   verifyStripeWebhook,
   type Stripe,
@@ -57,6 +58,10 @@ export const stripeProvider: PaymentProvider<Stripe.Event> = {
       orderId,
     })
     return { checkoutUrl: url, providerRef: sessionId }
+  },
+
+  stopRenewal(subscriptionRef, productIds) {
+    return stopStripeRenewal(subscriptionRef, productIds)
   },
 
   async verifyWebhook(rawBody, headers) {
