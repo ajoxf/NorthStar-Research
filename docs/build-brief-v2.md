@@ -1,4 +1,4 @@
-# Build brief — affiliate portal, expert portal, cart, and the legal pack
+# Build brief — affiliate portal, expert portal, cart, payment rails, and the legal pack
 
 A refined specification for the next phase of NordStar Pro, written to be picked up in a
 fresh session. It assumes no memory of the conversation it came from.
@@ -33,6 +33,32 @@ and should be visible in the product, not only in the small print.
 | **Deduction order** | Fees come off the top. Expert and platform each bear their share. Already encoded in `src/lib/earnings.ts`. |
 | **Holdback** | 30 days from when payment clears, before earnings can be withdrawn. |
 | **Attribution** | By who sold it, not by who reads it. |
+| **Affiliate visibility** | Counts, status and value only. An affiliate never sees who they introduced. |
+| **Mixed intervals in a cart** | Allowed. Stripe can bill monthly and yearly items as separate subscriptions behind one checkout; Cregis cannot, so a crypto order is one interval. |
+| **Reviews** | Verified buyers only — a live entitlement to that section — and moderated *before* display. |
+| **"Cashback"** | Not a separate concept. It is the owner's word for discounts and promo codes, which already exist as `Offer`. See the warning below. |
+| **Payment providers** | More rails will be added as deals are signed. Checkout needs a provider seam before the next one arrives. |
+
+### A calculation warning about discounts and "cashbacks"
+
+The revenue definition reads *"net after refunds, cashbacks, discounts, affiliate charges,
+bank charges and others"*. Taken literally that would be wrong, and expensively so.
+
+**A discount is already inside the gross.** `priceWithOffer` computes the charge from the
+list price and the offer, and it is the *charged* amount that is written to the order —
+`amount: amountString(priced.chargeCents)`. A $349 section sold at 25% off records $261.75,
+not $349. Deducting the discount again would take it off twice and roughly halve the
+expert's share on every discounted sale.
+
+So the deduction list that actually applies to net is: **tax, gateway fee, affiliate/IB
+commission, and refunds.** Discounts and cashbacks need no line of their own because the
+gross has already absorbed them. `netRevenueCents` in `src/lib/earnings.ts` is correct as
+written — do not add a discount term to it.
+
+**Related gap.** `CheckoutOrder.grossCents` exists and **no checkout route populates it**.
+The ledger falls back to parsing the formatted `amount` string, which works and gives the
+right answer, but the integer column should be filled at checkout so the arithmetic stops
+depending on a parse. Small, and worth doing with the cart work.
 
 ---
 
@@ -58,7 +84,7 @@ and should be visible in the product, not only in the small print.
 
 ---
 
-## 3. The nine workstreams
+## 3. The ten workstreams
 
 ### 1 — Affiliate portal
 
@@ -252,74 +278,104 @@ document says the same thing in its own first paragraph.
 
 ---
 
+### 10 — A seam for more payment providers
+
+**Asked for after the original nine**: more payment rails will be added as the deals are
+signed, so the next one must not be a rewrite.
+
+**What exists.** `BillingProvider` is already an enum of `stripe | cregis | manual`, and
+`CheckoutOrder` carries it — so the *data* is ready for more. The *code* is not. There are
+three separate checkout routes with the provider baked in: `/api/checkout/stripe`,
+`/api/checkout/create` (Cregis, packages) and `/api/checkout/section` (both, chosen by a
+`method` branch inside the handler). Adding a fourth rail today means a fourth route and a
+fourth branch in every place that reads an order.
+
+**The precedent to copy is already in this codebase.** `src/lib/notifications/types.ts`
+defines a `NotificationProvider` interface, and its own comment states the rule:
+
+> Everything that sends a message to a member goes through this interface. Nothing outside
+> `src/lib/notifications/` imports Resend, Twilio, or any other vendor SDK. Migrating to
+> Kit.com means writing one new file that implements `NotificationProvider` and registering
+> it in `index.ts`.
+
+Do the same for money.
+
+**To build.**
+- A `PaymentProvider` interface covering what a rail must do: start a checkout, report
+  configuration status, verify and parse a webhook, and — where supported — issue a refund
+  and send a payout.
+- `StripeProvider` and `CregisProvider` implementing it, moving the vendor SDK imports
+  behind the seam. Nothing outside `src/lib/payments/` should import `stripe` again.
+- One checkout route that resolves the provider, rather than one route per provider.
+- A registry, so adding a rail is one new file plus one line — the same shape as
+  `getNotificationProvider()`.
+- Capability flags on the interface, because the rails genuinely differ: Cregis cannot do
+  recurring billing, Stripe cannot settle in crypto, and only some will ever do payouts.
+  The UI already has to say "card payments are not live yet" honestly; that should come
+  from the provider declaring what it can do, not from scattered `isConfigured` calls.
+
+**Do this before the cart (item 4), not after.** The cart rewrites checkout anyway, and
+rewriting it twice is the avoidable cost.
+
+---
+
 ## 4. Decisions still needed
 
 Ordered by how much they change the build.
 
 **Cart**
-1. Can a cart mix monthly and yearly items? *Recommendation: yes, and bill them as separate
-   subscriptions behind one checkout — Stripe supports this; Cregis does not, so crypto may
-   need one interval per order.*
-2. Can a trial be added to a cart alongside a paid item? *Recommendation: no. A trial is a
+1. Can a trial be added to a cart alongside a paid item? *Recommendation: no. A trial is a
    different act with its own eligibility rules, and mixing them makes both confusing.*
-3. What happens when the cart contains something the buyer already holds? *Recommendation:
+2. What happens when the cart contains something the buyer already holds? *Recommendation:
    refuse the line with a clear message, as the section checkout already does.*
 
 **Affiliates**
-4. Does an affiliate see **who** they introduced, or only counts? *Recommendation: counts,
-   status and value only. Names and emails are the platform's customers, and handing over a
-   contact list should be a deliberate contractual decision, not a dashboard default.*
-5. Commission on the first payment only, or on every renewal? *Recommendation: make it a
+3. Commission on the first payment only, or on every renewal? *Recommendation: make it a
    stored term per affiliate, like the expert share — the existing `AffiliateRewardKind`
    already anticipates several shapes.*
-6. Attribution window and rule: how long does a referral cookie last, and does first click
+4. Attribution window and rule: how long does a referral cookie last, and does first click
    or last click win? *Recommendation: 30 days, last click, both stored on the `Referral`
    row so a dispute can be settled from data.*
-7. Can affiliates self-register, or are they invited? *Recommendation: invited. Open
+5. Can affiliates self-register, or are they invited? *Recommendation: invited. Open
    affiliate registration on a financial platform attracts exactly the promotion the
    Affiliate Policy will prohibit.*
 
 **Reviews**
-8. Who may review — anyone, or only a member with a live entitlement to that section?
-   *Recommendation: only entitled members, and say so on the review. A verified-buyer badge
-   is the only thing that makes a rating worth reading.*
-9. Moderated before display, or published and removable? *Recommendation: before. See §8.*
-10. Can the expert reply? *Recommendation: yes, labelled as the expert, in a later phase.*
-11. Does the star rating affect ordering or featured placement anywhere? *Recommendation:
+6. Can the expert reply? *Recommendation: yes, labelled as the expert, in a later phase.*
+7. Does the star rating affect ordering or featured placement anywhere? *Recommendation:
     not initially. Ranking by rating invites gaming before there is enough volume for it to
     mean anything.*
 
 **Trials**
-12. Should existing sections be switched on when the default changes, or only new ones?
+8. Should existing sections be switched on when the default changes, or only new ones?
     *Recommendation: new ones only, plus a one-click "turn trials on everywhere" in the
     admin. A migration that silently starts giving away existing products is the kind of
     change that should be a decision, not a side effect.*
 
 **Audience labels**
-13. Rename the enum value `retail` → `starter`, or keep the value and change only the
+9. Rename the enum value `retail` → `starter`, or keep the value and change only the
     label? *Recommendation: change the label only. The value is written into rows already;
     renaming it is a data migration for a word nobody outside the admin sees.*
 
 **Admin**
-14. Should light mode apply to the whole site or only the admin console? *Recommendation:
+10. Should light mode apply to the whole site or only the admin console? *Recommendation:
     admin only for now. The marketing site's two-ground design is deliberate and a theme
     toggle across it is a design project, not a feature.*
 
 **Legal**
-15. Country of incorporation, company number, registered address, governing law, and the
+11. Country of incorporation, company number, registered address, governing law, and the
     support/privacy email addresses.
-16. Adapt the three extra documents — Regulatory Status, Conflicts of Interest, Complaints
+12. Adapt the three extra documents — Regulatory Status, Conflicts of Interest, Complaints
     Handling? *Recommendation: yes. They are already drafted, they are cheap to adapt, and
     a complaints procedure is the kind of thing whose absence is noticed only when it is
     needed.*
-17. Does the platform hold itself out as regulated anywhere, or is it explicitly
+13. Does the platform hold itself out as regulated anywhere, or is it explicitly
     unregulated? This determines the entire Regulatory Status page and must come from the
     lawyer, not from here.
 
 **Money**
-18. "Cashbacks" appear in the revenue definition but exist nowhere in the product. What is
-    one — a promotional rebate to the buyer, a loyalty credit, something else? It cannot be
-    deducted before it is defined.
+14. Which payment rails are coming, and roughly when? The seam in item 10 should be shaped
+    against at least one real second rail rather than against an imagined one.
 
 ---
 
@@ -330,19 +386,19 @@ on their own. Suggested order, cheapest and least risky first:
 
 | Phase | Work | Why here |
 |---|---|---|
-| **0** | Merge PR #80 | Several items build on the ledger; one reworks it. |
 | **1** | Items 3, 5, 6, 7 | Small, self-contained, immediately useful. Admin sign out and larger text improve every session that follows. |
 | **2** | Item 9, the legal pack | Independent of all the code. Can run in parallel, and the lawyer's turnaround is the long pole. |
-| **3** | Item 4, cart and order lines | Reworks the order model, so everything downstream should sit on top of it rather than be rewritten after it. |
-| **4** | Item 1, affiliate portal | Needs the ledger *and* the cart attribution. |
-| **5** | Item 2, expert portal | Shares most of its machinery with the affiliate portal; second is much cheaper than first. |
-| **6** | Item 8, reviews | Genuinely optional, and the moderation question deserves its own thought. |
+| **3** | Item 10, payment provider seam | Checkout gets rewritten by the cart anyway. Doing the seam first means writing it once. |
+| **4** | Item 4, cart and order lines | Reworks the order model, so everything downstream should sit on top of it rather than be rewritten after it. |
+| **5** | Item 1, affiliate portal | Needs the ledger *and* the cart attribution. |
+| **6** | Item 2, expert portal | Shares most of its machinery with the affiliate portal; second is much cheaper than first. |
+| **7** | Item 8, reviews | Genuinely optional, and the moderation question deserves its own thought. |
 
 ---
 
 ## 6. Things the next session should check before starting
 
-- `PR #80` merged, and `main` green.
+- `main` green, with the ledger from PR #80 in it.
 - Whether `STRIPE_SECRET_KEY` has been set. Card payment is still unproven against a real
   Stripe account; everything in item 4 assumes it works.
 - Whether Cregis supports third-party payouts. Still unanswered, and it decides whether
