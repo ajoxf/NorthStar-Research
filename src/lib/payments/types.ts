@@ -63,14 +63,25 @@ export type CheckoutItem =
       authorId: string | null
     }
 
+/** One line of an order, as a rail needs it. */
+export type StartCheckoutLine = {
+  item: CheckoutItem
+  listCents: number
+  /** What this line is charged, after the order's offer if it covers this line. */
+  chargeCents: number
+  /** Whether the order's offer covers this line. */
+  offerApplied: boolean
+}
+
 export type StartCheckoutInput = {
   /** Our CheckoutOrder id, created before the rail is called so a callback can always find it. */
   orderId: string
   email: string
-  item: CheckoutItem
-  /** What is actually charged, after any offer. Always what the order records. */
+  /** One or more lines, all on the same billing period and currency — see checkout.ts. */
+  lines: StartCheckoutLine[]
+  /** The order total: the sum of the lines' charges. Always what the order records. */
   chargeCents: number
-  /** The offer applied, if any. A rail that discounts natively (Stripe) needs it. */
+  /** The order's one offer, if any. A rail that discounts natively (Stripe) needs it. */
   offer: OfferShape | null
 }
 
@@ -104,7 +115,7 @@ export interface PaymentProvider<Event = unknown> {
    */
   canSell(item: CheckoutItem): string | null
 
-  /** Open a hosted checkout for one item. Throws on failure; see checkout.ts for the mapping. */
+  /** Open one hosted checkout for an order's lines. Throws on failure; see checkout.ts for the mapping. */
   startCheckout(input: StartCheckoutInput): Promise<StartCheckoutResult>
 
   /** Authenticate an inbound callback from this rail. Never trust a payload this refused. */

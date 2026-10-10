@@ -3,6 +3,7 @@
 import * as React from 'react'
 import { ArrowRight } from 'lucide-react'
 
+import { AddToCartButton } from '@/components/cart/cart-buttons'
 import { Button, ButtonLink, Spinner } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
@@ -150,6 +151,11 @@ export function SectionBuy({
         We email your access code once the payment confirms. Card renews automatically and can be
         cancelled any time; crypto you renew yourself.
       </p>
+
+      {/* Buying several subjects? Collect them and pay once. */}
+      <div className="mt-3">
+        <AddToCartButton item={{ kind: 'section', id: sectionId, name }} tone={tone} />
+      </div>
     </div>
   )
 }

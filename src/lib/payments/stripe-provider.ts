@@ -8,10 +8,11 @@ import {
   createStripeCoupon,
   createStripePrice,
   stripeConfigured,
+  stripeProductForPrice,
   verifyStripeWebhook,
   type Stripe,
 } from '@/lib/payments/stripe'
-import type { CheckoutItem, PaymentProvider } from '@/lib/payments/types'
+import type { CheckoutItem, PaymentProvider, StartCheckoutLine } from '@/lib/payments/types'
 
 /**
  * Card payments, through Stripe Checkout. Recurring: Stripe stores the card and charges it
@@ -39,17 +40,21 @@ export const stripeProvider: PaymentProvider<Stripe.Event> = {
     return null
   },
 
-  async startCheckout({ email, item, offer }) {
-    const priceId = item.kind === 'section' ? await sectionPriceId(item) : item.stripePriceId
-    const couponId = offer ? await couponForOffer(offer) : null
+  async startCheckout({ orderId, email, lines, offer }) {
+    const priceIds = await Promise.all(
+      lines.map((line) => (line.item.kind === 'section' ? sectionPriceId(line.item) : line.item.stripePriceId)),
+    )
+    const couponId = offer ? await couponForLines(offer, lines, priceIds) : null
+    const single = lines.length === 1 ? lines[0].item : null
 
     const { url, sessionId } = await createStripeCheckout(email, {
-      priceId,
-      planName: item.name,
-      ...(item.kind === 'section' ? { sectionId: item.id } : {}),
-      ...(item.kind === 'package' && item.id ? { packageId: item.id } : {}),
+      priceIds,
+      planName: single?.name ?? `${lines.length} items`,
+      ...(single?.kind === 'section' ? { sectionId: single.id } : {}),
+      ...(single?.kind === 'package' && single.id ? { packageId: single.id } : {}),
       couponId,
       offerId: offer?.id ?? null,
+      orderId,
     })
     return { checkoutUrl: url, providerRef: sessionId }
   },
@@ -93,6 +98,33 @@ async function sectionPriceId(item: Extract<CheckoutItem, { kind: 'section' }>):
     data: { stripePriceId: created.priceId, stripeProductId: created.productId },
   })
   return created.priceId
+}
+
+/**
+ * The coupon for this order: the offer's own when it covers every line, otherwise one
+ * limited to the products of the lines it does cover.
+ *
+ * Stripe applies a coupon to the whole session unless told which products it is for. An
+ * offer that covers two lines of three would otherwise discount the third as well, and the
+ * card would be charged less than the order — and every line of the ledger — records. The
+ * limited coupon is minted per order rather than cached: which products it names depends
+ * on what is in this particular basket.
+ */
+async function couponForLines(
+  offer: OfferShape,
+  lines: StartCheckoutLine[],
+  priceIds: (string | null)[],
+): Promise<string | null> {
+  const covered = lines.flatMap((line, index) => (line.offerApplied ? [priceIds[index]] : []))
+  if (covered.length === 0) return null
+  if (covered.length === lines.length) return couponForOffer(offer)
+  const products = [...new Set(await Promise.all(covered.filter((id): id is string => Boolean(id)).map(stripeProductForPrice)))]
+  return createStripeCoupon({
+    percentOff: offer.percentOff,
+    duration: offer.duration,
+    name: offer.name,
+    appliesToProducts: products,
+  })
 }
 
 /**

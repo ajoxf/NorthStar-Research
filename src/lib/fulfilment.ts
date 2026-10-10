@@ -139,6 +139,36 @@ export async function fulfilPaidOrder(input: {
 }
 
 /**
+ * Grant every line of an order to a member, inside the caller's transaction.
+ *
+ * Used on payment for somebody who already has an account, and at redemption for a code
+ * issued against an order of several lines — a code that names no single section or
+ * package, and must never be read as the default membership.
+ */
+export async function grantOrderLines(
+  tx: Tx,
+  member: Parameters<typeof grantLine>[1],
+  orderId: string,
+  opts: { provider: BillingProvider; subscriptionId: string | null; now: Date },
+): Promise<number> {
+  const order = await tx.checkoutOrder.findUnique({
+    where: { id: orderId },
+    select: {
+      sectionId: true,
+      packageId: true,
+      lines: {
+        orderBy: { position: 'asc' },
+        select: { id: true, kind: true, sectionId: true, packageId: true, interval: true },
+      },
+    },
+  })
+  if (!order) return 0
+  const lines = linesForOrder({ sectionId: order.sectionId, packageId: order.packageId, lines: order.lines })
+  for (const line of lines) await grantLine(tx, member, line, opts)
+  return lines.length
+}
+
+/**
  * Grant one line to a member who already has an account, stacked on any time they hold.
  *
  * - **A section** is one entitlement.
