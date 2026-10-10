@@ -6,6 +6,7 @@ import { codeExpiresAt, generateRedemptionCode } from '@/lib/codes'
 import { getNotificationProvider } from '@/lib/notifications'
 import { type Stripe } from '@/lib/payments/stripe'
 import { stripeProvider } from '@/lib/payments/stripe-provider'
+import { resolveSubscription } from '@/lib/subscription-target'
 import { recordReferralConversion } from '@/lib/referral-attribution'
 
 export const runtime = 'nodejs'
@@ -226,25 +227,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 
 /**
- * Which thing is this Stripe subscription?
- *
- * One customer can now hold several at once — all-access plus a section, or two sections
- * — so the customer no longer identifies what an invoice or a cancellation is about. The
- * subscription does. An id matching an Entitlement is a section; anything else is the
- * member's own all-access membership, which is what every subscription was before
- * sections existed.
- *
- * **Several rows, not one.** A package with contents grants an entitlement per item, and
- * all of them carry the same subscription id, because one payment renews the whole bundle.
- * This used to take the first row it found — which renewed one item of a package and let
- * the rest lapse on their original date, quietly shrinking what somebody kept paying for.
+ * Which thing is this Stripe subscription? One customer can hold several at once — all-access
+ * plus a section, or two packages — so the subscription, not the customer, says what an
+ * invoice or a cancellation is about. See resolveSubscription in src/lib/subscription-target.ts.
  */
-async function entitlementsForSubscription(subscriptionId: string | null | undefined) {
-  if (!subscriptionId) return []
-  return db.entitlement.findMany({
-    where: { stripeSubscriptionId: subscriptionId },
-    select: { id: true, memberId: true, renewsAt: true, startedAt: true },
-  })
+function logUnknown(event: string, subscriptionId: string | null | undefined, reason: string) {
+  console.warn(`[stripe:webhook] ${event} for ${subscriptionId ?? 'no subscription'}: ${reason}. Nothing changed.`)
 }
 
 /**
@@ -277,13 +265,17 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
    */
   const subscriptionId =
     typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id
-  const entitlements = await entitlementsForSubscription(subscriptionId)
+  const target = await resolveSubscription(subscriptionId, member)
 
-  if (entitlements.length > 0) {
+  if (target.kind === 'entitlements') {
     // Every item on this subscription moves to the same date. One payment, one period —
     // a bundle whose parts expired separately would be a bundle in name only.
+    const rows = await db.entitlement.findMany({
+      where: { id: { in: target.ids } },
+      select: { id: true, startedAt: true },
+    })
     await Promise.all(
-      entitlements.map((entitlement) =>
+      rows.map((entitlement) =>
         db.entitlement.update({
           where: { id: entitlement.id },
           data: {
@@ -295,6 +287,8 @@ async function handleInvoicePaid(invoice: Stripe.Invoice) {
         }),
       ),
     )
+  } else if (target.kind === 'unknown') {
+    logUnknown('invoice.paid', subscriptionId, target.reason)
   } else {
     await db.member.update({
       where: { id: member.id },
@@ -348,12 +342,19 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   const member = await db.member.findFirst({ where: { stripeCustomerId: customerId } })
   if (!member) return
 
-  // Every row on this subscription, because a package's items share one — see
-  // entitlementsForSubscription.
-  const entitlements = await entitlementsForSubscription(subscription.id)
-  if (entitlements.length > 0) {
+  // Every row on this subscription, because a package's items share one.
+  const target = await resolveSubscription(subscription.id, member)
+  if (target.kind === 'unknown') {
+    logUnknown('customer.subscription.updated', subscription.id, target.reason)
+    return
+  }
+  if (target.kind === 'entitlements') {
+    const rows = await db.entitlement.findMany({
+      where: { id: { in: target.ids } },
+      select: { id: true, renewsAt: true },
+    })
     await Promise.all(
-      entitlements.map((entitlement) =>
+      rows.map((entitlement) =>
         db.entitlement.update({
           where: { id: entitlement.id },
           data: {
@@ -399,10 +400,14 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
    * left the rest of a cancelled bundle live and renewing against a subscription Stripe
    * has already ended.
    */
-  const entitlements = await entitlementsForSubscription(subscription.id)
-  if (entitlements.length > 0) {
+  const target = await resolveSubscription(subscription.id, member)
+  if (target.kind === 'unknown') {
+    logUnknown('customer.subscription.deleted', subscription.id, target.reason)
+    return
+  }
+  if (target.kind === 'entitlements') {
     await db.entitlement.updateMany({
-      where: { id: { in: entitlements.map((entitlement) => entitlement.id) } },
+      where: { id: { in: target.ids } },
       data: { status: 'cancelled', cancelAtPeriodEnd: true },
     })
     return

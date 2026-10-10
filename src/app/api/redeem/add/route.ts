@@ -80,6 +80,15 @@ export async function POST(request: Request) {
   // The row rather than its date: an open-ended comp must not be cut short by a code.
   const until = extendedRenewal(held ?? null, monthsGranted(row, section.interval), now)
 
+  // The card subscription behind this code, if it was bought by card, so its renewals and
+  // cancellation reach this section rather than falling through to the member's columns.
+  const paidOrder = row.cregisOrderId
+    ? await db.checkoutOrder.findUnique({
+        where: { cregisOrderId: row.cregisOrderId },
+        select: { stripeSubscriptionId: true, provider: true },
+      })
+    : null
+
   try {
     await db.$transaction(async (tx) => {
       // Conditional on status and expiry inside the transaction: two tabs, or two people
@@ -107,9 +116,17 @@ export async function POST(request: Request) {
           status: 'active',
           startedAt: now,
           renewsAt: until,
-          billingProvider: 'cregis',
+          billingProvider: paidOrder?.provider ?? 'cregis',
+          stripeSubscriptionId: paidOrder?.stripeSubscriptionId ?? null,
         },
-        update: { status: 'active', renewsAt: until, cancelAtPeriodEnd: false },
+        update: {
+          status: 'active',
+          renewsAt: until,
+          cancelAtPeriodEnd: false,
+          ...(paidOrder?.stripeSubscriptionId
+            ? { stripeSubscriptionId: paidOrder.stripeSubscriptionId, billingProvider: paidOrder.provider }
+            : {}),
+        },
       })
     })
   } catch {

@@ -117,13 +117,15 @@ export async function POST(request: Request) {
     : null
 
   /*
-   * The Stripe subscription behind a section purchase, if there was one.
+   * The Stripe subscription behind a section or package purchase, if there was one.
    *
-   * Attached to the entitlement rather than to the member, so a later invoice or
-   * cancellation for this subscription is routed to this section and not to whatever
-   * membership the person also holds.
+   * Attached to the entitlements rather than to the member, so a later invoice or
+   * cancellation for this subscription is routed to what was bought and not to whatever
+   * membership the person also holds. This used to be looked up for sections only, which
+   * left package items unlinked — and their renewals fell through to the all-access
+   * columns. See src/lib/subscription-target-shape.ts.
    */
-  const paidOrder = codeGrant?.sectionId
+  const paidOrder = codeGrant?.sectionId || codeGrant?.packageId
     ? await db.redemptionCode
         .findUnique({ where: { code }, select: { cregisOrderId: true } })
         .then((row) =>
@@ -325,6 +327,9 @@ export async function POST(request: Request) {
                 // a row found by section keeps its section, and gains the item.
                 itemId,
                 ...(sectionId ? { sectionId } : {}),
+                ...(paidOrder?.stripeSubscriptionId
+                  ? { stripeSubscriptionId: paidOrder.stripeSubscriptionId, billingProvider: paidOrder.provider }
+                  : {}),
               },
             })
           } else {
