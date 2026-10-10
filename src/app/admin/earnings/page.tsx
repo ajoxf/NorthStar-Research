@@ -2,9 +2,10 @@ import type { Metadata } from 'next'
 
 import { EarningsManager, WithdrawalsLink } from '@/app/admin/earnings/earnings-manager'
 import { Eyebrow } from '@/components/band'
+import { refundedFromPortion } from '@/lib/earnings'
 import { db } from '@/lib/db'
 import { DEFAULT_HOLDBACK_DAYS } from '@/lib/earnings'
-import { balancesByAuthor, postPendingEarnings } from '@/lib/ledger'
+import { balancesByAuthor, postPendingEarnings, refundPortions } from '@/lib/ledger'
 import { parsePriceCents } from '@/lib/package-shape'
 
 export const metadata: Metadata = { title: 'Earnings' }
@@ -51,7 +52,9 @@ export default async function EarningsPage() {
                 grossCents: true,
                 paidAt: true,
                 createdAt: true,
-                refunds: { select: { amountCents: true } },
+                refunds: { orderBy: { createdAt: 'asc' }, select: { amountCents: true, authorId: true } },
+                lines: { select: { authorId: true, chargeCents: true } },
+                ledger: { where: { kind: 'earning' }, select: { authorId: true, amountCents: true } },
               },
             },
           },
@@ -104,7 +107,22 @@ export default async function EarningsPage() {
            */
           occurredAt: (entry.order?.paidAt ?? entry.order?.createdAt ?? entry.createdAt).toISOString(),
           orderId: entry.orderId,
-          orderRefundableCents: gross === null ? null : Math.max(0, gross - refunded),
+          /*
+           * What is left to refund on this expert's part of the order. For an order of one
+           * expert that is the order; for a cart it is their lines, less what has been
+           * refunded against them, whole-order refunds counted by their share.
+           */
+          orderRefundableCents:
+            gross === null || !entry.order
+              ? null
+              : (() => {
+                  const portions = refundPortions(entry.order, gross)
+                  const mine = portions.find((portion) => portion.authorId === author.id)
+                  const orderLeft = Math.max(0, gross - refunded)
+                  if (!mine) return 0
+                  return Math.min(orderLeft, Math.max(0, mine.grossCents - refundedFromPortion(portions, author.id, entry.order.refunds)))
+                })(),
+          authorId: author.id,
         }
       }),
     }

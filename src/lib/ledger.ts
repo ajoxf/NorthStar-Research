@@ -5,9 +5,14 @@ import {
   DEFAULT_HOLDBACK_DAYS,
   DEFAULT_SHARE_PERCENT,
   balanceOf,
-  earningFor,
+  netRevenueCents,
+  portionsByAuthor,
+  refundPlan,
+  refundedByPortion,
+  refundedFromPortion,
+  splitNet,
+  type RefundPortion,
   payableAt,
-  reversalCents,
   type Balance,
 } from '@/lib/earnings'
 import { parsePriceCents } from '@/lib/package-shape'
@@ -81,6 +86,10 @@ export async function authorIdForOrder(order: {
  * Every order written before this column existed has only the string, and refusing to post
  * earnings for them would mean a ledger that silently begins midway through trading.
  */
+function deductionsOf(order: { taxCents: number | null; gatewayFeeCents: number | null; ibFeeCents: number | null }) {
+  return { taxCents: order.taxCents ?? 0, gatewayFeeCents: order.gatewayFeeCents ?? 0, ibFeeCents: order.ibFeeCents ?? 0 }
+}
+
 function grossCentsOf(order: { grossCents: number | null; amount: string }): number | null {
   if (order.grossCents !== null) return order.grossCents
   return parsePriceCents(order.amount)
@@ -127,6 +136,7 @@ export async function postPendingEarnings(
       packageId: true,
       paidAt: true,
       createdAt: true,
+      lines: { select: { authorId: true, chargeCents: true } },
     },
     orderBy: { createdAt: 'asc' },
     take: options.limit ?? 500,
@@ -140,12 +150,6 @@ export async function postPendingEarnings(
   }
 
   for (const order of orders) {
-    const authorId = await authorIdForOrder(order)
-    if (!authorId) {
-      summary.house += 1
-      continue
-    }
-
     const grossCents = grossCentsOf(order)
     if (grossCents === null) {
       summary.unreadable += 1
@@ -153,25 +157,38 @@ export async function postPendingEarnings(
       continue
     }
 
-    const author = await db.author.findUnique({
-      where: { id: authorId },
-      select: { revenueSharePercent: true },
-    })
-    if (!author) {
+    /*
+     * Who is owed what. An order with lines is attributed line by line — a cart can hold
+     * several experts' work — with the order-wide deductions shared by line value. An order
+     * from before lines existed has one author or none, and the whole gross is theirs.
+     */
+    const portions =
+      order.lines.length > 0
+        ? portionsByAuthor(order.lines, deductionsOf(order))
+        : [
+            {
+              authorId: await authorIdForOrder(order),
+              grossCents,
+              netCents: netRevenueCents({ grossCents, ...deductionsOf(order) }),
+            },
+          ]
+
+    const owed: { authorId: string; sharePercent: number; split: ReturnType<typeof splitNet>; netCents: number }[] = []
+    for (const portion of portions) {
+      if (!portion.authorId) continue
+      const author = await db.author.findUnique({
+        where: { id: portion.authorId },
+        select: { revenueSharePercent: true },
+      })
+      if (!author) continue
+      const sharePercent = await shareFor(author)
+      owed.push({ authorId: portion.authorId, sharePercent, split: splitNet(portion.netCents, sharePercent), netCents: portion.netCents })
+    }
+
+    if (owed.length === 0) {
       summary.house += 1
       continue
     }
-
-    const sharePercent = await shareFor(author)
-    const earning = earningFor(
-      {
-        grossCents,
-        taxCents: order.taxCents ?? 0,
-        gatewayFeeCents: order.gatewayFeeCents ?? 0,
-        ibFeeCents: order.ibFeeCents ?? 0,
-      },
-      sharePercent,
-    )
 
     /*
      * The holdback runs from when the money cleared, not from now. An order posted late —
@@ -181,18 +198,24 @@ export async function postPendingEarnings(
     const cleared = order.paidAt ?? order.createdAt
 
     try {
-      await db.ledgerEntry.create({
-        data: {
-          authorId,
-          kind: 'earning',
-          amountCents: earning.authorCents,
-          currency: order.currency,
-          payableAt: payableAt(cleared, DEFAULT_HOLDBACK_DAYS),
-          orderId: order.id,
-          sharePercent,
-          basisCents: earning.netCents,
-        },
-      })
+      // Every expert on the order at once, or none: a half-posted order would be skipped by
+      // the next sweep, which looks for orders with no earning at all.
+      await db.$transaction(
+        owed.map((entry) =>
+          db.ledgerEntry.create({
+            data: {
+              authorId: entry.authorId,
+              kind: 'earning',
+              amountCents: entry.split.authorCents,
+              currency: order.currency,
+              payableAt: payableAt(cleared, DEFAULT_HOLDBACK_DAYS),
+              orderId: order.id,
+              sharePercent: entry.sharePercent,
+              basisCents: entry.netCents,
+            },
+          }),
+        ),
+      )
       summary.posted += 1
     } catch (error) {
       // The unique index doing its job: something else posted this first. Not an error.
@@ -219,6 +242,8 @@ export async function postPendingEarnings(
 export async function recordRefund(input: {
   orderId: string
   amountCents: number
+  /** One expert's part of the order, or null/absent for the order as a whole. */
+  authorId?: string | null
   reason?: string | null
   recordedByMemberId?: string | null
   refundedAt?: Date
@@ -231,8 +256,19 @@ export async function recordRefund(input: {
       grossCents: true,
       currency: true,
       status: true,
-      ledger: { where: { kind: 'earning' }, select: { id: true, authorId: true, amountCents: true } },
-      refunds: { select: { amountCents: true } },
+      sectionId: true,
+      packageId: true,
+      ledger: { where: { kind: 'earning' }, select: { authorId: true, amountCents: true } },
+      // Oldest first: whole-order refunds are shared by what was left at the time.
+      refunds: {
+        orderBy: { createdAt: 'asc' },
+        select: {
+          amountCents: true,
+          authorId: true,
+          ledger: { where: { kind: 'reversal' }, select: { authorId: true, amountCents: true } },
+        },
+      },
+      lines: { select: { authorId: true, chargeCents: true } },
     },
   })
   if (!order) return { ok: false, error: 'No such order.' }
@@ -263,7 +299,38 @@ export async function recordRefund(input: {
     }
   }
 
-  const earning = order.ledger[0] ?? null
+  // Each expert's part of the order: by line, or the whole order for one from before lines.
+  const portions = refundPortions(order, grossCents)
+
+  const scope = input.authorId ?? null
+  if (scope !== null) {
+    const portion = portions.find((entry) => entry.authorId === scope)
+    if (!portion) return { ok: false, error: 'That expert has nothing on this order.' }
+    const left = portion.grossCents - refundedFromPortion(portions, scope, order.refunds)
+    if (input.amountCents > left) {
+      return {
+        ok: false,
+        error:
+          left <= 0
+            ? 'This expert\'s part of the order has already been refunded in full.'
+            : `Only ${(left / 100).toFixed(2)} is left to refund on this expert's part of the order.`,
+      }
+    }
+  }
+
+  // What each part has had refunded, and what each expert has already given back.
+  const refundedCents = refundedByPortion(portions, order.refunds)
+  const reversedCents = portions.map((portion) =>
+    order.refunds.reduce(
+      (sum, refund) =>
+        sum +
+        refund.ledger
+          .filter((entry) => entry.authorId === portion.authorId)
+          .reduce((acc, entry) => acc - entry.amountCents, 0),
+      0,
+    ),
+  )
+  const plan = refundPlan(portions, input.amountCents, scope, { refundedCents, reversedCents })
 
   const reversed = await db.$transaction(async (tx) => {
     const refund = await tx.refund.create({
@@ -271,6 +338,7 @@ export async function recordRefund(input: {
         orderId: order.id,
         amountCents: input.amountCents,
         currency: order.currency,
+        authorId: scope,
         reason: input.reason ?? null,
         recordedByMemberId: input.recordedByMemberId ?? null,
         refundedAt: input.refundedAt ?? new Date(),
@@ -279,32 +347,58 @@ export async function recordRefund(input: {
 
     // House revenue has no contributor entry to reverse. The refund is still recorded —
     // it is a fact about the order either way.
-    if (!earning) return 0
-
-    const amountCents = reversalCents(
-      { authorCents: earning.amountCents, grossCents },
-      input.amountCents,
-    )
-    if (amountCents === 0) return 0
-
-    await tx.ledgerEntry.create({
-      data: {
-        authorId: earning.authorId,
-        kind: 'reversal',
-        amountCents,
-        currency: order.currency,
-        // No holdback: see the note above.
-        payableAt: null,
-        orderId: order.id,
-        refundId: refund.id,
-        note: input.reason ?? null,
-        createdByMemberId: input.recordedByMemberId ?? null,
-      },
-    })
-    return amountCents
+    for (const entry of plan) {
+      await tx.ledgerEntry.create({
+        data: {
+          authorId: entry.authorId,
+          kind: 'reversal',
+          amountCents: entry.reversalCents,
+          currency: order.currency,
+          // No holdback: see the note above.
+          payableAt: null,
+          /*
+           * Tied to the order through its refund, not directly. The unique index on
+           * (orderId, authorId, kind) exists to stop a second *earning* for one sale; a
+           * reversal carrying the orderId too meant a second partial refund for the same
+           * expert collided with the first and could not be recorded at all.
+           */
+          orderId: null,
+          refundId: refund.id,
+          note: input.reason ?? null,
+          createdByMemberId: input.recordedByMemberId ?? null,
+        },
+      })
+    }
+    return plan.reduce((sum, entry) => sum + entry.reversalCents, 0)
   })
 
   return { ok: true, reversedCents: reversed }
+}
+
+/**
+ * Each expert's part of an order, with the earning posted for it.
+ *
+ * By line for an order that has lines; an order from before lines existed is one part —
+ * the whole gross — belonging to whoever its single earning was posted for.
+ */
+export function refundPortions(
+  order: {
+    lines: { authorId: string | null; chargeCents: number }[]
+    ledger: { authorId: string; amountCents: number }[]
+  },
+  grossCents: number,
+): RefundPortion[] {
+  const earningOf = (authorId: string | null) =>
+    authorId === null ? null : (order.ledger.find((entry) => entry.authorId === authorId)?.amountCents ?? null)
+  if (order.lines.length > 0) {
+    return portionsByAuthor(order.lines, { taxCents: 0, gatewayFeeCents: 0, ibFeeCents: 0 }).map((portion) => ({
+      authorId: portion.authorId,
+      grossCents: portion.grossCents,
+      earningCents: earningOf(portion.authorId),
+    }))
+  }
+  const authorId = order.ledger[0]?.authorId ?? null
+  return [{ authorId, grossCents, earningCents: earningOf(authorId) }]
 }
 
 /** What one contributor has earned, and what of it could be paid today. */

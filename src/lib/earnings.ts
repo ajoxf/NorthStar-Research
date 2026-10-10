@@ -204,3 +204,148 @@ export function withdrawable(balance: Balance, requestedCents: number): { ok: tr
   }
   return { ok: true }
 }
+
+/**
+ * Split a whole number of cents across weights, exactly.
+ *
+ * Largest remainder: each share is rounded down, and the cents left over go one at a time
+ * to the largest fractional parts. The shares always sum to the total — rounding each one
+ * independently would leave a cent in nobody's account, or invent one, on a fair fraction
+ * of orders. All weights zero splits nothing.
+ */
+export function apportion(totalCents: number, weights: number[]): number[] {
+  const sum = weights.reduce((acc, weight) => acc + Math.max(0, weight), 0)
+  if (sum <= 0 || totalCents === 0) return weights.map(() => 0)
+  const exact = weights.map((weight) => (totalCents * Math.max(0, weight)) / sum)
+  const floored = exact.map((value) => Math.floor(value))
+  let left = totalCents - floored.reduce((acc, value) => acc + value, 0)
+  const order = exact
+    .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index)
+  for (const { index } of order) {
+    if (left <= 0) break
+    floored[index] += 1
+    left -= 1
+  }
+  return floored
+}
+
+/** What one order owes to whom, line by line, before any expert's percentage is taken. */
+export type AuthorPortion = {
+  /** Null is house revenue: the built-in plan, or a package nobody is credited with. */
+  authorId: string | null
+  /** What this author's lines were charged. */
+  grossCents: number
+  /** That, less this author's share of the order's tax, gateway fee and affiliate fee. */
+  netCents: number
+}
+
+/**
+ * Attribute an order's revenue per line, and group it by author.
+ *
+ * Revenue follows who sold each line, not who sold the order. Deductions that belong to
+ * the whole order — tax, the gateway's fee, the affiliate's commission — are shared across
+ * the lines in proportion to what each was charged, so a $99 section and a $349 section in
+ * one cart each bear the fee their price earned rather than half of it each. Grouped by
+ * author because an expert with two lines in one order is owed one earning, not two.
+ */
+export function portionsByAuthor(
+  lines: { authorId: string | null; chargeCents: number }[],
+  deductions: { taxCents: number; gatewayFeeCents: number; ibFeeCents: number },
+): AuthorPortion[] {
+  const weights = lines.map((line) => line.chargeCents)
+  const tax = apportion(deductions.taxCents, weights)
+  const fee = apportion(deductions.gatewayFeeCents, weights)
+  const ib = apportion(deductions.ibFeeCents, weights)
+
+  const byAuthor = new Map<string | null, AuthorPortion>()
+  lines.forEach((line, index) => {
+    const net = Math.max(0, line.chargeCents - tax[index] - fee[index] - ib[index])
+    const current = byAuthor.get(line.authorId) ?? { authorId: line.authorId, grossCents: 0, netCents: 0 }
+    current.grossCents += line.chargeCents
+    current.netCents += net
+    byAuthor.set(line.authorId, current)
+  })
+  return [...byAuthor.values()]
+}
+
+/** One expert's part of an order, as a refund needs it. */
+export type RefundPortion = {
+  authorId: string | null
+  /** What this author's lines were charged. */
+  grossCents: number
+  /** Their earning on this order, if one was posted. */
+  earningCents: number | null
+}
+
+/**
+ * How much of each part of an order has been refunded, replaying its refunds in order.
+ *
+ * A refund scoped to one expert counts against their part alone. A whole-order refund is
+ * shared across the parts by what was still unrefunded on each at that moment — so once
+ * one expert's lines have been refunded in full, a later "refund the rest" falls entirely
+ * on the others, as it should. `refunds` must be oldest first.
+ */
+export function refundedByPortion(
+  portions: RefundPortion[],
+  refunds: { amountCents: number; authorId: string | null }[],
+): number[] {
+  const done = portions.map(() => 0)
+  for (const refund of refunds) {
+    if (refund.authorId !== null) {
+      const index = portions.findIndex((portion) => portion.authorId === refund.authorId)
+      if (index !== -1) done[index] += refund.amountCents
+      continue
+    }
+    const remaining = portions.map((portion, index) => Math.max(0, portion.grossCents - done[index]))
+    apportion(refund.amountCents, remaining).forEach((slice, index) => (done[index] += slice))
+  }
+  return done
+}
+
+/** What has been refunded so far against one expert's part. See refundedByPortion. */
+export function refundedFromPortion(
+  portions: RefundPortion[],
+  authorId: string | null,
+  refunds: { amountCents: number; authorId: string | null }[],
+): number {
+  const index = portions.findIndex((portion) => portion.authorId === authorId)
+  return index === -1 ? 0 : refundedByPortion(portions, refunds)[index]
+}
+
+/**
+ * What a new refund takes back from whom.
+ *
+ * Scoped to one expert: only their part is refunded, and only their earning reversed —
+ * refunding one section of a cart costs that section's expert, not the others. For the
+ * whole order: the refund is shared across the parts by what is still unrefunded on each.
+ *
+ * Each reversal is sized against a running total rather than on its own: an expert whose
+ * part is now refunded by fraction f has lost round(f × earning) in all, and this refund
+ * takes the difference from what earlier ones already took. Rounding therefore never
+ * accumulates, a part refunded in full cancels its earning exactly, and no expert can lose
+ * more than they earned. House parts carry no earning and lose nothing.
+ */
+export function refundPlan(
+  portions: RefundPortion[],
+  refundCents: number,
+  scopeAuthorId: string | null,
+  history: { refundedCents: number[]; reversedCents: number[] },
+): { authorId: string; reversalCents: number }[] {
+  const remaining = portions.map((portion, index) => Math.max(0, portion.grossCents - history.refundedCents[index]))
+  const slices =
+    scopeAuthorId !== null
+      ? portions.map((portion) => (portion.authorId === scopeAuthorId ? refundCents : 0))
+      : apportion(refundCents, remaining)
+
+  return portions.flatMap((portion, index) => {
+    if (portion.authorId === null || portion.earningCents === null || portion.grossCents <= 0) return []
+    const refundedAfter = Math.min(portion.grossCents, history.refundedCents[index] + slices[index])
+    const owedBack =
+      refundedAfter >= portion.grossCents
+        ? portion.earningCents
+        : Math.round((portion.earningCents * refundedAfter) / portion.grossCents)
+    const take = Math.min(owedBack, portion.earningCents) - history.reversedCents[index]
+    return take > 0 ? [{ authorId: portion.authorId, reversalCents: -take }] : []
+  })
+}

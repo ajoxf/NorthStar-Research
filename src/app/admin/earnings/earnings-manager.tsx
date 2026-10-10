@@ -27,6 +27,8 @@ export type LedgerRow = {
   orderId: string | null
   /** What is left to refund on the order behind this entry. Null when there is no order. */
   orderRefundableCents: number | null
+  /** The contributor this entry belongs to; a refund recorded from it covers their part only. */
+  authorId?: string
 }
 
 export type AuthorEarnings = {
@@ -406,6 +408,7 @@ function LedgerTable({
               (entry.orderRefundableCents ?? 0) > 0 && (
                 <RefundButton
                   orderId={entry.orderId}
+                  authorId={entry.authorId}
                   refundableCents={entry.orderRefundableCents ?? 0}
                   currency={entry.currency}
                   busy={busy}
@@ -421,12 +424,15 @@ function LedgerTable({
 
 function RefundButton({
   orderId,
+  authorId,
   refundableCents,
   currency,
   busy,
   send,
 }: {
   orderId: string
+  /** The expert whose earning this is. The refund covers their part of the order only. */
+  authorId?: string
   refundableCents: number
   currency: string
   busy: boolean
@@ -453,7 +459,8 @@ function RefundButton({
         */}
         <strong className="font-medium text-ink">This refunds nobody.</strong> Issue the refund
         in Stripe or send the crypto back first, then record it here so the contributor&rsquo;s
-        share is taken back. Up to {formatPrice(refundableCents, currency)} left on this order.
+        share is taken back. This covers this contributor&rsquo;s part of the order only — up
+        to {formatPrice(refundableCents, currency)} is left on it.
       </p>
       <div className="mt-3 grid gap-3 sm:grid-cols-[160px_1fr]">
         <Input
@@ -481,7 +488,7 @@ function RefundButton({
             void send(
               '/api/admin/refunds',
               'POST',
-              { orderId, amountCents: cents, reason: reason || undefined },
+              { orderId, authorId, amountCents: cents, reason: reason || undefined },
               'Refund recorded and the share reversed',
             )
           }}
