@@ -39,7 +39,14 @@ export function AffiliateLink({ link }: { link: string }) {
  * Ask for a withdrawal. Asking moves nothing: the request waits for an operator to approve
  * it and send it, and the page says so, so nobody watches their bank for money not yet sent.
  */
-export function WithdrawalForm({ availableCents }: { availableCents: number }) {
+export function WithdrawalForm({
+  availableCents,
+  endpoint = '/api/affiliate/withdrawals',
+}: {
+  availableCents: number
+  /** The signed-in member's own withdrawal route: affiliate or expert. */
+  endpoint?: string
+}) {
   const router = useRouter()
   const toast = useToast()
   const [pending, setPending] = React.useState(false)
@@ -69,7 +76,7 @@ export function WithdrawalForm({ availableCents }: { availableCents: number }) {
         }
         setPending(true)
         try {
-          const response = await fetch('/api/affiliate/withdrawals', {
+          const response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
