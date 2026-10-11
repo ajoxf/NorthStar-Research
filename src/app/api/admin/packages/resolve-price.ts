@@ -40,12 +40,12 @@ export async function resolveStripePrice(input: {
     return { ok: true, stripePriceId: null, stripeProductId: current.stripeProductId }
   }
 
-  if (!stripeConfigured()) {
+  if (!(await stripeConfigured())) {
     return {
       ok: false,
       error:
-        'STRIPE_SECRET_KEY is not set on this deployment, so a card price cannot be created. ' +
-        'Add it in Vercel → Settings → Environment Variables and redeploy, or save this ' +
+        'No Stripe secret key is set, so a card price cannot be created. ' +
+        'Add it on Payments → Providers, or save this ' +
         'package as crypto-only for now.',
     }
   }

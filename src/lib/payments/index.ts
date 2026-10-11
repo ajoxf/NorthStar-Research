@@ -7,6 +7,8 @@ import { PAYMENT_PROVIDER_IDS } from '@/lib/payments/ids'
 
 export * from '@/lib/payments/types'
 export { PAYMENT_PROVIDER_IDS, isPaymentProviderId } from '@/lib/payments/ids'
+/** Stripe's keys as in use — saved on the Providers page, else the environment. */
+export { stripeKeys } from '@/lib/payments/stripe'
 
 /**
  * Every rail this deployment knows how to take money through.

@@ -4,6 +4,7 @@ import * as React from 'react'
 import { ArrowRight } from 'lucide-react'
 
 import { AddToCartButton } from '@/components/cart/cart-buttons'
+import { useChosenMethod, useCountryOptions, usePaymentMethods } from '@/components/checkout/payment-choice'
 import { Button, ButtonLink, Spinner } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
@@ -24,15 +25,22 @@ import { useToast } from '@/components/ui/toast'
  * follows are what actually give somebody access, which is why reaching the success page
  * proves nothing.
  */
+const SELECT = 'rounded-lg border px-3 text-[16px] sm:text-[14px]'
+const LIGHT = 'border-line-on-light bg-white text-ink-on-light'
+const DARK = 'border-line bg-panel-2 text-ink'
+
 export function SectionBuy({
   sectionId,
   name,
   trialDays,
   trialSlug,
   tone = 'dark',
+  currency = 'USD',
 }: {
   sectionId: string
   name: string
+  /** What the section is priced in; decides which providers are offered. */
+  currency?: string
   /**
    * The ground this card sits on.
    *
@@ -54,22 +62,30 @@ export function SectionBuy({
 }) {
   const toast = useToast()
   const [email, setEmail] = React.useState('')
-  const [pending, setPending] = React.useState<'card' | 'crypto' | null>(null)
+  const [pending, setPending] = React.useState(false)
+  const [country, setCountry] = React.useState('')
+  const { methods, detected } = usePaymentMethods(currency, country)
+  const [chosen, setChosen] = useChosenMethod(methods)
+  React.useEffect(() => {
+    if (detected) setCountry((current) => current || detected)
+  }, [detected])
+  const countries = useCountryOptions()
 
   const hasTrial = Boolean(trialDays && trialSlug)
   const light = tone === 'light'
 
-  async function start(method: 'card' | 'crypto') {
+  async function start() {
     if (!email.trim()) {
       toast('Enter the email address your access code should go to.', 'error')
       return
     }
-    setPending(method)
+    if (!chosen) return
+    setPending(true)
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), sectionId, method }),
+        body: JSON.stringify({ email: email.trim(), sectionId, provider: chosen, country: country || undefined }),
       })
       const data = await response.json().catch(() => null)
 
@@ -81,7 +97,7 @@ export function SectionBuy({
     } catch {
       toast('Could not reach the server. Nothing has been charged.', 'error')
     } finally {
-      setPending(null)
+      setPending(false)
     }
   }
 
@@ -130,26 +146,56 @@ export function SectionBuy({
           className="sm:flex-1"
         />
         <div className="flex shrink-0 gap-2.5">
-          <Button onClick={() => start('card')} disabled={pending !== null}>
-            {pending === 'card' ? <Spinner /> : null}
-            Pay by card
-          </Button>
-          <Button
-            variant={light ? 'on-light' : 'secondary'}
-            onClick={() => start('crypto')}
-            disabled={pending !== null}
-          >
-            {pending === 'crypto' ? <Spinner /> : null}
-            Crypto
+          {methods && methods.length > 1 && (
+            <select
+              value={chosen ?? ''}
+              onChange={(event) => setChosen(event.target.value)}
+              aria-label="How to pay"
+              className={`min-w-0 flex-1 sm:w-44 sm:flex-none ${SELECT} ${light ? LIGHT : DARK}`}
+            >
+              {methods.map((method) => (
+                <option key={method.id} value={method.id}>
+                  {method.label}
+                </option>
+              ))}
+            </select>
+          )}
+          <Button onClick={start} disabled={pending || !chosen}>
+            {pending ? <Spinner /> : null}
+            {methods && methods.length === 1 ? methods[0].label : 'Pay'}
           </Button>
         </div>
+      </div>
+
+      {methods && methods.length === 0 && (
+        <p className={`mt-3 text-[14px] leading-relaxed ${light ? 'text-ink-on-light' : 'text-ink'}`}>
+          Online payment isn&rsquo;t available for this country yet. Please{' '}
+          <a href="/faqs" className="underline underline-offset-4">contact us</a> and we will arrange it.
+        </p>
+      )}
+
+      <div className={`mt-3 flex flex-wrap items-center gap-2 text-[13px] ${light ? 'text-ink-on-light-dim' : 'text-ink-dim'}`}>
+        <label htmlFor={`country-${sectionId}`}>Billing country</label>
+        <select
+          id={`country-${sectionId}`}
+          value={country}
+          onChange={(event) => setCountry(event.target.value)}
+          className={`h-8 max-w-[14rem] ${SELECT} ${light ? LIGHT : DARK}`}
+        >
+          <option value="">Choose…</option>
+          {countries.map((option) => (
+            <option key={option.code} value={option.code}>
+              {option.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <p
         className={`mt-3 text-[13px] leading-relaxed ${light ? 'text-ink-on-light-dim' : 'text-ink-dim'}`}
       >
-        We email your access code once the payment confirms. Card renews automatically and can be
-        cancelled any time; crypto you renew yourself.
+        We email your access once the payment confirms. Card renews automatically and can be
+        cancelled any time; other methods pay for one period and we remind you before it ends.
       </p>
 
       {/* Buying several subjects? Collect them and pay once. */}

@@ -33,7 +33,7 @@ type Tx = Prisma.TransactionClient
  */
 export async function fulfilPaidOrder(input: {
   order: CheckoutOrder
-  provider: Extract<BillingProvider, 'stripe' | 'cregis'>
+  provider: Extract<BillingProvider, 'stripe' | 'cregis' | 'gateway'>
   /** The rail's reference for this payment; written onto the order. */
   providerRef: string
   /** How the receipt names the method: "Card", "Crypto". */
@@ -44,7 +44,7 @@ export async function fulfilPaidOrder(input: {
   rawCallback: unknown
   /** Card only: the customer and subscription Stripe created for this checkout. */
   stripe?: { customerId: string | null; subscriptionId: string | null }
-}): Promise<{ outcome: 'granted' } | { outcome: 'code'; code: string }> {
+}): Promise<FulfilmentResult> {
   const { order, provider } = input
   const subscriptionId = input.stripe?.subscriptionId ?? null
   const now = new Date()
@@ -70,77 +70,101 @@ export async function fulfilPaidOrder(input: {
 
   let result: { outcome: 'granted' } | { outcome: 'code'; code: string }
 
-  if (member && fulfilmentRoute({ hasPassword: Boolean(member.passwordHash) }) === 'grant') {
-    await db.$transaction(async (tx) => {
-      await tx.checkoutOrder.update({ where: { id: order.id }, data: paidUpdate })
-      if (commission) await applyCommission(tx, commission, order, now)
-      for (const line of lines) {
-        await grantLine(tx, member, line, { provider, subscriptionId, now })
-      }
-      // So the card subscription's invoices can find this member. Only when they have
-      // none: a customer id is unique, and an older one still routes its own invoices.
-      if (input.stripe?.customerId && !member.stripeCustomerId) {
-        await tx.member.update({
-          where: { id: member.id },
-          data: { stripeCustomerId: input.stripe.customerId },
-        })
-      }
-    })
-    result = { outcome: 'granted' }
-  } else {
-    const code = generateRedemptionCode()
-    // What the member's own all-access columns describe: only a plan line, never a section
-    // or a package with contents — those are entitlements, granted at redemption.
-    const single = lines.length === 1 ? lines[0] : null
-    const allAccess = single !== null && single.kind !== 'section'
+  try {
+    if (member && fulfilmentRoute({ hasPassword: Boolean(member.passwordHash) }) === 'grant') {
+      await db.$transaction(async (tx) => {
+        await claimOrder(tx, order.id, paidUpdate)
+        if (commission) await applyCommission(tx, commission, order, now)
+        for (const line of lines) {
+          await grantLine(tx, member, line, { provider, subscriptionId, now })
+        }
+        // So the card subscription's invoices can find this member. Only when they have
+        // none: a customer id is unique, and an older one still routes its own invoices.
+        if (input.stripe?.customerId && !member.stripeCustomerId) {
+          await tx.member.update({
+            where: { id: member.id },
+            data: { stripeCustomerId: input.stripe.customerId },
+          })
+        }
+      })
+      result = { outcome: 'granted' }
+    } else {
+      const code = generateRedemptionCode()
+      // What the member's own all-access columns describe: only a plan line, never a section
+      // or a package with contents — those are entitlements, granted at redemption.
+      const single = lines.length === 1 ? lines[0] : null
+      const allAccess = single !== null && single.kind !== 'section'
 
-    await db.$transaction(async (tx) => {
-      await tx.checkoutOrder.update({ where: { id: order.id }, data: paidUpdate })
-      if (commission) await applyCommission(tx, commission, order, now)
-      await tx.redemptionCode.create({
-        // Expiry runs from payment: the buyer has the code the moment the callback lands.
-        data: {
-          code,
-          orderId: order.id,
-          cregisOrderId: input.providerRef,
-          email: order.email,
-          status: 'unused',
-          discountPercent: 0,
-          expiresAt: codeExpiresAt(),
-          // A one-line order also names its item on the code, which is what redemption
-          // reads today. A code for several lines is redeemed from the order's lines.
-          packageId: single?.packageId ?? null,
-          sectionId: single?.sectionId ?? null,
-        },
+      await db.$transaction(async (tx) => {
+        await claimOrder(tx, order.id, paidUpdate)
+        if (commission) await applyCommission(tx, commission, order, now)
+        await tx.redemptionCode.create({
+          // Expiry runs from payment: the buyer has the code the moment the callback lands.
+          data: {
+            code,
+            orderId: order.id,
+            cregisOrderId: input.providerRef,
+            email: order.email,
+            status: 'unused',
+            discountPercent: 0,
+            expiresAt: codeExpiresAt(),
+            // A one-line order also names its item on the code, which is what redemption
+            // reads today. A code for several lines is redeemed from the order's lines.
+            packageId: single?.packageId ?? null,
+            sectionId: single?.sectionId ?? null,
+          },
+        })
+        // The CRM contact, at 'pending' until the code is redeemed.
+        await tx.member.upsert({
+          where: { email: order.email },
+          create: {
+            email: order.email,
+            phoneNumber: order.phoneNumber,
+            source: provider === 'stripe' ? 'stripe_checkout' : provider === 'gateway' ? 'gateway_checkout' : 'cregis_checkout',
+            subscriptionStatus: 'pending',
+            ...(provider === 'stripe' ? { billingProvider: 'stripe' as const } : {}),
+            stripeCustomerId: input.stripe?.customerId ?? null,
+            stripeSubscriptionId: allAccess ? subscriptionId : null,
+            packageId: allAccess ? (single?.packageId ?? null) : null,
+          },
+          update: {
+            phoneNumber: order.phoneNumber ?? undefined,
+            ...(provider === 'stripe' ? { billingProvider: 'stripe' as const } : {}),
+            stripeCustomerId: input.stripe?.customerId ?? undefined,
+            ...(allAccess
+              ? { stripeSubscriptionId: subscriptionId ?? undefined, packageId: single?.packageId ?? undefined }
+              : {}),
+          },
+        })
       })
-      // The CRM contact, at 'pending' until the code is redeemed.
-      await tx.member.upsert({
-        where: { email: order.email },
-        create: {
-          email: order.email,
-          phoneNumber: order.phoneNumber,
-          source: provider === 'stripe' ? 'stripe_checkout' : 'cregis_checkout',
-          subscriptionStatus: 'pending',
-          ...(provider === 'stripe' ? { billingProvider: 'stripe' as const } : {}),
-          stripeCustomerId: input.stripe?.customerId ?? null,
-          stripeSubscriptionId: allAccess ? subscriptionId : null,
-          packageId: allAccess ? (single?.packageId ?? null) : null,
-        },
-        update: {
-          phoneNumber: order.phoneNumber ?? undefined,
-          ...(provider === 'stripe' ? { billingProvider: 'stripe' as const } : {}),
-          stripeCustomerId: input.stripe?.customerId ?? undefined,
-          ...(allAccess
-            ? { stripeSubscriptionId: subscriptionId ?? undefined, packageId: single?.packageId ?? undefined }
-            : {}),
-        },
-      })
-    })
-    result = { outcome: 'code', code }
+      result = { outcome: 'code', code }
+    }
+  } catch (error) {
+    // Somebody else confirmed it first — a duplicate webhook, the buyer's return page, an
+    // admin's "Mark as paid". Nothing was written; nothing more to do, and no second receipt.
+    if (error instanceof AlreadyPaid) return { outcome: 'already' }
+    throw error
   }
 
   await afterPayment(input, member?.firstName ?? null, result)
   return result
+}
+
+export type FulfilmentResult = { outcome: 'granted' } | { outcome: 'code'; code: string } | { outcome: 'already' }
+
+class AlreadyPaid extends Error {}
+
+/**
+ * Mark the order paid — only if it is not already — as the first write of the grant.
+ *
+ * Conditional, inside the grant's transaction, so two confirmations arriving together
+ * cannot both grant: the second finds no unpaid row, throws, and its transaction rolls
+ * back having written nothing. Checking the status beforehand, as the webhooks also do, is
+ * a fast path, not the guarantee — two requests can both pass that check.
+ */
+async function claimOrder(tx: Tx, orderId: string, data: Prisma.CheckoutOrderUpdateManyMutationInput) {
+  const claimed = await tx.checkoutOrder.updateMany({ where: { id: orderId, status: { not: 'paid' } }, data })
+  if (claimed.count === 0) throw new AlreadyPaid()
 }
 
 /**

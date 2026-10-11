@@ -1,7 +1,7 @@
 'use client'
 
 import * as React from 'react'
-import { ArrowRight, Bitcoin, Check, CreditCard, Lock } from 'lucide-react'
+import { ArrowRight, Bitcoin, Check, CreditCard, Lock, Wallet } from 'lucide-react'
 
 import { Button, Spinner } from '@/components/ui/button'
 import { FieldError, Hint, Input, Label } from '@/components/ui/field'
@@ -11,8 +11,8 @@ import { FALLBACK_PACKAGE, formatPrice } from '@/lib/package-shape'
 import { cn, isValidEmail } from '@/lib/utils'
 import { UploadedImage } from '@/components/uploaded-image'
 import { AddToCartButton } from '@/components/cart/cart-buttons'
+import { useChosenMethod, useCountryOptions, usePaymentMethods } from '@/components/checkout/payment-choice'
 
-type Method = 'card' | 'crypto'
 
 /** What /api/checkout/quote answers. The server is the only thing that knows. */
 type Quote = {
@@ -59,18 +59,13 @@ export type JoinPackage = {
  * its own proves nothing.
  */
 export function JoinForm({
-  cardReady,
-  cryptoReady,
   packages,
   selectedId,
 }: {
-  cardReady: boolean
-  cryptoReady: boolean
   packages: JoinPackage[]
   selectedId: string
 }) {
   const toast = useToast()
-  const [method, setMethod] = React.useState<Method>(cardReady ? 'card' : 'crypto')
   const [packageId, setPackageId] = React.useState(selectedId)
   const [email, setEmail] = React.useState('')
   const [phone, setPhone] = React.useState('')
@@ -81,6 +76,18 @@ export function JoinForm({
   const [quoting, setQuoting] = React.useState(false)
 
   const chosen = packages.find((pkg) => pkg.id === packageId) ?? packages[0]
+
+  // Which providers this buyer is offered: the admin's rules, for their country and currency.
+  const [country, setCountry] = React.useState('')
+  const { methods, detected } = usePaymentMethods(chosen.currency, country)
+  const [method, setMethod] = useChosenMethod(methods)
+  React.useEffect(() => {
+    if (detected) setCountry((current) => current || detected)
+  }, [detected])
+  const countries = useCountryOptions()
+  const offered = methods?.find((option) => option.id === method) ?? null
+  // Card renews by itself; every other provider pays for one period.
+  const byCard = offered?.recurring ?? false
 
   /*
    * The price comes from the server, not from arithmetic done here.
@@ -125,7 +132,7 @@ export function JoinForm({
   // A package with no Stripe price cannot be billed by card, whatever Stripe's own
   // configuration says. Disabling the option here is the honest version of a checkout
   // that would otherwise be refused after the buyer had committed to it.
-  const ready = method === 'card' ? cardReady && chosen.cardAvailable : cryptoReady
+  const ready = Boolean(offered) && (!byCard || chosen.cardAvailable)
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
@@ -143,7 +150,8 @@ export function JoinForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          method,
+          provider: method,
+          country: country || undefined,
           phoneNumber: phone || undefined,
           packageId: chosen.id,
           offerCode: code || undefined,
@@ -234,46 +242,55 @@ export function JoinForm({
         </Step>
 
         <Step number={packages.length > 1 ? '03' : '02'} title="How would you like to pay?">
-          <div className="grid grid-cols-2 gap-2.5" role="radiogroup" aria-label="Payment method">
-            <MethodOption
-              icon={CreditCard}
-              label="Card"
-              detail={`Renews every ${chosen.interval}`}
-              selected={method === 'card'}
-              onSelect={() => setMethod('card')}
-            />
-            <MethodOption
-              icon={Bitcoin}
-              label="Crypto"
-              detail="You renew it yourself"
-              selected={method === 'crypto'}
-              onSelect={() => setMethod('crypto')}
-            />
+          <div className="mb-4">
+            <Label htmlFor="join-country" tone="light">
+              Billing country
+            </Label>
+            <select
+              id="join-country"
+              value={country}
+              onChange={(event) => setCountry(event.target.value)}
+              className="h-11 w-full rounded-lg border border-ink-on-light/20 bg-white px-3 text-[16px] text-ink-on-light"
+            >
+              <option value="">Choose your country</option>
+              {countries.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {!ready && (
-            <div className="mt-4 rounded-xl border border-ink-on-light/20 bg-white px-4 py-3.5 text-[13px] leading-relaxed text-ink-on-light">
-              {method === 'card' && cardReady && !chosen.cardAvailable ? (
-                <>
-                  <strong className="font-medium">{chosen.name} cannot be paid by card.</strong> This
-                  membership is set up for crypto only.{' '}
-                  {cryptoReady && 'Choose crypto above, or pick another membership.'}
-                </>
-              ) : (
-                <>
-                  <strong className="font-medium">
-                    {method === 'card' ? 'Card payments' : 'Crypto payments'} are not live yet.
-                  </strong>{' '}
-                  Those credentials have not been configured for this deployment, so this option
-                  cannot take a payment.{' '}
-                  {method === 'card' && cryptoReady && 'Crypto is available in the meantime.'}
-                  {method === 'crypto' && cardReady && 'Card payment is available in the meantime.'}
-                </>
-              )}
+          {methods === null ? (
+            <p className="text-[14px] text-ink-on-light-dim">Finding the ways you can pay…</p>
+          ) : methods.length === 0 ? (
+            <div className="rounded-xl border border-ink-on-light/20 bg-white px-4 py-3.5 text-[14px] leading-relaxed text-ink-on-light">
+              Online payment isn&rsquo;t available for this country yet. Please{' '}
+              <a href="/faqs" className="underline underline-offset-4">contact us</a> and we will arrange it.
+            </div>
+          ) : (
+            <div className="grid gap-2.5 sm:grid-cols-2" role="radiogroup" aria-label="Payment method">
+              {methods.map((option) => (
+                <MethodOption
+                  key={option.id}
+                  icon={option.recurring ? CreditCard : option.id === 'cregis' ? Bitcoin : Wallet}
+                  label={option.label}
+                  detail={option.recurring ? `Renews every ${chosen.interval}` : 'You renew it yourself'}
+                  selected={method === option.id}
+                  onSelect={() => setMethod(option.id)}
+                />
+              ))}
             </div>
           )}
 
-          {method === 'crypto' && (
+          {offered && byCard && !chosen.cardAvailable && (
+            <div className="mt-4 rounded-xl border border-ink-on-light/20 bg-white px-4 py-3.5 text-[13px] leading-relaxed text-ink-on-light">
+              <strong className="font-medium">{chosen.name} cannot be paid by card.</strong> This membership is set up
+              for one-off payment only. Choose another way to pay above, or pick another membership.
+            </div>
+          )}
+
+          {offered && !byCard && (
             <div className="mt-4 animate-fade-up">
               <Label htmlFor="phone" tone="light">
                 Phone number — optional
@@ -359,7 +376,7 @@ export function JoinForm({
             </>
           ) : (
             <>
-              {method === 'card' ? `Subscribe — ${price}/${chosen.interval}` : `Pay ${price} in crypto`}
+              {byCard ? `Subscribe — ${price}/${chosen.interval}` : `Pay ${price}`}
               <ArrowRight className="h-4 w-4" aria-hidden />
             </>
           )}
@@ -367,9 +384,9 @@ export function JoinForm({
 
         <p className="mt-3.5 flex items-start gap-2 text-[13px] leading-relaxed text-ink-on-light-dim">
           <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-          {method === 'card'
+          {byCard
             ? `Payment is taken on Stripe's secure page — NordStar Pro never sees your card details. Billed every ${chosen.interval}, cancel any time from your account.`
-            : `One ${chosen.interval} of access per payment. Crypto cannot renew automatically, so we will remind you before it ends.`}
+            : `One ${chosen.interval} of access per payment. It does not renew automatically, so we will remind you before it ends.`}
         </p>
 
         {/* Collect several and pay once. Not for the built-in plan, which has no row a cart

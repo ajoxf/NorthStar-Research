@@ -115,7 +115,9 @@ export default async function AccountPage() {
                 ? 'Card — renews automatically'
                 : member.billingProvider === 'cregis'
                   ? 'Crypto — renew manually'
-                  : '—'}
+                  : member.billingProvider === 'gateway'
+                    ? 'Paid per period — renew manually'
+                    : '—'}
             </dd>
           </div>
           <div>
@@ -256,4 +258,6 @@ const billingText = (line: AccessLine) =>
     ? 'Card, automatic'
     : line.billing === 'cregis'
       ? 'Crypto, manual'
-      : 'None'
+      : line.billing === 'gateway'
+        ? 'Manual renewal'
+        : 'None'

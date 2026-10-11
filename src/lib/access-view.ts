@@ -21,11 +21,12 @@ import { entitlementActive, isAllAccess, type MemberAccess } from '@/lib/entitle
  * row had a null in it, and the history an operator most needs to audit is exactly the
  * rows that predate the column.
  */
-export type AccessSource = 'stripe' | 'crypto' | 'code' | 'manual'
+export type AccessSource = 'stripe' | 'crypto' | 'provider' | 'code' | 'manual'
 
 export const ACCESS_SOURCE_LABEL: Record<AccessSource, string> = {
   stripe: 'Card',
   crypto: 'Crypto',
+  provider: 'Paid per period',
   code: 'Access code',
   manual: 'Granted by hand',
 }
@@ -54,6 +55,7 @@ export function accessSource(entitlement: EntitlementRow): AccessSource {
   if (entitlement.stripeSubscriptionId) return 'stripe'
   if (entitlement.billingProvider === 'stripe') return 'stripe'
   if (entitlement.billingProvider === 'cregis') return 'crypto'
+  if (entitlement.billingProvider === 'gateway') return 'provider'
   if (entitlement.renewsAt === null) return 'manual'
   return 'code'
 }

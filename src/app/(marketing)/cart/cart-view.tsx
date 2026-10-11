@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Lock, X } from 'lucide-react'
 
 import { markPending, sameItem, useCart, type CartItem } from '@/components/cart/cart-store'
+import { CountrySelect, MethodChoice, useChosenMethod, usePaymentMethods } from '@/components/checkout/payment-choice'
 import { Button, ButtonLink, Spinner } from '@/components/ui/button'
 import { Hint, Input, Label } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
@@ -37,7 +38,7 @@ const refOf = (key: string) => {
  * monthly and a yearly price in one subscription, and a crypto payment buys one period.
  * Every figure here comes from /api/cart/quote — the browser holds only which items.
  */
-export function CartView({ cardReady, cryptoReady }: { cardReady: boolean; cryptoReady: boolean }) {
+export function CartView() {
   const cart = useCart()
   const toast = useToast()
   const [email, setEmail] = React.useState('')
@@ -45,6 +46,8 @@ export function CartView({ cardReady, cryptoReady }: { cardReady: boolean; crypt
   const [quote, setQuote] = React.useState<Quote | null>(null)
   const [quoting, setQuoting] = React.useState(false)
   const [pending, setPending] = React.useState<string | null>(null)
+  // The billing country decides which providers are offered; blank until the server's guess arrives.
+  const [country, setCountry] = React.useState('')
 
   const itemsKey = cart.items.map(keyOf).join(',')
   const emailForQuote = isValidEmail(email) ? email.trim() : ''
@@ -97,7 +100,7 @@ export function CartView({ cardReady, cryptoReady }: { cardReady: boolean; crypt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quote])
 
-  async function checkout(group: QuoteGroup, method: 'card' | 'crypto') {
+  async function checkout(group: QuoteGroup, provider: string) {
     if (!isValidEmail(email)) {
       toast('Enter the email address your access should go to.', 'error')
       return
@@ -105,14 +108,15 @@ export function CartView({ cardReady, cryptoReady }: { cardReady: boolean; crypt
     // Exactly the lines that were priced together, so the charge matches the figure shown.
     const payable = group.lines
     if (payable.some((line) => quote?.held.includes(line.key))) return
-    setPending(`${group.interval}:${method}`)
+    setPending(group.interval)
     try {
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim(),
-          method,
+          provider,
+          country: country || undefined,
           items: payable.map((line) => refOf(line.key)),
           offerCode: code.trim() || undefined,
         }),
@@ -169,6 +173,8 @@ export function CartView({ cardReady, cryptoReady }: { cardReady: boolean; crypt
           <Hint>One discount per order, applied to everything it covers.</Hint>
         </div>
       </div>
+
+      <CountrySelect id="cart-country" value={country} onChange={setCountry} className="sm:max-w-xs" />
 
       {split && (
         <p className="rounded-lg border border-line bg-panel px-4 py-3 text-[15px] leading-relaxed text-ink-dim">
@@ -240,40 +246,73 @@ export function CartView({ cardReady, cryptoReady }: { cardReady: boolean; crypt
                   <Link href="/login" className="underline">sign in</Link> to read what you have.
                 </p>
               )}
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-[17px] text-ink">
-                  {formatPrice(total, group.currency)}
-                  <span className="text-ink-dim"> / {per}</span>
-                  {quoting && <Spinner className="ml-2 inline-block" />}
-                </p>
-                <div className="flex gap-2.5">
-                  <Button
-                    onClick={() => checkout(group, 'card')}
-                    disabled={!cardReady || pending !== null || quoting || blocked}
-                    title={cardReady ? undefined : 'Card payment is not available yet'}
-                  >
-                    {pending === `${group.interval}:card` && <Spinner />}
-                    Pay by card
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => checkout(group, 'crypto')}
-                    disabled={!cryptoReady || pending !== null || quoting || blocked}
-                    title={cryptoReady ? undefined : 'Crypto payment is not available yet'}
-                  >
-                    {pending === `${group.interval}:crypto` && <Spinner />}
-                    Crypto
-                  </Button>
-                </div>
-              </div>
-              <p className="mt-3 flex items-start gap-2 text-[13px] leading-relaxed text-ink-dim">
-                <Lock aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                Card renews every {per} until you cancel. Crypto pays for one {per}; we remind you before it ends.
-              </p>
+              <GroupPayment
+                group={group}
+                per={per}
+                country={country}
+                onDetected={(code) => setCountry((current) => current || code)}
+                disabled={pending !== null || quoting || blocked}
+                pending={pending === group.interval}
+                quoting={quoting}
+                onPay={(provider) => checkout(group, provider)}
+              />
             </div>
           </section>
         )
       })}
     </div>
+  )
+}
+
+/**
+ * How one group is paid: the providers this buyer is offered for its currency, and the pay
+ * button. One per group, because groups are separate orders and may differ in currency.
+ */
+function GroupPayment({
+  group,
+  per,
+  country,
+  onDetected,
+  disabled,
+  pending,
+  quoting,
+  onPay,
+}: {
+  group: QuoteGroup
+  per: string
+  country: string
+  onDetected: (code: string) => void
+  disabled: boolean
+  pending: boolean
+  quoting: boolean
+  onPay: (provider: string) => void
+}) {
+  const { methods, detected } = usePaymentMethods(group.currency, country)
+  const [chosen, setChosen] = useChosenMethod(methods)
+
+  React.useEffect(() => {
+    if (detected) onDetected(detected)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detected])
+
+  return (
+    <>
+      <MethodChoice name={`pay-${group.interval}`} methods={methods} value={chosen} onChange={setChosen} per={per} />
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[17px] text-ink">
+          {formatPrice(group.chargeCents, group.currency)}
+          <span className="text-ink-dim"> / {per}</span>
+          {quoting && <Spinner className="ml-2 inline-block" />}
+        </p>
+        <Button onClick={() => chosen && onPay(chosen)} disabled={disabled || !chosen}>
+          {pending && <Spinner />}
+          Pay {formatPrice(group.chargeCents, group.currency)}
+        </Button>
+      </div>
+      <p className="mt-3 flex items-start gap-2 text-[13px] leading-relaxed text-ink-dim">
+        <Lock aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+        Nothing is charged until you confirm with the provider you choose.
+      </p>
+    </>
   )
 }

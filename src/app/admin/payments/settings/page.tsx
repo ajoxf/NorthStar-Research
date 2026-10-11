@@ -55,7 +55,7 @@ export const dynamic = 'force-dynamic'
 export default async function PaymentSettingsPage() {
   const admin = await requireAdmin()
 
-  const stripe = stripeSettings()
+  const stripe = await stripeSettings()
   const cregis = await cregisSettings()
   const cregisFormState = await buildCregisFormState()
   const [packages, defaultPkg, available, recentTests] = await Promise.all([
@@ -193,7 +193,7 @@ export default async function PaymentSettingsPage() {
 
         <Section
           title="Stripe"
-          note="Card subscriptions, renewing automatically. Credentials live in Vercel."
+          note="Card subscriptions, renewing automatically. Keys are entered on Providers & keys, or in Vercel."
           action={{ href: 'https://dashboard.stripe.com/apikeys', label: 'Stripe dashboard' }}
         >
           <SettingTable rows={stripe} />
@@ -206,15 +206,18 @@ export default async function PaymentSettingsPage() {
             <span className="font-mono text-[14px] text-ink">
               {REQUIRED_STRIPE_EVENTS.join(', ')}
             </span>
-            . The signing secret it gives you is{' '}
-            <code className="font-mono text-[14px]">STRIPE_WEBHOOK_SECRET</code>. Without it,
+            . The signing secret it gives you goes on Providers &amp; keys (or{' '}
+            <code className="font-mono text-[14px]">STRIPE_WEBHOOK_SECRET</code>). Without it,
             payments succeed and no membership is ever created.
           </p>
           <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
-            The Stripe key is not editable from this console: it can move money out of the
-            account — charges, refunds, payouts — so it stays in Vercel rather than travelling
-            through whichever browser is signed in as an admin. Environment variables are read at
-            boot, so a change there needs a redeploy.
+            Stripe&rsquo;s keys can be pasted on{' '}
+            <Link href="/admin/payments/providers" className="text-accent-ink underline underline-offset-4">
+              Payments → Providers &amp; keys
+            </Link>
+            , where they are encrypted and override the environment variables shown above. That key
+            can move money out of the account, so treat admin sign-in with the same care as the
+            Stripe dashboard.
           </p>
         </Section>
 

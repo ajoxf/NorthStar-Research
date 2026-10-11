@@ -2,7 +2,10 @@ import 'server-only'
 
 import Stripe from 'stripe'
 
-import { PLAN, appBaseUrl, isConfigured, requireEnv } from '@/lib/env'
+import { MissingConfigError, PLAN, appBaseUrl, isConfigured, requireEnv } from '@/lib/env'
+import { configFrom, loadStored } from '@/lib/payments/gateway-settings'
+import type { PaymentGateway } from '@/lib/payments/gateway-types'
+import { STRIPE_FIELDS } from '@/lib/payments/gateways/stripe-fields'
 import type { StripePriceFacts } from '@/lib/package-shape'
 
 /**
@@ -38,8 +41,8 @@ export const STRIPE_ENV_KEYS = ['STRIPE_SECRET_KEY'] as const
 /** The legacy fallback price. Needed only by the built-in plan; see the note above. */
 export const STRIPE_FALLBACK_PRICE_KEY = 'STRIPE_PRICE_ID'
 
-export function stripeConfigured(): boolean {
-  return isConfigured(...STRIPE_ENV_KEYS)
+export async function stripeConfigured(): Promise<boolean> {
+  return Boolean((await stripeKeys()).secretKey)
 }
 
 /**
@@ -52,12 +55,34 @@ export function stripeFallbackPriceConfigured(): boolean {
   return isConfigured(STRIPE_FALLBACK_PRICE_KEY)
 }
 
-export function stripeClient(): Stripe {
-  return new Stripe(requireEnv('STRIPE_SECRET_KEY', 'Card billing (Stripe)'), {
-    // Pinned so a future Stripe API change cannot silently alter webhook payload shapes.
-    apiVersion: '2025-02-24.acacia',
-    typescript: true,
-  })
+/** Stripe's keys: saved on the Providers page first, then the environment. */
+export async function stripeKeys(): Promise<{ secretKey: string | null; webhookSecret: string | null }> {
+  const descriptor = { id: 'stripe', fields: STRIPE_FIELDS } as PaymentGateway
+  const stored = (await loadStored([descriptor])).get('stripe')
+  const { values } = configFrom(descriptor, stored)
+  return { secretKey: values.secret_key ?? null, webhookSecret: values.webhook_secret ?? null }
+}
+
+/** One client per key, so a key changed on the Providers page is used from the next call. */
+const clients = new Map<string, Stripe>()
+
+export function stripeClientFor(secretKey: string): Stripe {
+  let client = clients.get(secretKey)
+  if (!client) {
+    client = new Stripe(secretKey, {
+      // Pinned so a future Stripe API change cannot silently alter webhook payload shapes.
+      apiVersion: '2025-02-24.acacia',
+      typescript: true,
+    })
+    clients.set(secretKey, client)
+  }
+  return client
+}
+
+export async function stripeClient(): Promise<Stripe> {
+  const { secretKey } = await stripeKeys()
+  if (!secretKey) throw new MissingConfigError(['STRIPE_SECRET_KEY'], 'Card billing (Stripe)')
+  return stripeClientFor(secretKey)
 }
 
 /**
@@ -69,7 +94,7 @@ export function stripeClient(): Stripe {
  * advertises one figure and a buyer who is charged another.
  */
 export async function stripePriceFacts(priceId: string): Promise<StripePriceFacts> {
-  const price = await stripeClient().prices.retrieve(priceId)
+  const price = await (await stripeClient()).prices.retrieve(priceId)
   return {
     active: price.active,
     type: price.type,
@@ -102,7 +127,7 @@ export async function createStripePrice(input: {
   productName: string
   productId?: string | null
 }): Promise<{ priceId: string; productId: string }> {
-  const stripe = stripeClient()
+  const stripe = await stripeClient()
 
   let productId = input.productId ?? null
   if (productId) {
@@ -154,7 +179,7 @@ export async function createStripeCoupon(input: {
    */
   appliesToProducts?: string[]
 }): Promise<string> {
-  const coupon = await stripeClient().coupons.create({
+  const coupon = await (await stripeClient()).coupons.create({
     percent_off: input.percentOff,
     duration: input.duration === 'forever' ? 'forever' : 'once',
     name: input.name,
@@ -171,7 +196,7 @@ export async function createStripeCoupon(input: {
  */
 export async function archiveStripePrice(priceId: string): Promise<void> {
   try {
-    await stripeClient().prices.update(priceId, { active: false })
+    await (await stripeClient()).prices.update(priceId, { active: false })
   } catch (error) {
     console.error(`[stripe] could not archive price ${priceId}`, error)
   }
@@ -192,7 +217,7 @@ export async function createStripeTestCheckout(
   email: string,
   amountCents: number,
 ): Promise<{ url: string; sessionId: string }> {
-  const stripe = stripeClient()
+  const stripe = await stripeClient()
   const base = appBaseUrl()
 
   const session = await stripe.checkout.sessions.create({
@@ -253,7 +278,7 @@ export async function createStripeCheckout(
     orderId?: string
   },
 ): Promise<{ url: string; sessionId: string }> {
-  const stripe = stripeClient()
+  const stripe = await stripeClient()
   const lineItems = options.priceIds.map((priceId) => ({
     price: priceId || requireEnv('STRIPE_PRICE_ID', 'Card billing (Stripe)'),
     quantity: 1,
@@ -306,7 +331,7 @@ export async function createStripeCheckout(
  * same webhook as everything else.
  */
 export async function createBillingPortalSession(customerId: string): Promise<string> {
-  const stripe = stripeClient()
+  const stripe = await stripeClient()
   const session = await stripe.billingPortal.sessions.create({
     customer: customerId,
     return_url: `${appBaseUrl()}/account`,
@@ -326,7 +351,7 @@ export async function stopStripeRenewal(
   subscriptionId: string,
   productIds: string[] | 'all',
 ): Promise<'cancelled' | 'removed' | 'nothing'> {
-  const stripe = stripeClient()
+  const stripe = await stripeClient()
   const subscription = await stripe.subscriptions.retrieve(subscriptionId)
   if (subscription.status === 'canceled' || subscription.status === 'incomplete_expired') return 'nothing'
   const items = subscription.items.data
@@ -346,14 +371,16 @@ export async function stopStripeRenewal(
 
 /** The Stripe Product a Price belongs to. */
 export async function stripeProductForPrice(priceId: string): Promise<string> {
-  const price = await stripeClient().prices.retrieve(priceId)
+  const price = await (await stripeClient()).prices.retrieve(priceId)
   return typeof price.product === 'string' ? price.product : price.product.id
 }
 
 /** Verify a webhook came from Stripe. Never trust an unverified payload. */
-export function verifyStripeWebhook(payload: string, signature: string): Stripe.Event {
-  const secret = requireEnv('STRIPE_WEBHOOK_SECRET', 'Stripe webhook verification')
-  return stripeClient().webhooks.constructEvent(payload, signature, secret)
+export async function verifyStripeWebhook(payload: string, signature: string): Promise<Stripe.Event> {
+  const { secretKey, webhookSecret } = await stripeKeys()
+  if (!webhookSecret) throw new MissingConfigError(['STRIPE_WEBHOOK_SECRET'], 'Stripe webhook verification')
+  if (!secretKey) throw new MissingConfigError(['STRIPE_SECRET_KEY'], 'Stripe webhook verification')
+  return stripeClientFor(secretKey).webhooks.constructEvent(payload, signature, webhookSecret)
 }
 
 export type { Stripe }

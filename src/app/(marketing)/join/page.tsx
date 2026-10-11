@@ -10,7 +10,6 @@ import { FALLBACK_PACKAGE } from '@/lib/package-shape'
 import { packageContents } from '@/lib/package-items'
 import { sellablePackages } from '@/lib/packages'
 import { trialOffers } from '@/lib/trial'
-import { paymentAvailability } from '@/lib/payments'
 
 export const metadata: Metadata = { title: 'Checkout' }
 export const dynamic = 'force-dynamic'
@@ -43,12 +42,8 @@ export default async function JoinPage({
    * the form, and the endpoint behind all of it are gone.
    */
 
-  // Resolved server-side so the page can say plainly which payment methods are actually
-  // wired up, rather than presenting a button that fails at the last step. Asked of each
-  // rail: Cregis can be configured from the console, which an environment check missed.
-  const available = await paymentAvailability()
-  const cryptoReady = available.cregis
-  const cardReady = available.stripe
+  // Which ways to pay a buyer is offered is asked by the form itself, for their billing
+  // country and the membership's currency; see /api/checkout/methods.
 
   /*
    * Which trial to advertise, when there is one.
@@ -132,8 +127,6 @@ export default async function JoinPage({
         </div>
 
         <JoinForm
-          cardReady={cardReady}
-          cryptoReady={cryptoReady}
           packages={packages.map((pkg) => {
             const author = pkg.authorId ? authorById.get(pkg.authorId) : undefined
             return {

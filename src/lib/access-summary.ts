@@ -29,7 +29,7 @@ export type AccessLine = {
   /** Null means open-ended — a comp, or an all-access membership with no renewal date. */
   endsAt: Date | null
   /** Null when nothing is attached: granted rather than bought. */
-  billing: 'stripe' | 'cregis' | null
+  billing: 'stripe' | 'cregis' | 'gateway' | null
   /**
    * Where to send somebody who wants to open this, or null for research, which is read
    * here. Prefers the handover route over the product's own address so they arrive signed
@@ -77,9 +77,7 @@ export async function accessSummary(
           ? 'Free trial — every report and the full archive'
           : 'Every report and the full archive',
       endsAt: member.subscriptionRenewsAt,
-      billing: member.billingProvider === 'stripe' || member.billingProvider === 'cregis'
-        ? member.billingProvider
-        : null,
+      billing: member.billingProvider === 'manual' ? null : member.billingProvider,
       openHref: null,
     })
   }
@@ -123,10 +121,7 @@ export async function accessSummary(
         ? 'Every report in this section, including back editions'
         : 'Opens with your NordStar Pro sign-in',
       endsAt: row.renewsAt,
-      billing:
-        row.billingProvider === 'stripe' || row.billingProvider === 'cregis'
-          ? row.billingProvider
-          : null,
+      billing: row.billingProvider === 'manual' ? null : row.billingProvider,
       openHref: isSection
         ? null
         : ((row.item && HANDOVER[row.item.slug]) ?? row.item?.url ?? null),

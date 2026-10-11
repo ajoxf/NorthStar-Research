@@ -50,7 +50,9 @@ export async function GET(request: Request) {
   const dueForReminder = await db.member.findMany({
     where: {
       subscriptionStatus: 'active',
-      billingProvider: 'cregis',
+      // Every rail that takes one payment per period: crypto, and the providers configured
+      // on the Providers page. Card renews by itself and is never reminded.
+      billingProvider: { in: ['cregis', 'gateway'] },
       subscriptionRenewsAt: { gt: now, lte: reminderCutoff },
       // Cleared whenever a payment extends the period, so each period reminds once.
       renewalReminderSentAt: null,
