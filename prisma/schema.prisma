@@ -552,6 +552,10 @@ model Referral {
   /// Amount actually paid, in whole USD, when the referral converts.
   amountUsd Int?
 
+  /// The campaign tag on the link they followed (`?c=` or `utm_campaign`), so an affiliate
+  /// can tell which of their posts or videos sends people. Null for an untagged link.
+  campaign String?
+
   visitedAt   DateTime  @default(now())
   signedUpAt  DateTime?
   convertedAt DateTime?
@@ -560,6 +564,7 @@ model Referral {
 
   @@index([affiliateId, status])
   @@index([visitedAt])
+  @@index([affiliateId, visitedAt])
 }
 
 /// What an affiliate has earned. A ledger, not a balance: rows are only ever added, so
@@ -650,6 +655,9 @@ model CheckoutOrder {
   /// checkout. What commission is credited against; null when nobody introduced them.
   affiliateId String?
   affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
+  /// The campaign tag of the affiliate link this order arrived by, read from the cookie at
+  /// checkout alongside the affiliate.
+  affiliateCampaign String?
 
   refunds Refund[]
   /// What was bought, one row per item. Orders placed before lines existed have none; see

@@ -141,3 +141,50 @@ export function WithdrawalForm({
     </form>
   )
 }
+
+/**
+ * Build a tracked link to any public page, with an optional campaign tag, so an affiliate
+ * can see which of their posts or videos sends people. Built in the browser from the same
+ * rules the server applies — the tag is cleaned the way the middleware will clean it.
+ */
+export function LinkBuilder({ base, slug, pages }: { base: string; slug: string; pages: { path: string; label: string }[] }) {
+  const [path, setPath] = React.useState(pages[0]?.path ?? '/join')
+  const [tag, setTag] = React.useState('')
+  const clean = tag
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+  const link = `${base.replace(/\/$/, '')}${path}?ref=${encodeURIComponent(slug)}${clean ? `&c=${encodeURIComponent(clean)}` : ''}`
+
+  return (
+    <div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="link-page">Page</Label>
+          <select
+            id="link-page"
+            value={path}
+            onChange={(event) => setPath(event.target.value)}
+            className="mt-2 h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-[15px] text-ink focus:border-accent/60 focus:outline-none focus:ring-2 focus:ring-accent/40"
+          >
+            {pages.map((page) => (
+              <option key={page.path} value={page.path}>
+                {page.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <Label htmlFor="link-tag">Campaign tag (optional)</Label>
+          <Input id="link-tag" value={tag} onChange={(event) => setTag(event.target.value)} placeholder="youtube-may" maxLength={60} className="mt-2" />
+          <Hint>Letters, numbers and dashes. Shows up in your campaign table.</Hint>
+        </div>
+      </div>
+      <div className="mt-5">
+        <AffiliateLink link={link} />
+      </div>
+    </div>
+  )
+}

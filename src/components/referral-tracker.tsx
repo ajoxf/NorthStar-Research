@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 
-import { REFERRAL_COOKIE } from '@/lib/affiliates'
+import { CAMPAIGN_COOKIE, REFERRAL_COOKIE } from '@/lib/affiliates'
 
 /**
  * Records one click per visitor per affiliate link.
@@ -22,7 +22,8 @@ export function ReferralTracker() {
     const slug = readCookie(REFERRAL_COOKIE)
     if (!slug) return
 
-    const key = `nsr:ref-seen:${slug}`
+    // Per campaign too, so following a second tagged link in the same visit still counts.
+    const key = `nsr:ref-seen:${slug}:${readCookie(CAMPAIGN_COOKIE) ?? ''}`
     try {
       if (window.sessionStorage.getItem(key)) return
       window.sessionStorage.setItem(key, '1')

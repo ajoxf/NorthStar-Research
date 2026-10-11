@@ -45,8 +45,27 @@ export function normaliseSlug(input: string): string {
     .slice(0, 32)
 }
 
-export function referralLink(baseUrl: string, slug: string): string {
-  return `${baseUrl.replace(/\/$/, '')}/join?ref=${encodeURIComponent(slug)}`
+export function referralLink(baseUrl: string, slug: string, path = '/join', campaign?: string | null): string {
+  const tag = normaliseCampaign(campaign ?? '')
+  const page = path.startsWith('/') ? path : `/${path}`
+  return `${baseUrl.replace(/\/$/, '')}${page}?ref=${encodeURIComponent(slug)}${tag ? `&c=${encodeURIComponent(tag)}` : ''}`
+}
+
+/**
+ * The campaign tag an affiliate puts on a link (`?c=youtube-may`), so they can see which
+ * post or video sends people. Kept with the affiliate cookie and read with it: last click
+ * wins for both, so a later untagged click clears an earlier tag.
+ */
+export const CAMPAIGN_COOKIE = 'nsr_ref_c'
+
+/** Lowercase letters, digits and dashes, at most 40 — it is printed in a table, not parsed. */
+export function normaliseCampaign(input: string): string {
+  return input
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
 }
 
 /**

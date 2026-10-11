@@ -7,7 +7,7 @@ import { db } from '@/lib/db'
 import { DEFAULT_HOLDBACK_DAYS, payableAt } from '@/lib/earnings'
 import type { OfferShape } from '@/lib/offer'
 import { affiliateOffer } from '@/lib/offers'
-import { referralSlugFromCookie } from '@/lib/referral-attribution'
+import { referralCampaignFromCookie, referralSlugFromCookie } from '@/lib/referral-attribution'
 
 type Tx = Prisma.TransactionClient
 
@@ -19,12 +19,12 @@ type Tx = Prisma.TransactionClient
  * closed one is gone. Recorded on the order at checkout, so commission no longer depends on
  * matching an email after the fact — which is what used to miss a new buyer's first payment.
  */
-export async function affiliateForCheckout(): Promise<{ affiliateId: string; offer: OfferShape | null } | null> {
+export async function affiliateForCheckout(): Promise<{ affiliateId: string; campaign: string | null; offer: OfferShape | null } | null> {
   const slug = referralSlugFromCookie()
   if (!slug) return null
   const affiliate = await db.affiliate.findUnique({ where: { slug }, select: { id: true, status: true } })
   if (!affiliate || affiliate.status !== 'active') return null
-  return { affiliateId: affiliate.id, offer: await affiliateOffer(affiliate.id) }
+  return { affiliateId: affiliate.id, campaign: referralCampaignFromCookie(), offer: await affiliateOffer(affiliate.id) }
 }
 
 /**

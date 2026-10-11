@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { z } from 'zod'
 
-import { REFERRAL_COOKIE, normaliseSlug } from '@/lib/affiliates'
+import { CAMPAIGN_COOKIE, REFERRAL_COOKIE, normaliseCampaign, normaliseSlug } from '@/lib/affiliates'
 import { db } from '@/lib/db'
 
 export const runtime = 'nodejs'
@@ -42,7 +42,8 @@ export async function POST(request: Request) {
   if (!affiliate || affiliate.status === 'closed') return NextResponse.json({ ok: true })
 
   try {
-    await db.referral.create({ data: { affiliateId: affiliate.id, status: 'visited' } })
+    const campaign = normaliseCampaign(cookies().get(CAMPAIGN_COOKIE)?.value ?? '') || null
+    await db.referral.create({ data: { affiliateId: affiliate.id, status: 'visited', campaign } })
   } catch (error) {
     // A dropped click is not worth failing a page load over.
     console.error('[referral] could not record visit', error)
