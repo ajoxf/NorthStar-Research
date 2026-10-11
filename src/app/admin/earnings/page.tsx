@@ -7,6 +7,7 @@ import { db } from '@/lib/db'
 import { DEFAULT_HOLDBACK_DAYS } from '@/lib/earnings'
 import { balancesByAuthor, postPendingEarnings, refundPortions } from '@/lib/ledger'
 import { parsePriceCents } from '@/lib/package-shape'
+import { everyGateway } from '@/lib/payments/registry'
 
 export const metadata: Metadata = { title: 'Earnings' }
 export const dynamic = 'force-dynamic'
@@ -52,6 +53,7 @@ export default async function EarningsPage() {
                 grossCents: true,
                 paidAt: true,
                 createdAt: true,
+                gateway: true,
                 refunds: { orderBy: { createdAt: 'asc' }, select: { amountCents: true, authorId: true } },
                 lines: { select: { authorId: true, chargeCents: true } },
                 ledger: { where: { kind: 'earning' }, select: { authorId: true, amountCents: true } },
@@ -64,6 +66,11 @@ export default async function EarningsPage() {
     balancesByAuthor(),
     db.payout.count({ where: { status: 'requested' } }),
   ])
+
+  // Providers that can send a refund from here, by id, to offer it on the refund form.
+  const refundable = new Map(
+    (await everyGateway()).filter((gateway) => gateway.refund).map((gateway) => [gateway.id, gateway.name]),
+  )
 
   const rows = authors.map((author) => {
     const balance = balances[author.id] ?? { totalCents: 0, availableCents: 0, heldCents: 0 }
@@ -123,6 +130,7 @@ export default async function EarningsPage() {
                   return Math.min(orderLeft, Math.max(0, mine.grossCents - refundedFromPortion(portions, author.id, entry.order.refunds)))
                 })(),
           authorId: author.id,
+          refundVia: entry.order?.gateway ? (refundable.get(entry.order.gateway) ?? null) : null,
         }
       }),
     }

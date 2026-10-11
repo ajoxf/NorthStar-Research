@@ -6,12 +6,24 @@ import { configFrom, loadStored, type StoredGateway } from '@/lib/payments/gatew
 import type { CustomGatewayRow, GatewayConfig, PaymentGateway } from '@/lib/payments/gateway-types'
 import { cregisGateway } from '@/lib/payments/gateways/cregis'
 import { makeCustomGateway } from '@/lib/payments/gateways/custom'
+import { nowpaymentsGateway } from '@/lib/payments/gateways/nowpayments'
+import { paypalGateway } from '@/lib/payments/gateways/paypal'
+import { razorpayGateway } from '@/lib/payments/gateways/razorpay'
 import { stripeGateway } from '@/lib/payments/gateways/stripe'
+import { tapGateway } from '@/lib/payments/gateways/tap'
 import { testGateway, testPaymentsAllowed } from '@/lib/payments/gateways/test'
 import { DEFAULT_RULES, rankProviders, type RouteRule } from '@/lib/payments/routing-shape'
 
 /** Providers written in code. Add a new one here; see gateways/_template.ts. */
-const BUILT_IN: PaymentGateway[] = [stripeGateway, cregisGateway, testGateway]
+const BUILT_IN: PaymentGateway[] = [
+  stripeGateway,
+  cregisGateway,
+  razorpayGateway,
+  tapGateway,
+  paypalGateway,
+  nowpaymentsGateway,
+  testGateway,
+]
 
 export function builtInGateways(): PaymentGateway[] {
   return BUILT_IN

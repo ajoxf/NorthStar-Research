@@ -27,6 +27,8 @@ export type LedgerRow = {
   orderId: string | null
   /** What is left to refund on the order behind this entry. Null when there is no order. */
   orderRefundableCents: number | null
+  /** The provider the order was paid through, when it can send a refund from here. */
+  refundVia?: string | null
   /** The contributor this entry belongs to; a refund recorded from it covers their part only. */
   authorId?: string
 }
@@ -424,6 +426,7 @@ function LedgerTable({
                   orderId={entry.orderId}
                   authorId={entry.authorId}
                   refundableCents={entry.orderRefundableCents ?? 0}
+                  refundVia={entry.refundVia ?? null}
                   currency={entry.currency}
                   busy={busy}
                   send={send}
@@ -440,6 +443,7 @@ function RefundButton({
   orderId,
   authorId,
   refundableCents,
+  refundVia,
   currency,
   busy,
   send,
@@ -448,11 +452,14 @@ function RefundButton({
   /** The expert whose earning this is. The refund covers their part of the order only. */
   authorId?: string
   refundableCents: number
+  refundVia: string | null
   currency: string
   busy: boolean
   send: Send
 }) {
   const [open, setOpen] = React.useState(false)
+  // Through the provider by default, when it can: one step instead of two.
+  const [through, setThrough] = React.useState(Boolean(refundVia))
   const [amount, setAmount] = React.useState((refundableCents / 100).toFixed(2))
   const [reason, setReason] = React.useState('')
 
@@ -471,9 +478,18 @@ function RefundButton({
           Said plainly, because the opposite assumption is expensive: somebody who believes
           this refunds the buyer will not go and do it in Stripe.
         */}
-        <strong className="font-medium text-ink">This refunds nobody.</strong> Issue the refund
-        in Stripe or send the crypto back first, then record it here so the contributor&rsquo;s
-        share is taken back. This covers this contributor&rsquo;s part of the order only — up
+        {through && refundVia ? (
+          <>
+            <strong className="font-medium text-ink">This sends the money back through {refundVia}</strong>, then
+            records it and takes the contributor&rsquo;s share back.
+          </>
+        ) : (
+          <>
+            <strong className="font-medium text-ink">This refunds nobody.</strong> Issue the refund
+            in Stripe or send the crypto back first, then record it here so the contributor&rsquo;s
+            share is taken back.
+          </>
+        )} This covers this contributor&rsquo;s part of the order only — up
         to {formatPrice(refundableCents, currency)} is left on it. Refunding all of it also ends
         the access it paid for, and stops a card subscription renewing it; a partial refund
         leaves access alone.
@@ -493,6 +509,12 @@ function RefundButton({
           aria-label="Reason"
         />
       </div>
+      {refundVia && (
+        <label className="mt-3 flex items-center gap-2 text-[15px] text-ink">
+          <input type="checkbox" checked={through} onChange={(event) => setThrough(event.target.checked)} className="h-4 w-4" />
+          Send the refund through {refundVia}
+        </label>
+      )}
       <div className="mt-3 flex gap-2">
         <Button
           size="sm"
@@ -504,12 +526,12 @@ function RefundButton({
             void send(
               '/api/admin/refunds',
               'POST',
-              { orderId, authorId, amountCents: cents, reason: reason || undefined },
-              'Refund recorded and the share reversed',
+              { orderId, authorId, amountCents: cents, reason: reason || undefined, throughProvider: through && Boolean(refundVia) },
+              through && refundVia ? `Refunded through ${refundVia} and recorded` : 'Refund recorded and the share reversed',
             )
           }}
         >
-          Record it
+          {through && refundVia ? 'Refund it' : 'Record it'}
         </Button>
         <Button size="sm" variant="secondary" onClick={() => setOpen(false)}>
           Cancel

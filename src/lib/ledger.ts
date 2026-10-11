@@ -250,6 +250,8 @@ export async function recordRefund(input: {
   reason?: string | null
   recordedByMemberId?: string | null
   refundedAt?: Date
+  /** The provider's id for this refund, when it went through one. */
+  providerRefundId?: string | null
 }): Promise<{ ok: true; reversedCents: number; access: AccessOutcome } | { ok: false; error: string }> {
   const order = await db.checkoutOrder.findUnique({
     where: { id: input.orderId },
@@ -345,6 +347,7 @@ export async function recordRefund(input: {
         reason: input.reason ?? null,
         recordedByMemberId: input.recordedByMemberId ?? null,
         refundedAt: input.refundedAt ?? new Date(),
+        providerRefundId: input.providerRefundId ?? null,
       },
     })
 
