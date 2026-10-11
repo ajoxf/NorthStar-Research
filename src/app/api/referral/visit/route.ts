@@ -39,7 +39,8 @@ export async function POST(request: Request) {
   const affiliate = await db.affiliate.findUnique({ where: { slug } })
   // A paused affiliate's existing links keep working for the people who already have
   // them, but stop accruing anything new. A closed one attributes nothing at all.
-  if (!affiliate || affiliate.status === 'closed') return NextResponse.json({ ok: true })
+  // Applications not yet approved (or declined) count nothing either.
+  if (!affiliate || (affiliate.status !== 'active' && affiliate.status !== 'paused')) return NextResponse.json({ ok: true })
 
   try {
     const campaign = normaliseCampaign(cookies().get(CAMPAIGN_COOKIE)?.value ?? '') || null

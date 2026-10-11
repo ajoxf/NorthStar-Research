@@ -64,9 +64,11 @@ export default async function AffiliatePage({ searchParams }: { searchParams: Re
   const tabParam = String(searchParams.tab ?? 'overview')
   const tab: Tab = TABS.some((entry) => entry.id === tabParam) ? (tabParam as Tab) : 'overview'
   const days = parsePeriod(searchParams.days, tab === 'statement' ? 90 : 30)
-  // The tab shows for a master partner only: anyone else has nothing in it.
-  const isMaster = (await db.affiliate.count({ where: { parentAffiliateId: affiliate.id } })) > 0
-  const tabs = TABS.filter((entry) => entry.id !== 'subs' || isMaster)
+  // Partners go one level deep: a sub-affiliate cannot bring in partners of their own, so
+  // the tab shows for anyone else, and for a master who somehow has subs regardless.
+  const hasSubs = (await db.affiliate.count({ where: { parentAffiliateId: affiliate.id } })) > 0
+  const showSubs = !affiliate.parentAffiliateId || hasSubs
+  const tabs = TABS.filter((entry) => entry.id !== 'subs' || showSubs)
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12">
@@ -110,7 +112,9 @@ export default async function AffiliatePage({ searchParams }: { searchParams: Re
         {tab === 'statement' && <StatementTab affiliateId={affiliate.id} days={days} />}
         {tab === 'links' && <LinksTab affiliateId={affiliate.id} slug={affiliate.slug} days={days} />}
         {tab === 'withdrawals' && <WithdrawalsTab affiliateId={affiliate.id} />}
-        {tab === 'subs' && isMaster && <SubsTab affiliateId={affiliate.id} days={days} />}
+        {tab === 'subs' && showSubs && (
+          <SubsTab affiliateId={affiliate.id} slug={affiliate.slug} canInvite={!affiliate.parentAffiliateId && affiliate.status === 'active'} days={days} />
+        )}
       </div>
     </div>
   )
@@ -402,13 +406,24 @@ async function LinksTab({ affiliateId, slug, days }: { affiliateId: string; slug
   )
 }
 
-async function SubsTab({ affiliateId, days }: { affiliateId: string; days: Period }) {
+async function SubsTab({ affiliateId, slug, canInvite, days }: { affiliateId: string; slug: string; canInvite: boolean; days: Period }) {
   const subs = await affiliateSubs(affiliateId, days)
+  const inviteLink = `${safeBase().replace(/\/$/, '')}/partners?invite=${encodeURIComponent(slug)}`
   const active = subs.filter((sub) => sub.status === 'active').length
   const sum = (pick: (row: (typeof subs)[number]) => number) => subs.reduce((total, row) => total + pick(row), 0)
 
   return (
     <div className="space-y-6">
+      {canInvite && (
+        <section className="panel p-6">
+          <h2 className="eyebrow mb-4">Invite a partner</h2>
+          <AffiliateLink link={inviteLink} />
+          <p className="mt-3 text-[15px] leading-relaxed text-ink-dim">
+            Send this to someone who could promote NordStar Pro. They apply through it, we review the application, and once
+            approved they sit under you: they earn their own commission, and you earn an override on their sales on top.
+          </p>
+        </section>
+      )}
       <PeriodPicker tab="subs" days={days} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Sub-affiliates" value={String(subs.length)} hint={`${active} active`} />
@@ -418,6 +433,9 @@ async function SubsTab({ affiliateId, days }: { affiliateId: string; days: Perio
       </div>
 
       <div className="panel relative overflow-x-auto">
+        {subs.length === 0 ? (
+          <p className="px-5 py-10 text-center text-[15px] text-ink-dim">No sub-affiliates yet.</p>
+        ) : (
         <table className="w-full min-w-[44rem] text-left">
           <thead>
             <tr className="border-b border-line">
@@ -438,7 +456,7 @@ async function SubsTab({ affiliateId, days }: { affiliateId: string; days: Perio
                   <div className="font-mono text-[13px] text-ink-dim">{sub.slug}</div>
                 </td>
                 <td className="px-4 py-3">
-                  <Badge tone={sub.status === 'active' ? 'accent' : 'muted'}>{sub.status}</Badge>
+                  <Badge tone={sub.status === 'active' ? 'accent' : 'muted'}>{sub.status === 'pending' ? 'applied' : sub.status}</Badge>
                 </td>
                 <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">{formatDate(sub.joinedAt)}</td>
                 <td className="px-4 py-3 text-right font-mono text-[14px] text-ink">{sub.clicks}</td>
@@ -452,6 +470,7 @@ async function SubsTab({ affiliateId, days }: { affiliateId: string; days: Perio
             ))}
           </tbody>
         </table>
+        )}
       </div>
       <p className="text-[14px] leading-relaxed text-ink-dim">
         You earn an override on every sale your sub-affiliates make, on top of their own commission — it never comes out

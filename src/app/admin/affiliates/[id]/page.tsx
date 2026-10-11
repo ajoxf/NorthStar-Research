@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 
 import { AffiliatePanel } from '@/app/admin/affiliates/[id]/affiliate-panel'
+import { ApplicationReview } from '@/app/admin/affiliates/application-review'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
 import { describeReward, formatAward, referralLink } from '@/lib/affiliates'
@@ -45,7 +46,7 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
       : null,
     // Who can be this affiliate's master: anyone not under a master themselves (one level).
     db.affiliate.findMany({
-      where: { id: { not: affiliate.id }, parentAffiliateId: null, status: { not: 'closed' } },
+      where: { id: { not: affiliate.id }, parentAffiliateId: null, status: { in: ['active', 'paused'] } },
       orderBy: { name: 'asc' },
       select: { id: true, name: true, slug: true },
     }),
@@ -56,6 +57,8 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
     }),
   ])
   const carried = new Set(carriedRows.map((row) => row.note?.slice(CARRIED_NOTE.length)))
+
+  const masterName = affiliate.parentAffiliateId ? masters.find((master) => master.id === affiliate.parentAffiliateId)?.name ?? null : null
 
   let base = 'https://APP_BASE_URL-not-set'
   try {
@@ -81,6 +84,40 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
         </Badge>
       </div>
       <p className="mt-1.5 break-all font-mono text-[14px] text-ink-dim">{affiliate.email}</p>
+
+      {(affiliate.status === 'pending' || affiliate.status === 'declined') && (
+        <section className="panel mt-6 p-5 sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="eyebrow">
+              {affiliate.status === 'pending' ? 'Partner application' : 'Declined application'}
+            </h2>
+            {affiliate.status === 'pending' && <ApplicationReview affiliateId={affiliate.id} name={affiliate.name} />}
+          </div>
+          <dl className="mt-4 grid gap-3 text-[15px] sm:grid-cols-2">
+            <div>
+              <dt className="text-ink-dim">Applied</dt>
+              <dd className="text-ink">{affiliate.appliedAt ? formatDate(affiliate.appliedAt) : '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-ink-dim">Website or profile</dt>
+              <dd className="break-all text-ink">{affiliate.website ?? '—'}</dd>
+            </div>
+            {masterName && (
+              <div>
+                <dt className="text-ink-dim">Invited by</dt>
+                <dd className="text-ink">{masterName}</dd>
+              </div>
+            )}
+          </dl>
+          {affiliate.promotion && <p className="mt-4 whitespace-pre-line text-[15px] leading-relaxed text-ink-dim">{affiliate.promotion}</p>}
+          {affiliate.status === 'pending' && (
+            <p className="mt-4 text-[14px] text-ink-dim">
+              Approving uses the terms below — adjust them first if this deal is different. They then get an email to set up
+              their page.
+            </p>
+          )}
+        </section>
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Stat label="Clicks" value={clicks} />

@@ -32,6 +32,17 @@ export type Recipient = Pick<
 export type ReportSummary = Pick<Report, 'id' | 'type' | 'title' | 'summary' | 'publishDate'>
 
 /** A sample-report enquiry from the public site. Not a member, not a subscriber. */
+/** A partner application from the public form, for the admins to review. */
+export type PartnerApplication = {
+  name: string
+  email: string
+  slug: string
+  website?: string | null
+  promotion?: string | null
+  invitedBy?: string | null
+  reviewUrl: string
+}
+
 export type SampleReportRequest = {
   name: string
   email: string
@@ -83,6 +94,9 @@ export interface NotificationProvider {
    * cause research to be delivered to an arbitrary address (build spec §5.5).
    */
   sendSampleReportRequest(request: SampleReportRequest): Promise<DeliveryResult>
+
+  /** Tell one admin that somebody applied to be a partner. `to` is an admin's own address. */
+  sendPartnerApplication(to: string, application: PartnerApplication): Promise<DeliveryResult>
   /** Pricing, sent to one person who asked for it. See PricingEnquiry. */
   sendPricingInvite(
     recipient: { email: string; name?: string | null },

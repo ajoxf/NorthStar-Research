@@ -138,6 +138,9 @@ export async function SiteFooter() {
               <Link href="/redeem" className="text-ink-dim hover:text-ink">
                 Redeem a code
               </Link>
+              <Link href="/partners" className="text-ink-dim hover:text-ink">
+                Become a partner
+              </Link>
             </div>
             <div className="flex flex-col gap-2.5">
               <span className="eyebrow">Legal</span>

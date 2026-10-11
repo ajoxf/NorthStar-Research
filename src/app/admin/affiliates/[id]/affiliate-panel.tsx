@@ -12,7 +12,7 @@ type Affiliate = {
   id: string
   name: string
   email: string
-  status: 'active' | 'paused' | 'closed'
+  status: 'active' | 'paused' | 'closed' | 'pending' | 'declined'
   rewardKind: 'percent' | 'fixed' | 'free_months'
   rewardAmount: number
   visitorDiscountPercent: number | null
@@ -360,7 +360,8 @@ export function AffiliatePanel({
 
             {/* Nothing is deleted. Pausing stops new credit; closing stops attribution
                 entirely. Either way the history stays. */}
-            {affiliate.status === 'active' ? (
+            {/* An application is approved or declined above, not paused or reactivated here. */}
+            {affiliate.status === 'pending' || affiliate.status === 'declined' ? null : affiliate.status === 'active' ? (
               <Button
                 type="button"
                 variant="secondary"
@@ -380,7 +381,7 @@ export function AffiliatePanel({
               </Button>
             )}
 
-            {affiliate.status !== 'closed' && (
+            {(affiliate.status === 'active' || affiliate.status === 'paused') && (
               <Button
                 type="button"
                 variant="danger"

@@ -131,6 +131,11 @@ enum AffiliateStatus {
   active
   paused
   closed
+  /// Applied through the public partner form; waiting for an admin. Attributes nothing.
+  pending
+  /// An application an admin turned down. Kept, never deleted, so a second application
+  /// from the same person shows the history.
+  declined
 }
 
 /// A referral's life. `visited` is a click that has not converted; `signed_up` a member
@@ -189,6 +194,8 @@ enum EmailKind {
   test
   /// An affiliate invited to their page in the member portal.
   affiliate_invite
+  /// An admin told that somebody applied through the public partner form.
+  partner_application
   /// A subject matter expert invited to their page in the member portal.
   expert_invite
 }
@@ -515,6 +522,13 @@ model Affiliate {
   commissionOn AffiliateCommissionScope @default(first_payment)
 
   notes String?
+
+  /// From the public partner application: where they publish, and how they will promote.
+  website   String?
+  promotion String?
+  /// When they applied through the form, and when an admin approved or declined it.
+  appliedAt  DateTime?
+  reviewedAt DateTime?
 
   /// Set when the affiliate is also a member of the product.
   memberId String?
