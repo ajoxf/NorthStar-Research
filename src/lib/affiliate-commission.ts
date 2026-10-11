@@ -84,7 +84,9 @@ export async function planCommission(order: CheckoutOrder): Promise<CommissionPl
     const affiliate = await db.affiliate.findUnique({ where: { id: affiliateId } })
     if (!affiliate || affiliate.status !== 'active') return null
 
-    const paidCents = order.grossCents ?? Math.round(Number(order.amount) * 100)
+    // What the buyer paid, less any tax in it: tax belongs to the tax authority and is never
+    // shared — the same rule the experts' earnings follow.
+    const paidCents = Math.max(0, (order.grossCents ?? Math.round(Number(order.amount) * 100)) - (order.taxCents ?? 0))
     // First-payment terms pay once per buyer. Every payment that earned anything — cash or
     // free months — converted this buyer's referral, so a converted one means paid before.
     const earlier = await db.referral.count({ where: { affiliateId, email: order.email, status: 'converted' } })

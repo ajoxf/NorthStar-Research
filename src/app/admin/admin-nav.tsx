@@ -13,6 +13,7 @@ const LINKS = [
   { href: '/admin/engagement', label: 'Reading' },
   { href: '/admin/enquiries', label: 'Enquiries' },
   { href: '/admin/payments', label: 'Payments' },
+  { href: '/admin/taxes', label: 'Taxes' },
   { href: '/admin/codes', label: 'Codes' },
   { href: '/admin/offers', label: 'Discounts' },
   { href: '/admin/earnings', label: 'Earnings' },

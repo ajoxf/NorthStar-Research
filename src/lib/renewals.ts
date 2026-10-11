@@ -3,6 +3,7 @@ import 'server-only'
 import { applyCommission, planCommission } from '@/lib/affiliate-commission'
 import { db } from '@/lib/db'
 import { apportion } from '@/lib/earnings'
+import { taxInPaid } from '@/lib/tax-shape'
 import { amountString } from '@/lib/package-shape'
 
 /**
@@ -44,6 +45,10 @@ export async function recordCardRenewal(invoice: {
     original.lines.map((line) => line.listCents),
   )
 
+  // Re-charged at the terms it was sold at: the same rate, the same reverse charge.
+  const rate = Number(original.taxRate)
+  const taxCents = taxInPaid(invoice.amountPaidCents, rate, original.reverseCharge)
+
   const now = new Date()
   let order
   try {
@@ -54,6 +59,14 @@ export async function recordCardRenewal(invoice: {
         email: original.email,
         amount: amountString(invoice.amountPaidCents),
         grossCents: invoice.amountPaidCents,
+        taxCents,
+        taxRate: original.taxRate,
+        taxName: original.taxName,
+        reverseCharge: original.reverseCharge,
+        billingCountry: original.billingCountry,
+        billingCompany: original.billingCompany,
+        billingTaxId: original.billingTaxId,
+        gateway: original.gateway,
         currency: invoice.currency.toUpperCase(),
         status: 'paid',
         paidAt: now,

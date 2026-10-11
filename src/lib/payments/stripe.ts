@@ -266,6 +266,12 @@ export async function createStripeCheckout(
      * and checkout.ts refuses a basket that would ask it to.
      */
     priceIds: (string | null)[]
+    /**
+     * A recurring amount to charge instead of a line's price, when the buyer's tax changes
+     * it. Charged under the same Stripe product, so a coupon scoped to it still applies and
+     * every renewal charges the same taxed amount.
+     */
+    taxedLines?: ({ unitCents: number; productId: string | null; name: string; currency: string; interval: 'month' | 'year' } | null)[]
     planName?: string
     packageId?: string
     /** Set when this is a single section rather than the all-access plan. */
@@ -279,10 +285,21 @@ export async function createStripeCheckout(
   },
 ): Promise<{ url: string; sessionId: string }> {
   const stripe = await stripeClient()
-  const lineItems = options.priceIds.map((priceId) => ({
-    price: priceId || requireEnv('STRIPE_PRICE_ID', 'Card billing (Stripe)'),
-    quantity: 1,
-  }))
+  const lineItems = options.priceIds.map((priceId, index) => {
+    const taxed = options.taxedLines?.[index]
+    if (taxed) {
+      return {
+        price_data: {
+          currency: taxed.currency.toLowerCase(),
+          unit_amount: taxed.unitCents,
+          recurring: { interval: taxed.interval },
+          ...(taxed.productId ? { product: taxed.productId } : { product_data: { name: taxed.name } }),
+        },
+        quantity: 1,
+      }
+    }
+    return { price: priceId || requireEnv('STRIPE_PRICE_ID', 'Card billing (Stripe)'), quantity: 1 }
+  })
   const base = appBaseUrl()
 
   const session = await stripe.checkout.sessions.create({

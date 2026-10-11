@@ -11,7 +11,8 @@ import { FALLBACK_PACKAGE, formatPrice } from '@/lib/package-shape'
 import { cn, isValidEmail } from '@/lib/utils'
 import { UploadedImage } from '@/components/uploaded-image'
 import { AddToCartButton } from '@/components/cart/cart-buttons'
-import { useChosenMethod, useCountryOptions, usePaymentMethods } from '@/components/checkout/payment-choice'
+import { CountryOptionList, useChosenMethod, usePaymentMethods } from '@/components/checkout/payment-choice'
+import { BusinessDetails, TaxBreakdown, type TaxSummary } from '@/components/checkout/tax-summary'
 
 
 /** What /api/checkout/quote answers. The server is the only thing that knows. */
@@ -24,6 +25,7 @@ type Quote = {
   currency: string
   codeApplied: boolean
   codeRejected: boolean
+  tax?: TaxSummary
 }
 
 export type JoinPackage = {
@@ -79,12 +81,14 @@ export function JoinForm({
 
   // Which providers this buyer is offered: the admin's rules, for their country and currency.
   const [country, setCountry] = React.useState('')
+  const [company, setCompany] = React.useState('')
+  const [taxId, setTaxId] = React.useState('')
+  const [requote, setRequote] = React.useState(0)
   const { methods, detected } = usePaymentMethods(chosen.currency, country)
   const [method, setMethod] = useChosenMethod(methods)
   React.useEffect(() => {
     if (detected) setCountry((current) => current || detected)
   }, [detected])
-  const countries = useCountryOptions()
   const offered = methods?.find((option) => option.id === method) ?? null
   // Card renews by itself; every other provider pays for one period.
   const byCard = offered?.recurring ?? false
@@ -106,7 +110,12 @@ export function JoinForm({
         const response = await fetch('/api/checkout/quote', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ packageId: chosen.id, code: code || undefined }),
+          body: JSON.stringify({
+            packageId: chosen.id,
+            code: code || undefined,
+            country: country || undefined,
+            taxId: taxId.trim() || undefined,
+          }),
         })
         const data = await response.json()
         if (!cancelled && response.ok) setQuote(data as Quote)
@@ -122,10 +131,11 @@ export function JoinForm({
       cancelled = true
       clearTimeout(timer)
     }
-  }, [chosen.id, code])
+  }, [chosen.id, code, country, taxId, requote])
 
   const chargeCents = quote?.chargeCents ?? chosen.priceCents
-  const discounted = chargeCents < chosen.priceCents
+  // A discount, not tax: a reverse-charged business pays less too, and that is not a sale.
+  const discounted = quote?.tax ? quote.tax.discountCents > 0 : chargeCents < chosen.priceCents
   const price = formatPrice(chargeCents, chosen.currency)
   const listPrice = formatPrice(chosen.priceCents, chosen.currency)
 
@@ -152,6 +162,8 @@ export function JoinForm({
           email,
           provider: method,
           country: country || undefined,
+          company: company.trim() || undefined,
+          taxId: taxId.trim() || undefined,
           phoneNumber: phone || undefined,
           packageId: chosen.id,
           offerCode: code || undefined,
@@ -252,12 +264,7 @@ export function JoinForm({
               onChange={(event) => setCountry(event.target.value)}
               className="h-11 w-full rounded-lg border border-ink-on-light/20 bg-white px-3 text-[16px] text-ink-on-light"
             >
-              <option value="">Choose your country</option>
-              {countries.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.name}
-                </option>
-              ))}
+              <CountryOptionList placeholder="Choose your country" />
             </select>
           </div>
 
@@ -344,7 +351,30 @@ export function JoinForm({
           )}
         </div>
 
-        {discounted && (
+        <div className="mt-5">
+          <BusinessDetails
+            idPrefix="join"
+            tone="light"
+            company={company}
+            taxId={taxId}
+            onCompany={setCompany}
+            onTaxId={setTaxId}
+            onUpdate={() => setRequote((value) => value + 1)}
+          />
+        </div>
+
+        {quote?.tax && (
+          <div className="mt-4 rounded-lg border border-ink-on-light/12 bg-white px-4 py-3">
+            <TaxBreakdown
+              summary={quote.tax}
+              currency={chosen.currency}
+              tone="light"
+              discountLabel={quote.codeApplied ? code : discounted ? `${quote.percentOff}% off` : null}
+            />
+          </div>
+        )}
+
+        {discounted && !quote?.tax && (
           <p className="mt-4 rounded-lg border border-ink-on-light/12 bg-white px-4 py-3 text-[14px] leading-relaxed text-ink-on-light">
             <span className="text-ink-on-light-dim line-through">{listPrice}</span>{' '}
             <strong className="font-medium">{price}</strong>

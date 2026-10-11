@@ -12,6 +12,8 @@ import { googleConfigured } from '@/lib/oauth'
 import { providerNames } from '@/lib/notifications'
 import { isConfigured } from '@/lib/env'
 import { reportTypeLabel } from '@/lib/report-content'
+import { formatPrice } from '@/lib/package-shape'
+import { revenueSummary } from '@/lib/revenue-shape'
 import { formatDate } from '@/lib/utils'
 
 export const metadata: Metadata = { title: 'Admin' }
@@ -46,6 +48,28 @@ export default async function AdminDashboard() {
 
   const providers = providerNames()
 
+  // Money over the last 30 days, net of tax and refunds. Amounts are summed as recorded;
+  // everything sold today is in USD.
+  const monthAgo = new Date(Date.now() - 30 * 86_400_000)
+  const [paidOrders, refunds] = await Promise.all([
+    db.checkoutOrder.findMany({
+      where: { status: 'paid', isTest: false, paidAt: { gte: monthAgo } },
+      select: { grossCents: true, amount: true, taxCents: true },
+    }),
+    db.refund.findMany({
+      where: { createdAt: { gte: monthAgo } },
+      select: { amountCents: true, order: { select: { grossCents: true, amount: true, taxCents: true } } },
+    }),
+  ])
+  const asRevenue = (order: { grossCents: number | null; amount: string; taxCents: number | null }) => ({
+    grossCents: order.grossCents ?? Math.round(Number(order.amount) * 100),
+    taxCents: order.taxCents ?? 0,
+  })
+  const revenue = revenueSummary(
+    paidOrders.map(asRevenue),
+    refunds.map((refund) => ({ amountCents: refund.amountCents, order: asRevenue(refund.order) })),
+  )
+
   return (
     <div className="mx-auto max-w-6xl px-5 py-10">
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
@@ -65,6 +89,12 @@ export default async function AdminDashboard() {
         <Stat label="Paid, not yet redeemed" value={pendingMembers} hint={`${unusedCodes} unused codes`} />
         <Stat label="Lapsed / cancelled" value={lapsedMembers} />
         <Stat label="Sends this week" value={sentThisWeek} hint="report emails" />
+        <Stat
+          label="Net revenue · 30 days"
+          value={formatPrice(revenue.netCents)}
+          hint={`after tax and ${formatPrice(revenue.refundedCents)} refunded`}
+        />
+        <Stat label="VAT collected · 30 days" value={formatPrice(revenue.taxCents)} hint="less tax on refunds" />
       </div>
 
       <DashboardCharts />
@@ -120,7 +150,7 @@ export default async function AdminDashboard() {
   )
 }
 
-function Stat({ label, value, hint }: { label: string; value: number; hint?: string }) {
+function Stat({ label, value, hint }: { label: string; value: number | string; hint?: string }) {
   return (
     <div className="rounded-lg border border-line bg-panel p-5">
       <div className="font-mono text-[12px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>

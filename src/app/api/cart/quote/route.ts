@@ -3,7 +3,9 @@ import { z } from 'zod'
 
 import { affiliateForCheckout } from '@/lib/affiliate-commission'
 import { heldKeys, priceLines, resolveCart } from '@/lib/cart'
+import { buyerCountry } from '@/lib/buyer-country'
 import { CART_MAX_ITEMS, groupByInterval } from '@/lib/cart-shape'
+import { taxLines } from '@/lib/tax-quote'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,6 +17,10 @@ const schema = z.object({
   code: z.string().trim().max(64).optional(),
   /** When given, sections this email already holds are flagged so the cart can drop them. */
   email: z.string().trim().max(254).optional(),
+  /** Billing country, two letters: decides the tax. */
+  country: z.string().trim().max(2).optional(),
+  /** A business buyer's VAT/GST number: may mean reverse charge. */
+  taxId: z.string().trim().max(60).optional(),
 })
 
 /**
@@ -35,10 +41,12 @@ export async function POST(request: Request) {
   // A visitor who came by an affiliate's link sees that link's discount, as checkout applies it.
   const referral = await affiliateForCheckout()
   const held = await heldKeys(items, parsed.data.email)
+  const country = await buyerCountry(parsed.data.country)
 
   const groups = await Promise.all(
     groupByInterval(items.map((entry) => ({ ...entry, interval: entry.item.interval }))).map(async (group) => {
       const priced = await priceLines(group.items, parsed.data.code, referral?.offer ? [referral.offer] : [])
+      const { summary } = await taxLines(priced.lines, country, parsed.data.taxId)
       return {
         interval: group.interval,
         currency: group.items[0].item.currency,
@@ -51,7 +59,9 @@ export async function POST(request: Request) {
           discounted: line.offerId !== null,
         })),
         listCents: priced.listCents,
-        chargeCents: priced.chargeCents,
+        // What is charged, tax included — the figure on the pay button.
+        chargeCents: summary.totalCents,
+        tax: summary,
         offerName: priced.offer?.name ?? null,
         percentOff: priced.offer?.percentOff ?? 0,
         codeApplied: priced.codeApplied,
@@ -59,5 +69,5 @@ export async function POST(request: Request) {
     }),
   )
 
-  return NextResponse.json({ groups, unavailable, held })
+  return NextResponse.json({ groups, unavailable, held, country })
 }

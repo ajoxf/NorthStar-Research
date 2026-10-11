@@ -15,6 +15,8 @@ import { getPaymentProvider } from '@/lib/payments/index'
 import { connect, gatewaysFor, webhookUrl, type Connected } from '@/lib/payments/registry'
 import { CheckoutRefusal, type PaymentCapabilities } from '@/lib/payments/types'
 import { appBaseUrl } from '@/lib/env'
+import { taxLines } from '@/lib/tax-quote'
+import { cleanTaxId, taxChangesAmount, taxedUnitCents } from '@/lib/tax-shape'
 
 /** What the buyer asked for, before anything is looked up. */
 export type CheckoutTarget = { kind: 'section'; id: string } | { kind: 'package'; id?: string | null }
@@ -35,8 +37,11 @@ export type CheckoutTarget = { kind: 'section'; id: string } | { kind: 'package'
 export async function startCheckout(input: {
   /** A provider id from the Providers page: "stripe", "cregis", "custom-ziina" … */
   gatewayId: string
-  /** The buyer's billing country, two letters; decides which providers they may use. */
-  country: string | null
+  /** The buyer's billing country, two letters; decides their tax and which providers they may use. */
+  country: string
+  /** A business buyer's company name and VAT/GST number, for the invoice and reverse charge. */
+  company?: string | null
+  taxId?: string | null
   email: string
   phoneNumber?: string | null
   items: CheckoutTarget[]
@@ -124,6 +129,12 @@ export async function startCheckout(input: {
     throw new CheckoutRefusal('That email already has an active membership. Sign in instead.', 409)
   }
 
+  // Tax for the billing country, on the discounted lines. What the order records and the
+  // provider charges is this total; each line carries its share, tax included, so the
+  // ledger can take the tax back out before anybody's share (see portionsByAuthor).
+  const { taxed, rule } = await taxLines(priced.lines, input.country, input.taxId)
+  const lineTotals = taxed.lines.map((line) => line.totalCents)
+
   const single = priced.lines.length === 1 ? priced.lines[0].item : null
   const order = await db.checkoutOrder.create({
     data: {
@@ -135,10 +146,18 @@ export async function startCheckout(input: {
       billingCountry: input.country,
       email,
       phoneNumber: input.phoneNumber ?? null,
-      amount: amountString(priced.chargeCents),
+      amount: amountString(taxed.totalCents),
       // The integer the ledger should read, rather than parsing `amount` back. See the
       // "related gap" note in docs/build-brief-v2.md §1.
-      grossCents: priced.chargeCents,
+      grossCents: taxed.totalCents,
+      taxCents: taxed.taxCents,
+      taxRate: taxed.taxRate,
+      taxName: taxed.taxName,
+      subtotalCents: taxed.subtotalCents,
+      discountCents: taxed.discountCents,
+      reverseCharge: taxed.reverseCharge,
+      billingCompany: input.company?.trim().slice(0, 120) || null,
+      billingTaxId: cleanTaxId(input.taxId),
       currency: priced.lines[0].item.currency,
       // The single-item columns, kept for a one-line order so every screen that reads them
       // still does. A basket of several is described by its lines alone.
@@ -156,7 +175,7 @@ export async function startCheckout(input: {
           name: line.item.name,
           interval: line.item.interval,
           listCents: line.listCents,
-          chargeCents: line.chargeCents,
+          chargeCents: lineTotals[position],
           offerId: line.offerId,
           authorId: line.item.authorId,
         })),
@@ -164,19 +183,21 @@ export async function startCheckout(input: {
     },
   })
 
-  if (!provider) return startOnePeriodCheckout(connected, order, priced, email, input.country)
+  if (!provider) return startOnePeriodCheckout(connected, order, priced, lineTotals, taxed.totalCents, email, input.country)
 
   try {
     const result = await provider.startCheckout({
       orderId: order.id,
       email,
-      lines: priced.lines.map((line) => ({
+      lines: priced.lines.map((line, index) => ({
         item: line.item,
         listCents: line.listCents,
-        chargeCents: line.chargeCents,
+        chargeCents: lineTotals[index],
+        // A recurring price that charges the taxed amount every period, when tax changes it.
+        unitCents: taxChangesAmount(rule, taxed.reverseCharge) ? taxedUnitCents(line.listCents, rule, taxed.reverseCharge) : undefined,
         offerApplied: line.offerId !== null,
       })),
-      chargeCents: priced.chargeCents,
+      chargeCents: taxed.totalCents,
       offer: priced.offer,
     })
     await db.checkoutOrder.update({
@@ -205,6 +226,8 @@ async function startOnePeriodCheckout(
   connected: Connected,
   order: { id: string; number: number },
   priced: Awaited<ReturnType<typeof priceLines>>,
+  lineTotals: number[],
+  totalCents: number,
   email: string,
   country: string | null,
 ): Promise<{ checkoutUrl: string; orderId: string }> {
@@ -212,7 +235,7 @@ async function startOnePeriodCheckout(
   const base = appBaseUrl()
   const successUrl = `${base}/checkout/success?order=${order.id}`
 
-  if (priced.chargeCents === 0) {
+  if (totalCents === 0) {
     const fresh = await db.checkoutOrder.findUniqueOrThrow({ where: { id: order.id } })
     await confirmOrder(fresh, { methodLabel: 'Free with discount', raw: { free: true } })
     return { checkoutUrl: successUrl, orderId: order.id }
@@ -225,8 +248,9 @@ async function startOnePeriodCheckout(
         orderId: order.id,
         orderNumber: order.number,
         currency: priced.lines[0].item.currency,
-        totalMinor: priced.chargeCents,
-        lines: priced.lines.map((line) => ({ title: line.item.name, amountMinor: line.chargeCents, quantity: 1 })),
+        totalMinor: totalCents,
+        // Tax included, so the lines add up to what is charged.
+        lines: priced.lines.map((line, index) => ({ title: line.item.name, amountMinor: lineTotals[index], quantity: 1 })),
         customer: { email, country },
         successUrl,
         cancelUrl: `${base}/checkout/cancelled`,

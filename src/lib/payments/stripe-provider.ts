@@ -46,10 +46,26 @@ export const stripeProvider: PaymentProvider<Stripe.Event> = {
       lines.map((line) => (line.item.kind === 'section' ? sectionPriceId(line.item) : line.item.stripePriceId)),
     )
     const couponId = offer ? await couponForLines(offer, lines, priceIds) : null
+    const taxedLines = await Promise.all(
+      lines.map(async (line, index) => {
+        if (line.unitCents === undefined) return null
+        const priceId = priceIds[index]
+        const productId =
+          (line.item.kind === 'section' ? line.item.stripeProductId : null) ?? (priceId ? await stripeProductForPrice(priceId) : null)
+        return {
+          unitCents: line.unitCents,
+          productId,
+          name: line.item.name,
+          currency: line.item.currency,
+          interval: line.item.interval as 'month' | 'year',
+        }
+      }),
+    )
     const single = lines.length === 1 ? lines[0].item : null
 
     const { url, sessionId } = await createStripeCheckout(email, {
       priceIds,
+      taxedLines,
       planName: single?.name ?? `${lines.length} items`,
       ...(single?.kind === 'section' ? { sectionId: single.id } : {}),
       ...(single?.kind === 'package' && single.id ? { packageId: single.id } : {}),

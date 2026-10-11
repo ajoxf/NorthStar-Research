@@ -3,7 +3,9 @@ import { z } from 'zod'
 
 import { checkoutErrorResponse, startCheckout } from '@/lib/payments/checkout'
 import { CART_MAX_ITEMS } from '@/lib/cart-shape'
+import { getCurrentMember } from '@/lib/auth'
 import { buyerCountry } from '@/lib/buyer-country'
+import { db } from '@/lib/db'
 import { METHOD_PROVIDER } from '@/lib/payments/ids'
 import { normalisePhone } from '@/lib/utils'
 import { emailSchema } from '@/lib/validation'
@@ -18,6 +20,9 @@ const schema = z
     provider: z.string().trim().min(1).max(60).optional(),
     /** The billing country the buyer chose, two letters. */
     country: z.string().trim().max(2).optional(),
+    /** A business buyer's company and VAT/GST number, for the invoice and reverse charge. */
+    company: z.string().trim().max(120).optional(),
+    taxId: z.string().trim().max(60).optional(),
     method: z.enum(['card', 'crypto']).optional(),
     /**
      * What to buy. A cart sends `items`; a single-item form may still send one sectionId or
@@ -56,10 +61,20 @@ export async function POST(request: Request) {
   }
   const input = parsed.data
 
+  const country = await buyerCountry(input.country)
+  // Remembered on the account for next time — only the signed-in member's own, never
+  // somebody else's because their email was typed.
+  const member = await getCurrentMember().catch(() => null)
+  if (member && member.email === input.email.trim().toLowerCase() && member.billingCountry !== country) {
+    await db.member.update({ where: { id: member.id }, data: { billingCountry: country } }).catch(() => undefined)
+  }
+
   try {
     const result = await startCheckout({
       gatewayId: input.provider ?? METHOD_PROVIDER[input.method!],
-      country: buyerCountry(input.country),
+      country,
+      company: input.company,
+      taxId: input.taxId,
       email: input.email,
       phoneNumber: input.phoneNumber ? normalisePhone(input.phoneNumber) : null,
       items:

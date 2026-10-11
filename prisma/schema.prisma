@@ -339,6 +339,10 @@ model Member {
   /// Set when the member signs in with Google. Null for password/magic-link accounts.
   googleId String? @unique
 
+  /// The billing country this member last chose at checkout, two letters. Pre-fills the
+  /// next checkout.
+  billingCountry String?
+
   role Role @default(member)
 
   subscriptionStatus    SubscriptionStatus @default(pending)
@@ -681,6 +685,22 @@ model CheckoutOrder {
   /// The billing country the buyer chose at checkout, two letters. Decides which
   /// providers they were offered; kept so that choice can be explained later.
   billingCountry String?
+
+  /// Tax as sold. Never recalculated from today's rates: an order keeps what it was sold
+  /// at, and its invoice prints that. `taxCents` (above) is the tax in the total.
+  /// The rate applied, as a fraction: 0.05 is 5%. Zero when no tax was charged.
+  taxRate        Decimal  @default(0) @db.Decimal(6, 4)
+  /// "UAE VAT", "India GST". Null when no tax was charged.
+  taxName        String?
+  /// List price of everything on the order, before any discount.
+  subtotalCents  Int?
+  /// What the discount took off the subtotal.
+  discountCents  Int?
+  /// A business buyer's company and VAT/GST number, for their invoice.
+  billingCompany String?
+  billingTaxId   String?
+  /// A business with a tax ID, in a country that allows it, paid without VAT.
+  reverseCharge  Boolean  @default(false)
 
   createdAt DateTime  @default(now())
   paidAt    DateTime?
@@ -1768,4 +1788,28 @@ model AdminAuditLog {
 
   @@index([createdAt])
   @@index([target])
+}
+
+/// Sales tax (VAT/GST) by the buyer's billing country.
+///
+/// Standard rates for digital services as of the time of writing; confirm with a tax
+/// adviser before switching a country on. Rates change. Only active rows are ever charged:
+/// a country is switched on once the business is registered there. Each order copies the
+/// rate it was sold at, so changing a row never alters an order or an invoice already made.
+model TaxRate {
+  /// Two letters, upper case.
+  countryCode      String   @id
+  /// On invoices: "UAE VAT", "Germany VAT".
+  name             String
+  /// In the checkout line and invoice columns: VAT, GST.
+  label            String   @default("VAT")
+  /// A fraction: 0.05 is 5%.
+  rate             Decimal  @db.Decimal(6, 4)
+  /// True: the price already includes the tax, which is carved out of it. False: added on top.
+  pricesIncludeTax Boolean  @default(true)
+  /// A business buyer with a VAT/GST number pays without tax (B2B digital services).
+  reverseCharge    Boolean  @default(false)
+  isActive         Boolean  @default(false)
+
+  updatedAt DateTime @updatedAt
 }

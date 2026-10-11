@@ -77,6 +77,41 @@ export function usePaymentMethods(currency: string | null, country: string) {
   return { methods, detected, loading }
 }
 
+/** Where most buyers are, listed first. */
+const COMMON = ['AE', 'SA', 'GB', 'US', 'IN', 'DE', 'FR', 'SG', 'AU', 'CA', 'EG', 'KW', 'QA', 'BH', 'OM']
+
+/**
+ * The options of a billing-country select: the common countries first, then all of them
+ * A–Z. Built in the browser only (see useCountryOptions).
+ */
+export function CountryOptionList({ placeholder = 'Choose your country' }: { placeholder?: string }) {
+  const options = useCountryOptions()
+  const byCode = new Map(options.map((option) => [option.code, option.name]))
+  return (
+    <>
+      <option value="">{placeholder}</option>
+      {options.length > 0 && (
+        <>
+          <optgroup label="Most common">
+            {COMMON.filter((code) => byCode.has(code)).map((code) => (
+              <option key={`c-${code}`} value={code}>
+                {byCode.get(code)}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="All countries">
+            {options.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.name}
+              </option>
+            ))}
+          </optgroup>
+        </>
+      )}
+    </>
+  )
+}
+
 /** Billing country. Shown once per page; every payment choice below follows it. */
 export function CountrySelect({
   id,
@@ -89,7 +124,6 @@ export function CountrySelect({
   onChange: (code: string) => void
   className?: string
 }) {
-  const options = useCountryOptions()
   return (
     <div className={className}>
       <Label htmlFor={id}>Billing country</Label>
@@ -99,12 +133,7 @@ export function CountrySelect({
         onChange={(event) => onChange(event.target.value)}
         className="h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-[16px] text-ink"
       >
-        <option value="">Choose your country</option>
-        {options.map((option) => (
-          <option key={option.code} value={option.code}>
-            {option.name}
-          </option>
-        ))}
+        <CountryOptionList />
       </select>
     </div>
   )

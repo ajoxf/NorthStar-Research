@@ -4,7 +4,7 @@ import * as React from 'react'
 import { ArrowRight } from 'lucide-react'
 
 import { AddToCartButton } from '@/components/cart/cart-buttons'
-import { useChosenMethod, useCountryOptions, usePaymentMethods } from '@/components/checkout/payment-choice'
+import { CountryOptionList, useChosenMethod, usePaymentMethods } from '@/components/checkout/payment-choice'
 import { Button, ButtonLink, Spinner } from '@/components/ui/button'
 import { Input } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
@@ -69,7 +69,6 @@ export function SectionBuy({
   React.useEffect(() => {
     if (detected) setCountry((current) => current || detected)
   }, [detected])
-  const countries = useCountryOptions()
 
   const hasTrial = Boolean(trialDays && trialSlug)
   const light = tone === 'light'
@@ -182,12 +181,7 @@ export function SectionBuy({
           onChange={(event) => setCountry(event.target.value)}
           className={`h-8 max-w-[14rem] ${SELECT} ${light ? LIGHT : DARK}`}
         >
-          <option value="">Choose…</option>
-          {countries.map((option) => (
-            <option key={option.code} value={option.code}>
-              {option.name}
-            </option>
-          ))}
+          <CountryOptionList placeholder="Choose…" />
         </select>
       </div>
 

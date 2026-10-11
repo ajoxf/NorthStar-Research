@@ -6,6 +6,7 @@ import { Lock, X } from 'lucide-react'
 
 import { markPending, sameItem, useCart, type CartItem } from '@/components/cart/cart-store'
 import { CountrySelect, MethodChoice, useChosenMethod, usePaymentMethods } from '@/components/checkout/payment-choice'
+import { BusinessDetails, TaxBreakdown, type TaxSummary } from '@/components/checkout/tax-summary'
 import { Button, ButtonLink, Spinner } from '@/components/ui/button'
 import { Hint, Input, Label } from '@/components/ui/field'
 import { useToast } from '@/components/ui/toast'
@@ -22,8 +23,9 @@ type QuoteGroup = {
   offerName: string | null
   percentOff: number
   codeApplied: boolean
+  tax: TaxSummary
 }
-type Quote = { groups: QuoteGroup[]; unavailable: string[]; held: string[] }
+type Quote = { groups: QuoteGroup[]; unavailable: string[]; held: string[]; country: string }
 
 const keyOf = (item: Pick<CartItem, 'kind' | 'id'>) => `${item.kind}:${item.id}`
 const refOf = (key: string) => {
@@ -48,6 +50,10 @@ export function CartView() {
   const [pending, setPending] = React.useState<string | null>(null)
   // The billing country decides which providers are offered; blank until the server's guess arrives.
   const [country, setCountry] = React.useState('')
+  const [company, setCompany] = React.useState('')
+  const [taxId, setTaxId] = React.useState('')
+  // Bumped by "Update total" to re-quote at once.
+  const [requote, setRequote] = React.useState(0)
 
   const itemsKey = cart.items.map(keyOf).join(',')
   const emailForQuote = isValidEmail(email) ? email.trim() : ''
@@ -70,10 +76,17 @@ export function CartView() {
             items: cart.items.map(({ kind, id }) => ({ kind, id })),
             code: code.trim() || undefined,
             email: emailForQuote || undefined,
+            country: country || undefined,
+            taxId: taxId.trim() || undefined,
           }),
           signal: controller.signal,
         })
-        if (response.ok) setQuote((await response.json()) as Quote)
+        if (response.ok) {
+          const next = (await response.json()) as Quote
+          setQuote(next)
+          // The server's guess at the billing country fills the select once.
+          setCountry((current) => current || next.country)
+        }
       } catch {
         // Aborted by a newer quote, or offline: the last good quote stays on screen.
       } finally {
@@ -85,7 +98,7 @@ export function CartView() {
       window.clearTimeout(timer)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [itemsKey, code, emailForQuote])
+  }, [itemsKey, code, emailForQuote, country, taxId, requote])
 
   // Anything no longer on sale leaves the cart, and the buyer is told which.
   React.useEffect(() => {
@@ -117,6 +130,8 @@ export function CartView() {
           email: email.trim(),
           provider,
           country: country || undefined,
+          company: company.trim() || undefined,
+          taxId: taxId.trim() || undefined,
           items: payable.map((line) => refOf(line.key)),
           offerCode: code.trim() || undefined,
         }),
@@ -174,7 +189,17 @@ export function CartView() {
         </div>
       </div>
 
-      <CountrySelect id="cart-country" value={country} onChange={setCountry} className="sm:max-w-xs" />
+      <div className="flex flex-col gap-3">
+        <CountrySelect id="cart-country" value={country} onChange={setCountry} className="sm:max-w-xs" />
+        <BusinessDetails
+          idPrefix="cart"
+          company={company}
+          taxId={taxId}
+          onCompany={setCompany}
+          onTaxId={setTaxId}
+          onUpdate={() => setRequote((value) => value + 1)}
+        />
+      </div>
 
       {split && (
         <p className="rounded-lg border border-line bg-panel px-4 py-3 text-[15px] leading-relaxed text-ink-dim">
@@ -246,6 +271,13 @@ export function CartView() {
                   <Link href="/login" className="underline">sign in</Link> to read what you have.
                 </p>
               )}
+              <div className="mb-4 rounded-lg border border-line px-4 py-3">
+                <TaxBreakdown
+                  summary={group.tax}
+                  currency={group.currency}
+                  discountLabel={group.offerName ? (group.codeApplied ? code.trim().toUpperCase() : group.offerName) : null}
+                />
+              </div>
               <GroupPayment
                 group={group}
                 per={per}

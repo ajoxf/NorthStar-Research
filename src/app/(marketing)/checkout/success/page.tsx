@@ -93,6 +93,13 @@ export default async function CheckoutSuccessPage({
                 I have a code
               </ButtonLink>
             </div>
+            {searchParams.order && (
+              <p className="mt-6 text-[15px]">
+                <a href={`/api/invoices/${searchParams.order}`} className="text-ink underline underline-offset-4">
+                  View your tax invoice
+                </a>
+              </p>
+            )}
           </>
         )}
         {state === 'claimed' && (

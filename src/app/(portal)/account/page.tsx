@@ -23,6 +23,14 @@ export default async function AccountPage() {
   const access = await accessSummary(member)
   const [isAffiliate, isExpert] = await Promise.all([isAffiliateMember(member.id), isExpertMember(member.id)])
 
+  // Every paid order on this email, newest first, each with its tax invoice.
+  const invoices = await db.checkoutOrder.findMany({
+    where: { email: member.email, status: 'paid', isTest: false },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+    select: { id: true, number: true, amount: true, currency: true, paidAt: true, createdAt: true },
+  })
+
   const reportsRead = await db.reportView.findMany({
     where: { memberId: member.id },
     select: { reportId: true },
@@ -77,6 +85,29 @@ export default async function AccountPage() {
           <AccessTable lines={access} />
         )}
       </section>
+
+      {invoices.length > 0 && (
+        <section className="panel mt-8 p-6">
+          <h2 className="eyebrow mb-4">Purchases and invoices</h2>
+          <ul className="divide-y divide-line">
+            {invoices.map((order) => (
+              <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 py-3 text-[15px]">
+                <span className="text-ink-dim">
+                  <span className="font-mono text-ink">NS-{order.number}</span> · {formatDate(order.paidAt ?? order.createdAt)}
+                </span>
+                <span className="flex items-center gap-4">
+                  <span className="font-mono text-ink">
+                    {order.amount} {order.currency}
+                  </span>
+                  <a href={`/api/invoices/${order.id}`} className="text-accent underline underline-offset-4">
+                    Invoice
+                  </a>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section className="panel mt-8 p-6">
         {/* Named for what it is. Titled "Membership", its PENDING sat over a live product

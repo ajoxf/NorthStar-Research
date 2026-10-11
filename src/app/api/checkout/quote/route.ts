@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { affiliateForCheckout } from '@/lib/affiliate-commission'
+import { buyerCountry } from '@/lib/buyer-country'
 import { priceCart } from '@/lib/cart-shape'
 import { priceWithOffer, type OfferShape } from '@/lib/offer'
 import { offerByCode, offerForCheckout } from '@/lib/offers'
 import { db } from '@/lib/db'
 import { isFallbackPackage } from '@/lib/package-shape'
 import { packageForCheckout } from '@/lib/packages'
+import { taxLines } from '@/lib/tax-quote'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,6 +19,8 @@ const schema = z
     packageId: z.string().trim().max(64).optional(),
     sectionId: z.string().trim().max(64).optional(),
     code: z.string().trim().max(64).optional(),
+    country: z.string().trim().max(2).optional(),
+    taxId: z.string().trim().max(60).optional(),
   })
   .refine((input) => Boolean(input.packageId) !== Boolean(input.sectionId), {
     message: 'Ask about one thing at a time.',
@@ -46,6 +50,8 @@ export async function POST(request: Request) {
   }
 
   const { code } = parsed.data
+  const country = await buyerCountry(parsed.data.country)
+  const taxId = parsed.data.taxId
 
   if (parsed.data.sectionId) {
     const section = await db.section.findUnique({
@@ -55,29 +61,33 @@ export async function POST(request: Request) {
     if (!section || section.archivedAt !== null) {
       return NextResponse.json({ error: 'That is not on sale.' }, { status: 404 })
     }
-    return quote({ sectionId: section.id }, section.priceCents, section.currency, code)
+    return quote({ sectionId: section.id }, section.priceCents, section.currency, code, country, taxId)
   }
 
   const pkg = await packageForCheckout(parsed.data.packageId)
   // The built-in fallback plan corresponds to no row, so nothing can be scoped to it.
   const packageId = isFallbackPackage(pkg) ? null : pkg.id
   if (!packageId) {
+    const { summary } = await taxLines([{ listCents: pkg.priceCents, chargeCents: pkg.priceCents }], country, taxId)
     return NextResponse.json({
       listCents: pkg.priceCents,
-      chargeCents: pkg.priceCents,
+      chargeCents: summary.totalCents,
       percentOff: 0,
       currency: pkg.currency,
       codeApplied: false,
+      tax: summary,
     })
   }
-  return quote({ packageId }, pkg.priceCents, pkg.currency, code)
+  return quote({ packageId }, pkg.priceCents, pkg.currency, code, country, taxId)
 }
 
 async function quote(
   target: { sectionId?: string; packageId?: string },
   listCents: number,
   currency: string,
-  code?: string,
+  code: string | undefined,
+  country: string,
+  taxId: string | undefined,
 ) {
   // The buyer's own best offer, and the affiliate link's discount if they came by one —
   // one wins, by the same rule checkout uses (priceCart), so this figure is what is charged.
@@ -99,9 +109,13 @@ async function quote(
    */
   const codeApplied = code ? (await offerByCode(code, target)) !== null : false
 
+  const { summary } = await taxLines([{ listCents, chargeCents: priced.chargeCents }], country, taxId)
+
   return NextResponse.json({
     listCents,
-    chargeCents: priced.chargeCents,
+    // Tax included: the figure the buyer is charged.
+    chargeCents: summary.totalCents,
+    tax: summary,
     percentOff: priced.percentOff,
     duration: priced.duration,
     currency,
