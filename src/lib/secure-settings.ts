@@ -21,16 +21,12 @@ import { decryptSetting, encryptSetting } from '@/lib/settings-crypto'
  *
  * ## Why this exists at all
  *
- * Payment credentials normally belong in the environment, and Stripe's still do — a
- * Stripe secret key can move money out, so it stays where only a deployment can change
- * it. The Cregis credentials are different by the owner's assessment: that account is
- * deposit-only, so the worst an exposed key permits is receiving money. Given that, being
- * able to rotate them from the console without a redeploy is worth more than the marginal
- * secrecy of an environment variable.
- *
- * That asymmetry is the whole design. It is not "the admin console can edit credentials";
- * it is "this specific, deposit-only credential is editable, and the one that can move
- * money is not".
+ * Cregis's credentials were the first stored here, because that account is deposit-only.
+ * Since the Providers page, every provider's keys can be entered from the console —
+ * Stripe's included, by the owner's decision, so that keys can be rotated and providers
+ * added without a developer or a redeploy (see src/lib/payments/gateway-settings.ts).
+ * The environment variables still work as a fallback. The cost is plain: an admin
+ * sign-in is now as sensitive as the Stripe account itself.
  *
  * ## Rotating AUTH_SECRET
  *

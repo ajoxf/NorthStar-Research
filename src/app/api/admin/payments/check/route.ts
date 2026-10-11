@@ -9,6 +9,7 @@ import { cregisConfigured } from '@/lib/payments/cregis'
 import {
   stripeClient,
   stripeConfigured,
+  stripeKeys,
   stripeFallbackPriceConfigured,
   stripePriceFacts,
 } from '@/lib/payments/stripe'
@@ -51,17 +52,17 @@ export async function POST() {
   const stripe: CheckResult[] = []
   const cregis: CheckResult[] = []
 
-  if (!stripeConfigured()) {
+  if (!(await stripeConfigured())) {
     stripe.push({
       label: 'Credentials',
       status: 'fail',
       detail:
-        'STRIPE_SECRET_KEY is not set, so card payments cannot be taken. Add it in Vercel → ' +
-        'Settings → Environment Variables and redeploy.',
+        'No Stripe secret key is set, so card payments cannot be taken. Add it on Payments → ' +
+        'Providers, or as STRIPE_SECRET_KEY in Vercel.',
     })
   } else {
     try {
-      const client = stripeClient()
+      const client = await stripeClient()
 
       /*
        * The key is proved by a call Stripe has to authorise, not by the string looking
@@ -124,12 +125,12 @@ export async function POST() {
        * membership is ever created. Every other row here can be wrong and somebody
        * notices; this one is wrong and everything looks fine.
        */
-      if (!isConfigured('STRIPE_WEBHOOK_SECRET')) {
+      if (!(await stripeKeys()).webhookSecret) {
         stripe.push({
           label: 'Webhook signing secret',
           status: 'fail',
           detail:
-            'STRIPE_WEBHOOK_SECRET is not set. Payments will succeed and no membership will ever ' +
+            'No Stripe webhook signing secret is set. Payments will succeed and no membership will ever ' +
             'be created, because the confirmation from Stripe cannot be verified.',
         })
       }

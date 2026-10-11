@@ -13,10 +13,8 @@ import { readSettings } from '@/lib/secure-settings'
  * one would be worse than not offering the field at all. The settings page states which
  * source is in effect for every value, and clearing a field falls back to the environment.
  *
- * Only Cregis is editable this way. Stripe's key can move money out of the account, so it
- * stays in the environment where only a deployment can change it. Cregis is deposit-only
- * on this account, which is what makes the trade acceptable — see the note in
- * src/lib/secure-settings.ts.
+ * The Providers page edits these same rows (see gateways/cregis.ts), so a value saved on
+ * either screen is the one in use.
  */
 
 export const CREGIS_SETTING_KEYS = {

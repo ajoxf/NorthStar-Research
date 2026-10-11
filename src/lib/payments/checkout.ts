@@ -10,8 +10,11 @@ import { CART_MAX_ITEMS } from '@/lib/cart-shape'
 import { amountString } from '@/lib/package-shape'
 import { CregisError } from '@/lib/payments/cregis'
 import { refuseExistingMembership } from '@/lib/payments/checkout-rules'
+import { confirmOrder } from '@/lib/payments/apply'
 import { getPaymentProvider } from '@/lib/payments/index'
-import { CheckoutRefusal, type PaymentProviderId } from '@/lib/payments/types'
+import { connect, gatewaysFor, webhookUrl, type Connected } from '@/lib/payments/registry'
+import { CheckoutRefusal, type PaymentCapabilities } from '@/lib/payments/types'
+import { appBaseUrl } from '@/lib/env'
 
 /** What the buyer asked for, before anything is looked up. */
 export type CheckoutTarget = { kind: 'section'; id: string } | { kind: 'package'; id?: string | null }
@@ -30,20 +33,26 @@ export type CheckoutTarget = { kind: 'section'; id: string } | { kind: 'package'
  * rather than nothing — so an operator can see an attempt that went wrong.
  */
 export async function startCheckout(input: {
-  providerId: PaymentProviderId
+  /** A provider id from the Providers page: "stripe", "cregis", "custom-ziina" … */
+  gatewayId: string
+  /** The buyer's billing country, two letters; decides which providers they may use. */
+  country: string | null
   email: string
   phoneNumber?: string | null
   items: CheckoutTarget[]
   offerCode?: string
 }): Promise<{ checkoutUrl: string; orderId: string }> {
-  const provider = getPaymentProvider(input.providerId)
   const email = input.email.trim().toLowerCase()
-
-  if (!(await provider.configured())) {
-    throw new CheckoutRefusal(
-      `${provider.label} payment is not available yet. Nothing has been charged.`,
-      409,
-    )
+  const connected = await connect(input.gatewayId)
+  if (!connected) {
+    throw new CheckoutRefusal('That payment method is not available at the moment. Nothing has been charged.', 409)
+  }
+  const { gateway } = connected
+  // Stripe and Cregis keep their own checkout; every other provider is one payment for one period.
+  const provider = gateway.rail ? getPaymentProvider(gateway.rail) : null
+  const capabilities = provider?.capabilities ?? ONE_PERIOD
+  if (provider && !(await provider.configured())) {
+    throw new CheckoutRefusal(`${provider.label} payment is not available yet. Nothing has been charged.`, 409)
   }
   if (input.items.length === 0) throw new CheckoutRefusal('Your cart is empty. Nothing has been charged.', 400)
   if (input.items.length > CART_MAX_ITEMS) {
@@ -74,8 +83,15 @@ export async function startCheckout(input: {
     throw new CheckoutRefusal('These items are priced in different currencies. Check them out separately — nothing has been charged.', 409)
   }
 
+  // Re-checked here, not only on the page: a buyer can send any provider id they like.
+  const currency = items[0].item.currency
+  const offered = await gatewaysFor(input.country, currency)
+  if (!offered.some((option) => option.id === gateway.id)) {
+    throw new CheckoutRefusal(`${gateway.label} is not offered for your country and currency. Nothing has been charged.`, 409)
+  }
+
   for (const { item } of items) {
-    const reason = provider.canSell(item)
+    const reason = provider?.canSell(item) ?? null
     if (reason) throw new CheckoutRefusal(items.length > 1 ? `${item.name}: ${reason}` : reason, 409)
   }
 
@@ -101,7 +117,7 @@ export async function startCheckout(input: {
   if (
     items.some(({ item }) => item.kind === 'package') &&
     refuseExistingMembership(
-      provider.capabilities,
+      capabilities,
       member ? { hasPassword: Boolean(member.passwordHash), subscriptionStatus: member.subscriptionStatus } : null,
     )
   ) {
@@ -114,7 +130,9 @@ export async function startCheckout(input: {
       // Replaced by the rail's own reference as soon as it answers. The column predates a
       // second rail, hence the name; it holds a Stripe session id for card orders too.
       cregisOrderId: `pending_${crypto.randomUUID()}`,
-      provider: provider.id,
+      provider: provider ? provider.id : 'gateway',
+      gateway: gateway.id,
+      billingCountry: input.country,
       email,
       phoneNumber: input.phoneNumber ?? null,
       amount: amountString(priced.chargeCents),
@@ -146,6 +164,8 @@ export async function startCheckout(input: {
     },
   })
 
+  if (!provider) return startOnePeriodCheckout(connected, order, priced, email, input.country)
+
   try {
     const result = await provider.startCheckout({
       orderId: order.id,
@@ -168,6 +188,64 @@ export async function startCheckout(input: {
     await db.checkoutOrder.update({ where: { id: order.id }, data: { status: 'failed' } })
     throw error
   }
+}
+
+/** What a provider without stored mandates can do: take one payment, for one period. */
+const ONE_PERIOD: PaymentCapabilities = { recurring: false, crypto: false, refunds: false, payouts: false }
+
+/**
+ * Hand an order to a provider from the Providers page.
+ *
+ * The provider's session id is stored on the order, prefixed with the provider's id so two
+ * providers' references can never collide, and the buyer is sent to the provider — or, for a
+ * payment-link provider, to our own pay page. A free order (a 100% discount) is confirmed at
+ * once: there is nothing to pay.
+ */
+async function startOnePeriodCheckout(
+  connected: Connected,
+  order: { id: string; number: number },
+  priced: Awaited<ReturnType<typeof priceLines>>,
+  email: string,
+  country: string | null,
+): Promise<{ checkoutUrl: string; orderId: string }> {
+  const { gateway, cfg } = connected
+  const base = appBaseUrl()
+  const successUrl = `${base}/checkout/success?order=${order.id}`
+
+  if (priced.chargeCents === 0) {
+    const fresh = await db.checkoutOrder.findUniqueOrThrow({ where: { id: order.id } })
+    await confirmOrder(fresh, { methodLabel: 'Free with discount', raw: { free: true } })
+    return { checkoutUrl: successUrl, orderId: order.id }
+  }
+
+  try {
+    if (!gateway.createCheckout) throw new Error(`${gateway.name} cannot start a checkout`)
+    const result = await gateway.createCheckout(
+      {
+        orderId: order.id,
+        orderNumber: order.number,
+        currency: priced.lines[0].item.currency,
+        totalMinor: priced.chargeCents,
+        lines: priced.lines.map((line) => ({ title: line.item.name, amountMinor: line.chargeCents, quantity: 1 })),
+        customer: { email, country },
+        successUrl,
+        cancelUrl: `${base}/checkout/cancelled`,
+        webhookUrl: webhookUrl(gateway),
+      },
+      cfg,
+    )
+    const ref = result.sessionId.startsWith(`${gateway.id}:`) ? result.sessionId : `${gateway.id}:${result.sessionId}`
+    await db.checkoutOrder.update({ where: { id: order.id }, data: { cregisOrderId: ref } })
+    return { checkoutUrl: result.redirectUrl, orderId: order.id }
+  } catch (error) {
+    await db.checkoutOrder.update({ where: { id: order.id }, data: { status: 'failed' } })
+    throw error
+  }
+}
+
+/** The provider's own session id, as stored on an order by startOnePeriodCheckout. */
+export function sessionIdOf(gatewayId: string, stored: string): string {
+  return stored.startsWith(`${gatewayId}:`) ? stored.slice(gatewayId.length + 1) : stored
 }
 
 /**

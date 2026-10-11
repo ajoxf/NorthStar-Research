@@ -299,7 +299,7 @@ function PackageRow({
             <p className="mt-2 text-[15px] leading-relaxed text-ink-dim">
               {stripeReady
                 ? 'No Stripe price yet, so card checkout will not offer this package — crypto still works.'
-                : 'STRIPE_SECRET_KEY is not set on this deployment, so no package can be sold by card. Add it in Vercel and redeploy.'}
+                : 'No Stripe secret key is set, so no package can be sold by card. Add it on Payments → Providers.'}
               {stripeReady && (
                 <>
                   {' '}

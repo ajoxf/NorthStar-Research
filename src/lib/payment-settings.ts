@@ -2,6 +2,7 @@ import 'server-only'
 
 import { appBaseUrl, isPlaceholder } from '@/lib/env'
 import { type CregisSource, resolveCregisSettings } from '@/lib/cregis-settings'
+import { stripeKeys } from '@/lib/payments'
 
 /**
  * What is configured for taking money, and what is merely claimed to be.
@@ -11,9 +12,9 @@ import { type CregisSource, resolveCregisSettings } from '@/lib/cregis-settings'
  * one fact is the difference between taking real money and taking none while everything
  * appears to work. Nothing here puts a credential into a page, a bundle or a log line.
  *
- * **Stripe's credentials are environment-only.** That key can move money out of the
- * account — charges, refunds, payouts — so it stays where only a deployment can change
- * it, and this module reports on `process.env` for those rows.
+ * **Stripe's keys are reported as resolved** — saved on the Providers page first, then the
+ * environment — because that is what the app uses; reporting `process.env` alone would
+ * show a missing key that is in fact saved.
  *
  * **Cregis is editable from the console**, because the owner's account there is
  * deposit-only: the worst an exposed key permits is receiving money. Being able to rotate
@@ -71,17 +72,20 @@ function lengthDetail(raw: string | undefined): string | null {
   return raw ? `${raw.length} characters` : null
 }
 
-export function stripeSettings(): SettingRow[] {
-  const secret = process.env.STRIPE_SECRET_KEY
+export async function stripeSettings(): Promise<SettingRow[]> {
+  const keys = await stripeKeys()
+  const secret = keys.secretKey ?? undefined
   const price = process.env.STRIPE_PRICE_ID
+  const where = (value: string | null, env: string) =>
+    value && value !== process.env[env]?.trim() ? ' · saved on Providers & keys' : ''
 
   return [
     {
       key: 'STRIPE_SECRET_KEY',
       label: 'Secret key',
       what: 'Authorises this app to create checkouts on your Stripe account.',
-      status: statusOf('STRIPE_SECRET_KEY'),
-      detail: stripeKeyMode(secret),
+      status: secret ? 'set' : statusOf('STRIPE_SECRET_KEY'),
+      detail: secret ? `${stripeKeyMode(secret)}${where(keys.secretKey, 'STRIPE_SECRET_KEY')}` : null,
       secret: true,
     },
     {
@@ -103,8 +107,10 @@ export function stripeSettings(): SettingRow[] {
       key: 'STRIPE_WEBHOOK_SECRET',
       label: 'Webhook signing secret',
       what: 'Proves a webhook really came from Stripe. Without it, payments are never confirmed.',
-      status: statusOf('STRIPE_WEBHOOK_SECRET'),
-      detail: lengthDetail(process.env.STRIPE_WEBHOOK_SECRET),
+      status: keys.webhookSecret ? 'set' : statusOf('STRIPE_WEBHOOK_SECRET'),
+      detail: keys.webhookSecret
+        ? `${lengthDetail(keys.webhookSecret)}${where(keys.webhookSecret, 'STRIPE_WEBHOOK_SECRET')}`
+        : null,
       secret: true,
     },
   ]

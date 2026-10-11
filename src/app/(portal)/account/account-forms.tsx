@@ -8,7 +8,7 @@ import { PasswordInput } from '@/components/ui/password-input'
 import { useToast } from '@/components/ui/toast'
 
 type MemberSettings = {
-  billingProvider: 'stripe' | 'cregis' | 'manual' | null
+  billingProvider: 'stripe' | 'cregis' | 'manual' | 'gateway' | null
   cancelAtPeriodEnd: boolean
   firstName: string | null
   lastName: string | null
@@ -92,6 +92,17 @@ function BillingSection({ member }: { member: MemberSettings }) {
             <ButtonLink href="/join" variant="secondary">
               Switch to card billing
             </ButtonLink>
+          </div>
+        </>
+      ) : member.billingProvider === 'gateway' ? (
+        <>
+          {/* Every provider other than card and crypto takes one payment for one period. */}
+          <p className="text-[15px] leading-relaxed text-ink-dim">
+            You pay one period at a time, so nothing renews automatically. We will email you a few days
+            before your period ends; paying again adds the new period on top of whatever time you have left.
+          </p>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <ButtonLink href="/join">Renew now</ButtonLink>
           </div>
         </>
       ) : (

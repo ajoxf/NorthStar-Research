@@ -3,7 +3,8 @@ import { z } from 'zod'
 
 import { checkoutErrorResponse, startCheckout } from '@/lib/payments/checkout'
 import { CART_MAX_ITEMS } from '@/lib/cart-shape'
-import { METHOD_PROVIDER, PAYMENT_PROVIDER_IDS } from '@/lib/payments/ids'
+import { buyerCountry } from '@/lib/buyer-country'
+import { METHOD_PROVIDER } from '@/lib/payments/ids'
 import { normalisePhone } from '@/lib/utils'
 import { emailSchema } from '@/lib/validation'
 
@@ -13,8 +14,10 @@ export const dynamic = 'force-dynamic'
 const schema = z
   .object({
     email: emailSchema,
-    /** Which rail. `method` is the older name the forms sent, and is still accepted. */
-    provider: z.enum(PAYMENT_PROVIDER_IDS).optional(),
+    /** A provider id offered to this buyer. `method` is the older name the forms sent, and is still accepted. */
+    provider: z.string().trim().min(1).max(60).optional(),
+    /** The billing country the buyer chose, two letters. */
+    country: z.string().trim().max(2).optional(),
     method: z.enum(['card', 'crypto']).optional(),
     /**
      * What to buy. A cart sends `items`; a single-item form may still send one sectionId or
@@ -39,8 +42,9 @@ const schema = z
 /**
  * Start a checkout — one item or a cart, any rail.
  *
- * The one checkout route. The rail is chosen by the buyer and resolved through the
- * payments registry; nothing here knows what Stripe or Cregis is. See
+ * The one checkout route. The provider is chosen by the buyer from those their country and
+ * currency are offered, and resolved through the payments registry; nothing here knows
+ * what any provider is. See
  * src/lib/payments/checkout.ts for what happens, and in what order.
  */
 export async function POST(request: Request) {
@@ -54,7 +58,8 @@ export async function POST(request: Request) {
 
   try {
     const result = await startCheckout({
-      providerId: input.provider ?? METHOD_PROVIDER[input.method!],
+      gatewayId: input.provider ?? METHOD_PROVIDER[input.method!],
+      country: buyerCountry(input.country),
       email: input.email,
       phoneNumber: input.phoneNumber ? normalisePhone(input.phoneNumber) : null,
       items:

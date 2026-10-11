@@ -254,6 +254,7 @@ function SubjectCard({ row, showTopic = false }: { row: CoverageRow; showTopic?:
             <SectionBuy
               tone="light"
               sectionId={row.id}
+              currency={row.currency}
               name={row.name}
               trialDays={row.trialDays}
               trialSlug={row.trialSlug}

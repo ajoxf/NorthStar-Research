@@ -531,6 +531,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                   <SectionBuy
                     tone="light"
                     sectionId={section.id}
+                    currency={section.currency}
                     name={sectionName(section)}
                     trialDays={section.item ? (sectionTrials.get(section.item.slug) ?? null) : null}
                     trialSlug={section.item?.slug ?? null}

@@ -68,7 +68,7 @@ export const stripeProvider: PaymentProvider<Stripe.Event> = {
     const signature = headers.get('stripe-signature')
     if (!signature) return { ok: false, status: 400, error: 'missing signature' }
     try {
-      return { ok: true, event: verifyStripeWebhook(rawBody, signature) }
+      return { ok: true, event: await verifyStripeWebhook(rawBody, signature) }
     } catch (error) {
       if (error instanceof MissingConfigError) {
         console.error(

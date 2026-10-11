@@ -1,10 +1,59 @@
 import type { Metadata } from 'next'
-import { MailCheck } from 'lucide-react'
+import { CheckCircle2, Clock, MailCheck } from 'lucide-react'
 
+import { SimulatePayment } from '@/app/(marketing)/checkout/success/simulate-payment'
 import { ClearPaidCart } from '@/components/cart/clear-paid'
 import { ButtonLink } from '@/components/ui/button'
+import { db } from '@/lib/db'
+import { applyGatewayEvents } from '@/lib/payments/apply'
+import { sessionIdOf } from '@/lib/payments/checkout'
+import { paymentReference } from '@/lib/payments/gateways/custom'
+import { testGateway, testPaymentsAllowed } from '@/lib/payments/gateways/test'
+import { connectForConfirmation } from '@/lib/payments/registry'
 
 export const metadata: Metadata = { title: 'Payment received' }
+export const dynamic = 'force-dynamic'
+
+type ReturnState = 'confirmed' | 'simulate' | 'claimed' | 'waiting' | null
+
+/**
+ * For an order from a provider on the Providers page: ask the provider whether it is paid,
+ * rather than waiting for its webhook, so the buyer sees the answer now.
+ *
+ * Asking is safe where trusting the URL would not be: the provider is called with our own
+ * keys, and what it says goes through the same idempotent path as its webhook. The order id
+ * in the URL only chooses which order to ask about.
+ */
+async function settleOnReturn(orderId: string | undefined, claimed: boolean): Promise<{ state: ReturnState; reference: string | null }> {
+  if (!orderId) return { state: null, reference: null }
+  const order = await db.checkoutOrder.findUnique({
+    where: { id: orderId },
+    select: { id: true, number: true, status: true, gateway: true, cregisOrderId: true },
+  })
+  if (!order?.gateway) return { state: null, reference: null }
+  const reference = paymentReference(order.number)
+  if (order.status === 'paid') return { state: 'confirmed', reference }
+
+  if (order.gateway === testGateway.id && testPaymentsAllowed()) return { state: 'simulate', reference }
+
+  const connected = await connectForConfirmation(order.gateway)
+  if (order.status === 'pending' && connected?.gateway.verify && !connected.gateway.rail) {
+    try {
+      const events = await connected.gateway.verify(
+        { orderId: order.id, sessionId: sessionIdOf(order.gateway, order.cregisOrderId) },
+        connected.cfg,
+      )
+      await applyGatewayEvents(connected.gateway, events)
+      const after = await db.checkoutOrder.findUnique({ where: { id: order.id }, select: { status: true } })
+      if (after?.status === 'paid') return { state: 'confirmed', reference }
+    } catch (error) {
+      // The webhook will still arrive; the buyer is told to watch their inbox.
+      console.error(`[payments:${order.gateway}] could not verify order ${order.id} on return`, error)
+    }
+  }
+  if (claimed || order.gateway.startsWith('custom-')) return { state: 'claimed', reference }
+  return { state: 'waiting', reference }
+}
 
 /**
  * Landing page after the payment processor redirects the browser back.
@@ -14,11 +63,60 @@ export const metadata: Metadata = { title: 'Payment received' }
  * verified server-to-server webhook (build spec §5, requirement 5), so this page can
  * only tell the buyer to watch their inbox.
  */
-export default function CheckoutSuccessPage({
+export default async function CheckoutSuccessPage({
   searchParams,
 }: {
-  searchParams: { session_id?: string }
+  searchParams: { session_id?: string; order?: string; claimed?: string }
 }) {
+  const { state, reference } = await settleOnReturn(searchParams.order, searchParams.claimed === '1')
+
+  if (state === 'confirmed' || state === 'simulate' || state === 'claimed') {
+    const Icon = state === 'confirmed' ? CheckCircle2 : state === 'claimed' ? Clock : MailCheck
+    return (
+      <div className="mx-auto max-w-lg px-5 py-24 text-center">
+        {state === 'confirmed' && <ClearPaidCart />}
+        <div className="mx-auto mb-7 flex h-14 w-14 items-center justify-center rounded-full border border-accent/40 bg-accent/10">
+          <Icon className="h-6 w-6 text-accent" aria-hidden />
+        </div>
+        {state === 'confirmed' && (
+          <>
+            <h1 className="text-3xl text-ink">Order confirmed</h1>
+            <p className="mt-5 text-[16px] leading-relaxed text-ink-dim">
+              Payment for order {reference} is confirmed. Your access is on its way by email — if you already have an
+              account, it is in your account now.
+            </p>
+            <div className="mt-9 flex flex-wrap justify-center gap-3">
+              <ButtonLink href="/dashboard" size="lg">
+                Go to my reports
+              </ButtonLink>
+              <ButtonLink href="/redeem" size="lg" variant="secondary">
+                I have a code
+              </ButtonLink>
+            </div>
+          </>
+        )}
+        {state === 'claimed' && (
+          <>
+            <h1 className="text-3xl text-ink">Thank you — we&rsquo;ll confirm shortly</h1>
+            <p className="mt-5 text-[16px] leading-relaxed text-ink-dim">
+              As soon as your payment for order {reference} reaches us we will confirm it and email you your access.
+              There is nothing more to do.
+            </p>
+          </>
+        )}
+        {state === 'simulate' && searchParams.order && (
+          <>
+            <h1 className="text-3xl text-ink">Test payment</h1>
+            <p className="mt-5 text-[16px] leading-relaxed text-ink-dim">
+              This is the test provider: no money moves. Simulate the payment to see what a buyer gets.
+            </p>
+            <SimulatePayment orderId={searchParams.order} />
+          </>
+        )}
+      </div>
+    )
+  }
+
   /*
    * Card and crypto both land here, and they do not settle the same way.
    *
