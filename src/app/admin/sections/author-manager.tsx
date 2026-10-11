@@ -27,6 +27,8 @@ export type AuthorRow = {
   comingSoon: boolean
   archived: boolean
   sectionCount: number
+  /** The member account that opens this expert's page, once invited. */
+  portal: { email: string; signedIn: boolean } | null
 }
 
 const EMPTY = {
@@ -45,9 +47,10 @@ const EMPTY = {
 /**
  * Author profiles — the part members actually see.
  *
- * This is a profile, not an account: there is no password field and no invitation, because
- * an author cannot sign in. Everything here is public, which is why the form says so next
- * to the biography rather than leaving somebody to find out by looking at the live page.
+ * The profile is public, which is why the form says so next to the biography rather than
+ * leaving somebody to find out by looking at the live page. Signing in is separate: an
+ * expert invited to their page signs in through an ordinary member account, linked below
+ * their row, and nothing about that account appears on the profile.
  */
 export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
   const router = useRouter()
@@ -302,6 +305,7 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
                 <p className="font-mono text-[12px] text-ink-dim">
                   {author.sectionCount} section{author.sectionCount === 1 ? '' : 's'}
                 </p>
+                <ExpertPortalAccess authorId={author.id} name={author.name} portal={author.portal} />
               </div>
               {author.archived && <Badge tone="muted">retired</Badge>}
               <div className="flex gap-2">
@@ -350,5 +354,116 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
         </ul>
       )}
     </section>
+  )
+}
+
+/**
+ * Whether this expert can open their page, and the controls to invite them or take it away.
+ * Inviting links the member with that email (or creates one holding nothing) and emails a
+ * link to the sign-in page; see portal-account.ts.
+ */
+function ExpertPortalAccess({
+  authorId,
+  name,
+  portal,
+}: {
+  authorId: string
+  name: string
+  portal: AuthorRow['portal']
+}) {
+  const router = useRouter()
+  const toast = useToast()
+  const [inviting, setInviting] = React.useState(false)
+  const [email, setEmail] = React.useState('')
+  const [busy, setBusy] = React.useState(false)
+
+  async function invite(address: string) {
+    setBusy(true)
+    try {
+      const response = await fetch(`/api/admin/authors/${authorId}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: address }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        toast(data.error ?? 'The invitation could not be sent.', 'error')
+        return
+      }
+      toast(data.sent ? 'Invitation sent' : (data.note ?? 'Linked, but no invitation went out.'), data.sent ? 'success' : 'error')
+      setInviting(false)
+      router.refresh()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm(`Take the expert page away from ${portal?.email}? Their account and profile stay.`)) return
+    setBusy(true)
+    try {
+      const response = await fetch(`/api/admin/authors/${authorId}/invite`, { method: 'DELETE' })
+      toast(response.ok ? 'Portal access removed' : 'That could not be changed.', response.ok ? 'success' : 'error')
+      router.refresh()
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (portal) {
+    return (
+      <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-dim">
+        <span>
+          Expert page: <span className="break-all text-ink">{portal.email}</span>
+          {portal.signedIn ? '' : ' · not signed in yet'}
+        </span>
+        <button type="button" disabled={busy} onClick={() => invite(portal.email)} className="underline underline-offset-4 hover:text-ink">
+          Resend
+        </button>
+        <button type="button" disabled={busy} onClick={remove} className="underline underline-offset-4 hover:text-ink">
+          Remove access
+        </button>
+      </p>
+    )
+  }
+
+  if (!inviting) {
+    return (
+      <button
+        type="button"
+        onClick={() => setInviting(true)}
+        className="mt-1 text-[13px] text-ink-dim underline underline-offset-4 hover:text-ink"
+      >
+        Invite to their expert page
+      </button>
+    )
+  }
+
+  return (
+    <form
+      className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center"
+      onSubmit={(event) => {
+        event.preventDefault()
+        if (email.trim()) void invite(email.trim())
+      }}
+    >
+      <Input
+        type="email"
+        value={email}
+        onChange={(event) => setEmail(event.target.value)}
+        placeholder={`${name.split(' ')[0].toLowerCase()}@example.com`}
+        aria-label={`Email ${name} signs in with`}
+        className="sm:max-w-xs"
+        autoFocus
+      />
+      <div className="flex gap-2">
+        <Button type="submit" size="sm" disabled={busy || !email.trim()}>
+          Send invitation
+        </Button>
+        <Button type="button" size="sm" variant="secondary" onClick={() => setInviting(false)}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   )
 }

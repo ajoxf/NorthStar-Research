@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import { AccountForms } from '@/app/(portal)/account/account-forms'
 import { Badge, statusTone } from '@/components/ui/badge'
 import { accessSummary, type AccessLine } from '@/lib/access-summary'
-import { isAffiliateMember } from '@/lib/affiliate-account'
+import { isAffiliateMember, isExpertMember } from '@/lib/portal-account'
 import { daysUntilRenewal, getCurrentMember, readSession } from '@/lib/auth'
 import { canSetPasswordWithoutCurrent } from '@/lib/password-reset-shape'
 import { db } from '@/lib/db'
@@ -21,7 +21,7 @@ export default async function AccountPage() {
 
   const daysLeft = daysUntilRenewal(member)
   const access = await accessSummary(member)
-  const isAffiliate = await isAffiliateMember(member.id)
+  const [isAffiliate, isExpert] = await Promise.all([isAffiliateMember(member.id), isExpertMember(member.id)])
 
   const reportsRead = await db.reportView.findMany({
     where: { memberId: member.id },
@@ -34,7 +34,16 @@ export default async function AccountPage() {
       <span className="eyebrow">Your account</span>
       <h1 className="mt-3 text-3xl text-ink sm:text-4xl">Settings</h1>
 
-      {/* The header nav is hidden on a phone, so the affiliate page is linked here too. */}
+      {/* The header nav is hidden on a phone, so these pages are linked here too. */}
+      {isExpert && (
+        <p className="mt-4 text-[15px] text-ink-dim">
+          Your subscribers, sales and withdrawals are on{' '}
+          <Link href="/expert" className="text-accent underline underline-offset-4">
+            your expert page
+          </Link>
+          .
+        </p>
+      )}
       {isAffiliate && (
         <p className="mt-4 text-[15px] text-ink-dim">
           Your referral link, earnings and withdrawals are on{' '}

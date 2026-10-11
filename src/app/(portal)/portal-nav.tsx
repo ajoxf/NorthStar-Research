@@ -12,12 +12,25 @@ const LINKS = [
   { href: '/account', label: 'Account' },
 ]
 
-export function PortalNav({ isAdmin, isAffiliate }: { isAdmin: boolean; isAffiliate: boolean }) {
+export function PortalNav({
+  isAdmin,
+  isAffiliate,
+  isExpert,
+}: {
+  isAdmin: boolean
+  isAffiliate: boolean
+  isExpert: boolean
+}) {
+  const links = [
+    ...LINKS,
+    ...(isExpert ? [{ href: '/expert', label: 'Expert' }] : []),
+    ...(isAffiliate ? [{ href: '/affiliate', label: 'Affiliate' }] : []),
+  ]
   const pathname = usePathname()
 
   return (
     <nav className="hidden items-center gap-1 sm:flex">
-      {[...LINKS, ...(isAffiliate ? [{ href: '/affiliate', label: 'Affiliate' }] : [])].map((link) => {
+      {links.map((link) => {
         const active = pathname === link.href || pathname.startsWith(`${link.href}/`)
         return (
           <Link

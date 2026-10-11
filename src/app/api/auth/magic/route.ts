@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { emailSchema } from '@/lib/validation'
 
-import { landingFor } from '@/lib/affiliate-account'
+import { landingFor } from '@/lib/portal-account'
 import { db } from '@/lib/db'
 import { startSession } from '@/lib/auth'
 import { appBaseUrl } from '@/lib/env'

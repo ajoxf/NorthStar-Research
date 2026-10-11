@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { LoginForm } from '@/app/(auth)/login/login-form'
-import { landingFor } from '@/lib/affiliate-account'
+import { landingFor } from '@/lib/portal-account'
 import { getCurrentMember } from '@/lib/auth'
 import { trialOffers } from '@/lib/trial'
 

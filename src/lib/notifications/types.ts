@@ -89,10 +89,10 @@ export interface NotificationProvider {
     invite: { price: string; interval: string; joinUrl: string; message?: string | null },
   ): Promise<DeliveryResult>
   /**
-   * An affiliate invited to their page in the member portal. Carries a link to the sign-in
-   * page, never a sign-in token: the invitation can sit in an inbox for weeks.
+   * An affiliate or expert invited to their page in the member portal. Carries a link to the
+   * sign-in page, never a sign-in token: the invitation can sit in an inbox for weeks.
    */
-  sendAffiliateInvite(recipient: { email: string; name?: string | null }, signInUrl: string): Promise<DeliveryResult>
+  sendPortalInvite(recipient: { email: string; name?: string | null }, invite: PortalInvite): Promise<DeliveryResult>
 
   /**
    * Transactional: welcome a member whose membership has just become active.
@@ -140,3 +140,6 @@ export interface NotificationProvider {
     renewUrl: string,
   ): Promise<DeliveryResult>
 }
+
+/** Whose page an invitation opens, and the sign-in page that leads to it. */
+export type PortalInvite = { role: 'affiliate' | 'expert'; signInUrl: string }

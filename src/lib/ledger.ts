@@ -468,14 +468,25 @@ export async function balanceForAffiliate(
   affiliateId: string,
   now: Date = new Date(),
 ): Promise<Balance & { earnedCents: number; paidCents: number }> {
+  return balanceWithTotals({ affiliateId }, now)
+}
+
+/**
+ * A balance with the two figures a portal page leads with: everything earned (less what
+ * refunds took back) and everything paid out. Either party — an expert or an affiliate.
+ */
+export async function balanceWithTotals(
+  party: { authorId: string } | { affiliateId: string },
+  now: Date = new Date(),
+): Promise<Balance & { earnedCents: number; paidCents: number }> {
   const entries = await db.ledgerEntry.findMany({
-    where: { affiliateId },
+    where: party,
     select: { kind: true, amountCents: true, payableAt: true },
   })
   return {
     ...balanceOf(entries, now),
     earnedCents: entries
-      .filter((entry) => entry.kind === 'commission' || entry.kind === 'reversal')
+      .filter((entry) => entry.kind === 'earning' || entry.kind === 'commission' || entry.kind === 'reversal')
       .reduce((sum, entry) => sum + entry.amountCents, 0),
     paidCents: -entries.filter((entry) => entry.kind === 'payout').reduce((sum, entry) => sum + entry.amountCents, 0),
   }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 
-import { landingFor } from '@/lib/affiliate-account'
+import { landingFor } from '@/lib/portal-account'
 import { db } from '@/lib/db'
 import { startSession } from '@/lib/auth'
 import { appBaseUrl } from '@/lib/env'
