@@ -48,6 +48,9 @@ export async function callJson<T = unknown>(provider: string, url: string, init:
 function providerMessage(body: unknown): string | null {
   if (!body || typeof body !== 'object') return null
   const record = body as Record<string, unknown>
+  // OAuth-style answers put the words beside a short code: "invalid_client" says less than
+  // "Client Authentication failed".
+  if (typeof record.error_description === 'string') return record.error_description
   const nested = record.error
   if (typeof nested === 'string') return nested
   if (nested && typeof nested === 'object') {

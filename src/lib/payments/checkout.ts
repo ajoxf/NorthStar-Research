@@ -267,11 +267,6 @@ async function startOnePeriodCheckout(
   }
 }
 
-/** The provider's own session id, as stored on an order by startOnePeriodCheckout. */
-export function sessionIdOf(gatewayId: string, stored: string): string {
-  return stored.startsWith(`${gatewayId}:`) ? stored.slice(gatewayId.length + 1) : stored
-}
-
 /**
  * The response for a checkout that did not start. Every message ends by saying nothing was
  * charged, because that is the first thing a buyer looking at an error wants to know.

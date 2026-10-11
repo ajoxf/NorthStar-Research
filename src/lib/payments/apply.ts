@@ -4,6 +4,8 @@ import { Prisma } from '@prisma/client'
 
 import { db } from '@/lib/db'
 import { fulfilPaidOrder, type FulfilmentResult } from '@/lib/fulfilment'
+import { recordRefund } from '@/lib/ledger'
+import { refundEventId } from '@/lib/payments/provider-refund'
 import type { GatewayEvent, PaymentGateway } from '@/lib/payments/gateway-types'
 
 /**
@@ -21,8 +23,12 @@ import type { GatewayEvent, PaymentGateway } from '@/lib/payments/gateway-types'
  */
 export async function applyGatewayEvents(gateway: PaymentGateway, events: GatewayEvent[]): Promise<boolean> {
   for (const original of events) {
-    const event = await resolveOrderNumber(gateway.id, original)
-    if (!event) continue
+    const resolved = await resolveOrderNumber(gateway.id, original)
+    if (!resolved) continue
+    // A refund is keyed by the provider's refund id, the same key an admin's own refund
+    // claims (provider-refund.ts), so the two can never both record it.
+    const event: GatewayEvent =
+      resolved.type === 'refund.succeeded' ? { ...resolved, eventId: refundEventId(resolved.refundId) } : resolved
     const orderId = 'orderId' in event ? event.orderId : null
 
     try {
@@ -91,11 +97,25 @@ async function applyOne(gateway: PaymentGateway, event: GatewayEvent): Promise<v
     return
   }
 
-  // A refund made in the provider's own dashboard. No provider here sends these yet; when
-  // one does, it is recorded through recordRefund like a refund an admin records.
-  console.error(
-    `[payments:${gateway.id}] refund ${event.refundId} of ${event.amountMinor} on order ${event.orderId} — record it on Earnings → Record refund`,
-  )
+  // A refund made in the provider's own dashboard: recorded like one an admin records, so the
+  // experts' and affiliate's shares come back and access paid for by all of it ends.
+  const order = await db.checkoutOrder.findUnique({ where: { id: event.orderId }, select: { gateway: true } })
+  if (order?.gateway !== gateway.id) {
+    console.error(`[payments:${gateway.id}] ignored a refund for order ${event.orderId}, placed with ${order?.gateway ?? 'nobody'}`)
+    return
+  }
+  const recorded = await recordRefund({
+    orderId: event.orderId,
+    amountCents: event.amountMinor,
+    authorId: null,
+    reason: `Refunded in ${gateway.name}`,
+    providerRefundId: event.refundId,
+  })
+  if (!recorded.ok) {
+    // Not something a retry will fix (too much, or an order already fully refunded): say so
+    // and stop, rather than have the provider retry it for days.
+    console.error(`[payments:${gateway.id}] refund ${event.refundId} on ${event.orderId} not recorded: ${recorded.error}`)
+  }
 }
 
 /**

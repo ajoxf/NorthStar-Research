@@ -974,6 +974,12 @@ model Refund {
   recordedByMemberId String?
   recordedBy         Member? @relation("RefundRecordedBy", fields: [recordedByMemberId], references: [id])
 
+  /// The provider's own id for this refund — Razorpay's rfnd_…, PayPal's, Tap's re_… —
+  /// when it went through a provider. Not a unique column (adding one to a live table is
+  /// not additive); the once-only guarantee is PaymentEvent's unique "refund:{id}" row,
+  /// which a refund sent from here and the provider's notification of it both claim.
+  providerRefundId String?
+
   /// When the money actually went back, which may not be when it was typed in.
   refundedAt DateTime @default(now())
   createdAt  DateTime @default(now())
@@ -983,6 +989,7 @@ model Refund {
   @@index([orderId])
   @@index([refundedAt])
   @@index([authorId])
+  @@index([providerRefundId])
 }
 
 /// What a ledger row is.
