@@ -13,6 +13,7 @@ import {
   affiliateClients,
   affiliateOverview,
   affiliateStatement,
+  affiliateSubs,
   type StatementRow,
 } from '@/lib/affiliate-report'
 import { describeReward, referralLink } from '@/lib/affiliates'
@@ -42,6 +43,7 @@ const TABS = [
   { id: 'clients', label: 'Clients' },
   { id: 'statement', label: 'Statement' },
   { id: 'links', label: 'Links & campaigns' },
+  { id: 'subs', label: 'Sub-affiliates' },
   { id: 'withdrawals', label: 'Withdrawals' },
 ] as const
 type Tab = (typeof TABS)[number]['id']
@@ -62,6 +64,9 @@ export default async function AffiliatePage({ searchParams }: { searchParams: Re
   const tabParam = String(searchParams.tab ?? 'overview')
   const tab: Tab = TABS.some((entry) => entry.id === tabParam) ? (tabParam as Tab) : 'overview'
   const days = parsePeriod(searchParams.days, tab === 'statement' ? 90 : 30)
+  // The tab shows for a master partner only: anyone else has nothing in it.
+  const isMaster = (await db.affiliate.count({ where: { parentAffiliateId: affiliate.id } })) > 0
+  const tabs = TABS.filter((entry) => entry.id !== 'subs' || isMaster)
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12">
@@ -85,7 +90,7 @@ export default async function AffiliatePage({ searchParams }: { searchParams: Re
       )}
 
       <nav aria-label="Affiliate sections" className="mt-8 flex gap-1 overflow-x-auto border-b border-line">
-        {TABS.map((entry) => (
+        {tabs.map((entry) => (
           <Link
             key={entry.id}
             href={entry.id === 'overview' ? '/affiliate' : `/affiliate?tab=${entry.id}`}
@@ -105,6 +110,7 @@ export default async function AffiliatePage({ searchParams }: { searchParams: Re
         {tab === 'statement' && <StatementTab affiliateId={affiliate.id} days={days} />}
         {tab === 'links' && <LinksTab affiliateId={affiliate.id} slug={affiliate.slug} days={days} />}
         {tab === 'withdrawals' && <WithdrawalsTab affiliateId={affiliate.id} />}
+        {tab === 'subs' && isMaster && <SubsTab affiliateId={affiliate.id} days={days} />}
       </div>
     </div>
   )
@@ -298,9 +304,11 @@ async function StatementTab({ affiliateId, days }: { affiliateId: string; days: 
                     {row.items || (row.kind === 'payout' ? 'Withdrawal' : '—')}
                     {row.campaign && <div className="font-mono text-[12px] text-ink-dim">#{row.campaign}</div>}
                   </td>
-                  <td className="px-4 py-3 text-[14px] text-ink-dim">{row.client ?? '—'}</td>
+                  <td className="px-4 py-3 text-[14px] text-ink-dim">
+                    {row.via ? <span className="whitespace-nowrap">via {row.via}</span> : row.client ?? '—'}
+                  </td>
                   <td className="px-4 py-3 text-right font-mono text-[14px] text-ink-dim">{row.saleCents === null ? '—' : money(row.saleCents)}</td>
-                  <td className="px-4 py-3 text-right font-mono text-[14px] text-ink-dim">{row.ratePercent === null ? '—' : `${row.ratePercent}%`}</td>
+                  <td className="px-4 py-3 text-right font-mono text-[14px] text-ink-dim">{row.ratePercent === null ? '—' : `${row.ratePercent}%${row.kind === 'override' ? ' override' : ''}`}</td>
                   <td className="px-4 py-3 text-right font-mono text-[14px] text-ink">{money(row.amountCents)}</td>
                   <td className="whitespace-nowrap px-4 py-3">
                     <Badge tone={STATUS_PILL[row.status].tone}>{STATUS_PILL[row.status].label}</Badge>
@@ -390,6 +398,66 @@ async function LinksTab({ affiliateId, slug, days }: { affiliateId: string; slug
           )}
         </div>
       </section>
+    </div>
+  )
+}
+
+async function SubsTab({ affiliateId, days }: { affiliateId: string; days: Period }) {
+  const subs = await affiliateSubs(affiliateId, days)
+  const active = subs.filter((sub) => sub.status === 'active').length
+  const sum = (pick: (row: (typeof subs)[number]) => number) => subs.reduce((total, row) => total + pick(row), 0)
+
+  return (
+    <div className="space-y-6">
+      <PeriodPicker tab="subs" days={days} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Stat label="Sub-affiliates" value={String(subs.length)} hint={`${active} active`} />
+        <Stat label="Their sales" value={String(sum((row) => row.sales))} hint={periodLabel(days)} />
+        <Stat label="Sales value" value={money(sum((row) => row.revenueCents))} hint="After tax and refunds" />
+        <Stat label="Your override" value={money(sum((row) => row.overrideCents))} accent={sum((row) => row.overrideCents) > 0} />
+      </div>
+
+      <div className="panel relative overflow-x-auto">
+        <table className="w-full min-w-[44rem] text-left">
+          <thead>
+            <tr className="border-b border-line">
+              <Th>Partner</Th>
+              <Th>Status</Th>
+              <Th>Joined</Th>
+              <Th right>Clicks</Th>
+              <Th right>Sales</Th>
+              <Th right>Sales value</Th>
+              <Th right>Your override</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {subs.map((sub) => (
+              <tr key={sub.id} className="border-b border-line/60 last:border-0">
+                <td className="px-4 py-3">
+                  <div className="text-[15px] text-ink">{sub.name}</div>
+                  <div className="font-mono text-[13px] text-ink-dim">{sub.slug}</div>
+                </td>
+                <td className="px-4 py-3">
+                  <Badge tone={sub.status === 'active' ? 'accent' : 'muted'}>{sub.status}</Badge>
+                </td>
+                <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">{formatDate(sub.joinedAt)}</td>
+                <td className="px-4 py-3 text-right font-mono text-[14px] text-ink">{sub.clicks}</td>
+                <td className="px-4 py-3 text-right font-mono text-[14px] text-ink">{sub.sales}</td>
+                <td className="px-4 py-3 text-right font-mono text-[14px] text-ink">{money(sub.revenueCents)}</td>
+                <td className="px-4 py-3 text-right font-mono text-[14px] text-ink">
+                  {money(sub.overrideCents)}
+                  <div className="text-[12px] text-ink-dim">{sub.overridePercent}%</div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-[14px] leading-relaxed text-ink-dim">
+        You earn an override on every sale your sub-affiliates make, on top of their own commission — it never comes out
+        of theirs. It is a percent of the sale before tax, held {DEFAULT_HOLDBACK_DAYS} days like your commission, and a
+        refund takes it back. Their clients stay theirs, so they are not listed here.
+      </p>
     </div>
   )
 }

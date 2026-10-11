@@ -489,7 +489,7 @@ export async function balanceWithTotals(
   return {
     ...balanceOf(entries, now),
     earnedCents: entries
-      .filter((entry) => entry.kind === 'earning' || entry.kind === 'commission' || entry.kind === 'reversal')
+      .filter((entry) => ['earning', 'commission', 'override', 'reversal'].includes(entry.kind))
       .reduce((sum, entry) => sum + entry.amountCents, 0),
     paidCents: -entries.filter((entry) => entry.kind === 'payout').reduce((sum, entry) => sum + entry.amountCents, 0),
   }

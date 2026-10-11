@@ -1,5 +1,6 @@
 import 'server-only'
 
+import { SUB_AFFILIATE_OVERRIDE_PERCENT } from '@/lib/commission-shape'
 import { db } from '@/lib/db'
 import {
   type DayPoint,
@@ -98,7 +99,7 @@ export async function affiliateOverview(affiliateId: string, days: number, now: 
     db.referral.findMany({ where: { affiliateId, signedUpAt: { gte: since } }, select: { signedUpAt: true } }),
     paidOrders(affiliateId, since),
     db.ledgerEntry.findMany({
-      where: { affiliateId, kind: { in: ['commission', 'reversal'] }, createdAt: { gte: since } },
+      where: { affiliateId, kind: { in: ['commission', 'override', 'reversal'] }, createdAt: { gte: since } },
       select: { amountCents: true, createdAt: true },
     }),
   ])
@@ -212,7 +213,9 @@ export async function affiliateClients(affiliateId: string): Promise<AffiliateCl
 export type StatementRow = {
   id: string
   at: Date
-  kind: 'commission' | 'reversal' | 'payout' | 'adjustment'
+  kind: 'commission' | 'override' | 'reversal' | 'payout' | 'adjustment'
+  /** For an override: the sub-affiliate whose sale it was. Their client is theirs, not shown. */
+  via: string | null
   orderNumber: number | null
   items: string
   client: string | null
@@ -232,7 +235,7 @@ export type StatementRow = {
 export async function affiliateStatement(affiliateId: string, days: number, now: Date = new Date()): Promise<StatementRow[]> {
   const since = periodStart(days, now)
   const entries = await db.ledgerEntry.findMany({
-    where: { affiliateId, createdAt: { gte: since }, kind: { in: ['commission', 'reversal', 'payout', 'adjustment'] } },
+    where: { affiliateId, createdAt: { gte: since }, kind: { in: ['commission', 'override', 'reversal', 'payout', 'adjustment'] } },
     orderBy: { createdAt: 'desc' },
     select: {
       id: true,
@@ -244,14 +247,14 @@ export async function affiliateStatement(affiliateId: string, days: number, now:
       note: true,
       createdAt: true,
       orderId: true,
-      order: { select: { number: true, email: true, affiliateCampaign: true, lines: { select: { name: true }, orderBy: { position: 'asc' } } } },
-      refund: { select: { order: { select: { number: true, email: true, affiliateCampaign: true, lines: { select: { name: true }, orderBy: { position: 'asc' } } } } } },
+      order: { select: { number: true, email: true, affiliateId: true, affiliateCampaign: true, affiliate: { select: { name: true } }, lines: { select: { name: true }, orderBy: { position: 'asc' } } } },
+      refund: { select: { order: { select: { number: true, email: true, affiliateId: true, affiliateCampaign: true, affiliate: { select: { name: true } }, lines: { select: { name: true }, orderBy: { position: 'asc' } } } } } },
     },
   })
 
   // What refunds took back per order, from any date — a sale in this period may have been
   // refunded after it, and one refunded in full should not read as money on its way.
-  const orderIds = entries.flatMap((entry) => (entry.kind === 'commission' && entry.orderId ? [entry.orderId] : []))
+  const orderIds = entries.flatMap((entry) => ((entry.kind === 'commission' || entry.kind === 'override') && entry.orderId ? [entry.orderId] : []))
   const reversals = orderIds.length
     ? await db.ledgerEntry.findMany({
         where: { affiliateId, kind: 'reversal', refund: { orderId: { in: orderIds } } },
@@ -277,19 +280,22 @@ export async function affiliateStatement(affiliateId: string, days: number, now:
     const order = entry.order ?? entry.refund?.order ?? null
     const member = order ? memberByEmail.get(order.email.toLowerCase()) : undefined
     const kind = entry.kind as StatementRow['kind']
+    // A reversal on a sub-affiliate's sale belongs to the override it reverses.
+    const throughSub = !!order && order.affiliateId !== affiliateId
     return {
       id: entry.id,
       at: entry.createdAt,
       kind,
       orderNumber: order?.number ?? null,
       items: order ? order.lines.map((line) => line.name).join(', ') : entry.note ?? '',
-      client: order ? maskName(member?.firstName, member?.lastName, order.email) : null,
-      campaign: order?.affiliateCampaign ?? null,
+      client: order && !throughSub ? maskName(member?.firstName, member?.lastName, order.email) : null,
+      campaign: throughSub ? null : order?.affiliateCampaign ?? null,
+      via: throughSub ? order?.affiliate?.name ?? 'Sub-affiliate' : null,
       saleCents: entry.basisCents,
       ratePercent: entry.sharePercent,
       amountCents: entry.amountCents,
       status:
-        kind === 'commission'
+        kind === 'commission' || kind === 'override'
           ? entry.amountCents + (reversedByOrder.get(entry.orderId ?? '') ?? 0) <= 0
             ? 'refunded'
             : entry.payableAt && entry.payableAt > now
@@ -349,4 +355,75 @@ export async function affiliateCampaigns(affiliateId: string, days: number, now:
     entry.commissionCents += commission.get(order.id) ?? 0
   }
   return [...rows.values()].sort((a, b) => b.clicks + b.sales * 100 - (a.clicks + a.sales * 100))
+}
+
+// ---------------------------------------------------------------------------------------
+// Sub-affiliates
+// ---------------------------------------------------------------------------------------
+
+export type SubAffiliateRow = {
+  id: string
+  name: string
+  slug: string
+  status: string
+  joinedAt: Date
+  overridePercent: number
+  clicks: number
+  sales: number
+  revenueCents: number
+  /** What the master earned on this sub's sales in the period, after refunds. */
+  overrideCents: number
+}
+
+/**
+ * The partners an affiliate brought in, with what each sold in the period and what the
+ * master earned on it. Partners rather than customers, so named in full — but their own
+ * clients stay theirs: nothing here reaches past the sub-affiliate to who bought.
+ */
+export async function affiliateSubs(affiliateId: string, days: number, now: Date = new Date()): Promise<SubAffiliateRow[]> {
+  const since = periodStart(days, now)
+  const subs = await db.affiliate.findMany({
+    where: { parentAffiliateId: affiliateId },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, name: true, slug: true, status: true, createdAt: true, overridePercent: true },
+  })
+  if (subs.length === 0) return []
+  const ids = subs.map((sub) => sub.id)
+
+  const [clicks, orders, overrides] = await Promise.all([
+    db.referral.groupBy({ by: ['affiliateId'], where: { affiliateId: { in: ids }, visitedAt: { gte: since } }, _count: true }),
+    db.checkoutOrder.findMany({
+      where: { affiliateId: { in: ids }, status: 'paid', isTest: false, paidAt: { gte: since } },
+      select: { ...ORDER_SELECT, affiliateId: true },
+    }),
+    db.ledgerEntry.findMany({
+      where: {
+        affiliateId,
+        createdAt: { gte: since },
+        OR: [
+          { kind: 'override', order: { affiliateId: { in: ids } } },
+          { kind: 'reversal', refund: { order: { affiliateId: { in: ids } } } },
+        ],
+      },
+      select: { amountCents: true, order: { select: { affiliateId: true } }, refund: { select: { order: { select: { affiliateId: true } } } } },
+    }),
+  ])
+
+  return subs.map((sub) => {
+    const mine = orders.filter((order) => order.affiliateId === sub.id)
+    return {
+      id: sub.id,
+      name: sub.name,
+      slug: sub.slug,
+      status: sub.status,
+      joinedAt: sub.createdAt,
+      overridePercent: sub.overridePercent ?? SUB_AFFILIATE_OVERRIDE_PERCENT,
+      clicks: clicks.find((row) => row.affiliateId === sub.id)?._count ?? 0,
+      sales: mine.length,
+      revenueCents: mine.reduce((sum, order) => sum + netCents(order), 0),
+      overrideCents: overrides
+        .filter((entry) => (entry.order?.affiliateId ?? entry.refund?.order.affiliateId) === sub.id)
+        .reduce((sum, entry) => sum + entry.amountCents, 0),
+    }
+  })
 }

@@ -18,6 +18,8 @@ type Affiliate = {
   visitorDiscountPercent: number | null
   commissionOn: 'first_payment' | 'every_payment'
   notes: string | null
+  parentAffiliateId: string | null
+  overridePercent: number | null
   link: string
   rewardDescription: string
 }
@@ -44,8 +46,14 @@ export function AffiliatePanel({
   affiliate,
   portal,
   awards,
+  masters,
+  subs,
 }: {
   affiliate: Affiliate
+  /** Partners who can be this affiliate's master: those not under a master themselves. */
+  masters: { id: string; name: string; slug: string }[]
+  /** This affiliate's own sub-affiliates, if they are a master. */
+  subs: { id: string; name: string; status: string }[]
   /** The member account that opens this affiliate's page, when one is linked. */
   portal: { email: string; lastSignIn: string | null } | null
   awards: Award[]
@@ -226,6 +234,8 @@ export function AffiliatePanel({
                 commissionOn: String(form.get('commissionOn') ?? affiliate.commissionOn),
                 visitorDiscountPercent: discount > 0 ? discount : null,
                 notes: String(form.get('notes') ?? '') || null,
+                ...(subs.length === 0 ? { parentAffiliateId: String(form.get('parentAffiliateId') ?? '') || null } : {}),
+                overridePercent: form.get('overridePercent') ? Number(form.get('overridePercent')) : null,
               },
               'Terms saved',
             )
@@ -292,6 +302,45 @@ export function AffiliatePanel({
             <div>
               <Label htmlFor="notes">Notes</Label>
               <Input id="notes" name="notes" defaultValue={affiliate.notes ?? ''} />
+            </div>
+            <div>
+              <Label htmlFor="parentAffiliateId">Master partner</Label>
+              {subs.length > 0 ? (
+                <p className="mt-2 text-[15px] text-ink-dim">
+                  Master of {subs.length} sub-affiliate{subs.length === 1 ? '' : 's'}:{' '}
+                  {subs.map((sub) => sub.name).join(', ')}. A master cannot sit under another master.
+                </p>
+              ) : (
+                <>
+                  <select
+                    id="parentAffiliateId"
+                    name="parentAffiliateId"
+                    defaultValue={affiliate.parentAffiliateId ?? ''}
+                    className="h-11 w-full rounded-lg border border-line bg-panel-2 px-3 text-[17px] text-ink"
+                  >
+                    <option value="">None</option>
+                    {masters.map((master) => (
+                      <option key={master.id} value={master.id}>
+                        {master.name} ({master.slug})
+                      </option>
+                    ))}
+                  </select>
+                  <Hint>The master earns an override on this affiliate&rsquo;s sales, on top of their commission.</Hint>
+                </>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="overridePercent">Master&rsquo;s override %</Label>
+              <Input
+                id="overridePercent"
+                name="overridePercent"
+                type="number"
+                min={0}
+                max={50}
+                placeholder="5"
+                defaultValue={affiliate.overridePercent ?? ''}
+              />
+              <Hint>Of the sale before tax, on this affiliate&rsquo;s sales. Blank means 5%.</Hint>
             </div>
           </div>
 

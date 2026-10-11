@@ -47,6 +47,8 @@ export type AuthorEarnings = {
 
 const KIND_LABEL: Record<string, string> = {
   earning: 'Earned',
+  commission: 'Commission',
+  override: 'Override',
   reversal: 'Refunded',
   adjustment: 'Adjustment',
   payout: 'Paid out',
