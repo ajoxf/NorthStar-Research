@@ -1,6 +1,7 @@
 import type {
   DeliveryResult,
   NotificationProvider,
+  PartnerApplication,
   ReceiptDetails,
   Recipient,
   ReportSummary,
@@ -107,6 +108,11 @@ export class ConsoleProvider implements NotificationProvider {
       `[notifications:console] SAMPLE REQUEST → desk | ${request.name} <${request.email}>` +
         (request.note ? ` | ${request.note}` : ''),
     )
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
+  async sendPartnerApplication(to: string, application: PartnerApplication): Promise<DeliveryResult> {
+    console.info(`[notifications:console] PARTNER APPLICATION → ${to} | ${application.name} <${application.email}> wants "${application.slug}"`)
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
 

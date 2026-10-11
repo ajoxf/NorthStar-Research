@@ -461,6 +461,39 @@ export function sampleReportRequestEmail(request: {
   }
 }
 
+export function partnerApplicationEmail(application: {
+  name: string
+  email: string
+  slug: string
+  website?: string | null
+  promotion?: string | null
+  invitedBy?: string | null
+  reviewUrl: string
+}) {
+  const row = (label: string, value: string) =>
+    `<p style="margin:0 0 8px;color:${INK_DIM};font-size:14px;"><span style="color:${INK_DIM};">${label}:</span> <span style="color:${INK};">${escapeHtml(value)}</span></p>`
+  const body = `
+    <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">New partner application</p>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:22px;line-height:1.3;font-weight:600;color:${INK};">${escapeHtml(application.name)}</h1>
+    ${row('Email', application.email)}
+    ${row('Link name', application.slug)}
+    ${application.website ? row('Website or profile', application.website) : ''}
+    ${application.invitedBy ? row('Invited by', application.invitedBy) : ''}
+    ${application.promotion ? `<p style="margin:14px 0 0;color:${INK_DIM};font-size:14px;line-height:1.65;">${escapeHtml(application.promotion)}</p>` : ''}
+    ${button(application.reviewUrl, 'Review the application')}
+    <p style="margin:18px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Nothing is live until you approve it: the link earns nothing while the application is pending.</p>
+  `
+  return {
+    subject: `Partner application — ${application.name}`,
+    html: shell('Partner application', body),
+    text:
+      `New partner application\n\n${application.name}\n${application.email}\nLink name: ${application.slug}\n` +
+      `${application.website ? `Website or profile: ${application.website}\n` : ''}` +
+      `${application.invitedBy ? `Invited by: ${application.invitedBy}\n` : ''}` +
+      `${application.promotion ? `\n${application.promotion}\n` : ''}\nReview it: ${application.reviewUrl}\n`,
+  }
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

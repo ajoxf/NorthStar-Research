@@ -12,6 +12,7 @@ import {
   welcomeEmail,
   reportEmail,
   pricingInviteEmail,
+  partnerApplicationEmail,
   sampleReportRequestEmail,
   portalInviteEmail,
 } from '@/lib/notifications/templates'
@@ -20,6 +21,7 @@ import type {
   LatestReport,
   ReceiptDetails,
   NotificationProvider,
+  PartnerApplication,
   Recipient,
   ReportSummary,
   PortalInvite,
@@ -134,6 +136,11 @@ export class ResendProvider implements NotificationProvider {
     // input from a public form.
     const to = optionalEnv('SAMPLE_REPORT_REQUEST_TO', this.from())
     const { subject, html, text } = sampleReportRequestEmail(request)
+    return this.send(to, subject, html, text)
+  }
+
+  async sendPartnerApplication(to: string, application: PartnerApplication): Promise<DeliveryResult> {
+    const { subject, html, text } = partnerApplicationEmail(application)
     return this.send(to, subject, html, text)
   }
 

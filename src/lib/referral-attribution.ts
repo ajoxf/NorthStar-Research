@@ -44,7 +44,7 @@ export async function recordReferralSignup(slug: string | null, email: string, m
 
   try {
     const affiliate = await db.affiliate.findUnique({ where: { slug } })
-    if (!affiliate || affiliate.status === 'closed') return
+    if (!affiliate || (affiliate.status !== 'active' && affiliate.status !== 'paused')) return
 
     const existing = await db.referral.findFirst({
       where: { affiliateId: affiliate.id, status: 'visited', email: null },

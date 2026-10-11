@@ -7,6 +7,7 @@ import type {
   DeliveryResult,
   LatestReport,
   NotificationProvider,
+  PartnerApplication,
   ReceiptDetails,
   Recipient,
   ReportSummary,
@@ -100,6 +101,10 @@ class CompositeProvider implements NotificationProvider {
     return sendAndRecord('sample_request', request.email, () =>
       this.email.sendSampleReportRequest(request),
     )
+  }
+
+  sendPartnerApplication(to: string, application: PartnerApplication) {
+    return sendAndRecord('partner_application', to, () => this.email.sendPartnerApplication(to, application))
   }
 
   sendWelcomeEmail(

@@ -3,11 +3,13 @@ import type { Metadata } from 'next'
 import { ArrowUpRight } from 'lucide-react'
 
 import { AffiliateCreator } from '@/app/admin/affiliates/affiliate-creator'
+import { ApplicationReview } from '@/app/admin/affiliates/application-review'
 import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
 import { ATTRIBUTION_DAYS, describeReward, formatAward, referralLink } from '@/lib/affiliates'
 import { db } from '@/lib/db'
 import { appBaseUrl } from '@/lib/env'
+import { formatDate } from '@/lib/utils'
 
 export const metadata: Metadata = {
   title: 'Affiliates',
@@ -26,13 +28,21 @@ export const dynamic = 'force-dynamic'
 export default async function AdminAffiliatesPage() {
   await requireAdmin()
 
-  const affiliates = await db.affiliate.findMany({
+  const [applications, affiliates] = await Promise.all([
+    db.affiliate.findMany({
+      where: { status: 'pending' },
+      orderBy: { appliedAt: 'asc' },
+      include: { parentAffiliate: { select: { name: true } } },
+    }),
+    db.affiliate.findMany({
+    where: { status: { not: 'pending' } },
     orderBy: { createdAt: 'desc' },
     include: {
       referrals: { select: { status: true } },
       awards: { select: { amount: true, kind: true, settledAt: true } },
     },
-  })
+    }),
+  ])
 
   const base = safeBaseUrl()
 
@@ -47,6 +57,44 @@ export default async function AdminAffiliatesPage() {
           sign up. Awards are a record of what is owed; paying them happens outside this system.
         </p>
       </div>
+
+      {applications.length > 0 && (
+        <section className="mb-8">
+          <div className="mb-3 flex items-center gap-3">
+            <h2 className="eyebrow">Applications</h2>
+            <Badge tone="accent">{applications.length} waiting</Badge>
+          </div>
+          <div className="space-y-3">
+            {applications.map((application) => (
+              <div key={application.id} className="panel px-5 py-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="min-w-0 max-w-2xl">
+                    <Link href={`/admin/affiliates/${application.id}`} className="text-[19px] text-ink hover:underline">
+                      {application.name}
+                    </Link>
+                    <p className="mt-1 break-all font-mono text-[14px] text-ink-dim">
+                      {application.email} · ?ref={application.slug}
+                    </p>
+                    <p className="mt-1 text-[14px] text-ink-dim">
+                      Applied {application.appliedAt ? formatDate(application.appliedAt) : '—'}
+                      {application.website ? ` · ${application.website}` : ''}
+                      {application.parentAffiliate ? ` · invited by ${application.parentAffiliate.name}` : ''}
+                    </p>
+                    {application.promotion && (
+                      <p className="mt-2 line-clamp-3 whitespace-pre-line text-[15px] leading-relaxed text-ink-dim">{application.promotion}</p>
+                    )}
+                  </div>
+                  <ApplicationReview affiliateId={application.id} name={application.name} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-[14px] text-ink-dim">
+            Approving uses the default terms ({describeReward('percent', 20, 'first_payment')}); open an application to
+            change them first. People apply at <span className="font-mono">/partners</span>.
+          </p>
+        </section>
+      )}
 
       <AffiliateCreator />
 
