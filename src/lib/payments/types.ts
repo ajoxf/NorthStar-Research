@@ -71,6 +71,12 @@ export type StartCheckoutLine = {
   chargeCents: number
   /** Whether the order's offer covers this line. */
   offerApplied: boolean
+  /**
+   * The recurring price to charge instead of the item's own, when the buyer's tax changes
+   * it — tax added on top, or a business reverse-charged. Before any discount, which the
+   * provider applies as usual. Undefined: the item's own price is right.
+   */
+  unitCents?: number
 }
 
 export type StartCheckoutInput = {

@@ -14,7 +14,8 @@ import {
   type FulfilmentLine,
 } from '@/lib/fulfilment-shape'
 import { getNotificationProvider } from '@/lib/notifications'
-import { addPeriod, type BillingIntervalValue } from '@/lib/package-shape'
+import { addPeriod, amountString, type BillingIntervalValue } from '@/lib/package-shape'
+import { formatRate } from '@/lib/tax-shape'
 import { intervalForPackage } from '@/lib/packages'
 
 type Tx = Prisma.TransactionClient
@@ -330,6 +331,13 @@ async function afterPayment(
         method: input.methodLabel,
         reference: input.providerRef,
         paidAt: new Date(),
+        orderReference: `NS-${order.number}`,
+        tax:
+          order.taxCents && order.taxName
+            ? { name: `${order.taxName} ${formatRate(Number(order.taxRate))}`, amount: amountString(order.taxCents) }
+            : null,
+        reverseCharge: order.reverseCharge,
+        invoiceUrl: `${appBaseUrl()}/api/invoices/${order.id}`,
       },
     )
     if (receipt.status === 'failed') console.error(`${tag} receipt failed for ${order.email}: ${receipt.error}`)

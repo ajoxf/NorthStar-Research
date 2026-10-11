@@ -164,6 +164,14 @@ export type ReceiptDetails = {
   /** The processor's own reference, so a query can be traced without guessing. */
   reference: string
   paidAt: Date
+  /** The tax in the amount, when any was charged: "UAE VAT 5%", "4.71". */
+  tax?: { name: string; amount: string } | null
+  /** Reverse-charged: the business accounts for VAT itself. */
+  reverseCharge?: boolean
+  /** Where the tax invoice is. */
+  invoiceUrl?: string | null
+  /** The human order reference, NS-1042. */
+  orderReference?: string | null
 }
 
 /**
@@ -198,10 +206,13 @@ export function receiptEmail(details: ReceiptDetails, firstName?: string | null)
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
       ${row('Item', 'NordStar Pro membership')}
       ${row('Amount', total)}
+      ${details.tax ? row(`Includes ${details.tax.name}`, `${escapeHtml(details.currency)} ${escapeHtml(details.tax.amount)}`) : ''}
+      ${details.reverseCharge ? row('VAT', 'Not charged (reverse charge)') : ''}
       ${row('Method', escapeHtml(details.method))}
       ${row('Date', escapeHtml(paid))}
-      ${row('Reference', escapeHtml(details.reference))}
+      ${row('Reference', escapeHtml(details.orderReference ?? details.reference))}
     </table>
+    ${details.invoiceUrl ? `<p style="margin:18px 0 0;font-size:13px;"><a href="${escapeHtml(details.invoiceUrl)}" style="color:${INK};">View or print your tax invoice</a></p>` : ''}
     <p style="margin:20px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Your access code and activation link are in a separate email. If it has not arrived, check your spam folder before contacting us.</p>
   `
 
@@ -212,9 +223,12 @@ export function receiptEmail(details: ReceiptDetails, firstName?: string | null)
       `Payment received. Thank you — keep this email for your records.\n\n` +
       `Item:      NordStar Pro membership\n` +
       `Amount:    ${details.currency} ${details.amount}\n` +
+      (details.tax ? `Includes ${details.tax.name}: ${details.currency} ${details.tax.amount}\n` : '') +
+      (details.reverseCharge ? `VAT:       not charged (reverse charge)\n` : '') +
       `Method:    ${details.method}\n` +
       `Date:      ${paid}\n` +
-      `Reference: ${details.reference}\n\n` +
+      `Reference: ${details.orderReference ?? details.reference}\n\n` +
+      (details.invoiceUrl ? `Tax invoice: ${details.invoiceUrl}\n\n` : '') +
       `Your access code and activation link are in a separate email.`,
   }
 }

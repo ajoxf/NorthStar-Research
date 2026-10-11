@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const currency = parsed.success ? normaliseCurrency(parsed.data.currency) : undefined
   if (!parsed.success || !currency) return NextResponse.json({ error: 'Unknown currency.' }, { status: 400 })
 
-  const country = buyerCountry(parsed.data.country)
+  const country = await buyerCountry(parsed.data.country)
   const gateways = await gatewaysFor(country, currency)
   return NextResponse.json({
     country,

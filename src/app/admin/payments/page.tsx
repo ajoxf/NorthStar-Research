@@ -170,6 +170,11 @@ export default async function AdminPaymentsPage({
                     {order.paidAt ? formatDate(order.paidAt) : '—'}
                   </td>
                   <td className="px-4 py-3 text-right">
+                    {order.status === 'paid' && !order.isTest && (
+                      <a href={`/api/invoices/${order.id}`} className="text-[15px] text-accent-ink underline underline-offset-4">
+                        Invoice
+                      </a>
+                    )}
                     {(order.status === 'pending' || order.status === 'failed') && !order.isTest && Number(order.amount) > 0 && (
                       <MarkPaid
                         orderId={order.id}
