@@ -80,7 +80,7 @@ async function TrialSignup({ offer }: { offer: TrialOffer }) {
 
       <p className="mt-8 border-t border-line pt-6 text-center text-[14px] text-ink-dim">
         Already have an account?{' '}
-        <Link href="/login" className="text-accent underline underline-offset-4">
+        <Link href="/login" className="text-accent-ink underline underline-offset-4">
           Sign in
         </Link>
       </p>
@@ -123,7 +123,7 @@ function TrialChooser({ offers }: { offers: TrialOffer[] }) {
                         : 'Platform'}
                 </span>
               </span>
-              <span className="shrink-0 text-[14px] font-medium text-accent">
+              <span className="shrink-0 text-[14px] font-medium text-accent-ink">
                 {offer.days} days free
               </span>
             </Link>

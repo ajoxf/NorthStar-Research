@@ -308,7 +308,7 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
   return (
     <div className="rounded-lg border border-line bg-panel px-4 py-3">
       <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
-      <div className={`mt-1 font-mono text-xl ${accent ? 'text-accent' : 'text-ink'}`}>{value}</div>
+      <div className={`mt-1 font-mono text-xl ${accent ? 'text-accent-ink' : 'text-ink'}`}>{value}</div>
     </div>
   )
 }

@@ -285,7 +285,7 @@ export default async function DashboardPage({
                 <span className="min-w-0 text-[15px] text-ink">{one.itemName}</span>
                 <Link
                   href={`/trial?item=${encodeURIComponent(one.itemSlug)}`}
-                  className="shrink-0 text-[14px] text-accent underline underline-offset-4 transition-colors hover:text-accent-hover"
+                  className="shrink-0 text-[14px] text-accent-ink underline underline-offset-4 transition-colors hover:text-accent-hover"
                 >
                   Read it free for {one.days} days
                 </Link>
@@ -299,7 +299,7 @@ export default async function DashboardPage({
         <section className="mt-16">
           <div className="mb-4 flex items-baseline justify-between">
             <h2 className="text-2xl text-ink">Recently published</h2>
-            <Link href="/archive" className="text-[14px] text-accent underline underline-offset-4">
+            <Link href="/archive" className="text-[14px] text-accent-ink underline underline-offset-4">
               Browse the full archive
             </Link>
           </div>
@@ -478,7 +478,7 @@ function InactiveState({
           {lapsed ? (
             <Lock className="h-5 w-5 text-ink-dim" aria-hidden />
           ) : (
-            <Check className="h-5 w-5 text-accent" aria-hidden />
+            <Check className="h-5 w-5 text-accent-ink" aria-hidden />
           )}
         </div>
         <h1 className="text-3xl text-ink">
@@ -514,7 +514,7 @@ function InactiveState({
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-2 inline-block text-[13px] text-accent underline underline-offset-4"
+                  className="mt-2 inline-block text-[13px] text-accent-ink underline underline-offset-4"
                 >
                   Open {item.name}
                 </a>

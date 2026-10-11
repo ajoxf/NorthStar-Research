@@ -129,11 +129,11 @@ export function ExpertsGrid({ experts }: { experts: ExpertCardRow[] }) {
                 aria-hidden
               />
 
-              <div className="absolute inset-x-0 bottom-0 p-5">
+              <div className="ground-dark absolute inset-x-0 bottom-0 p-5">
                 {/* Only a status badge sits above the name: "Coming soon" is two short
                     words and will always be one small pill. */}
                 {author.soon && (
-                  <span className="mb-2 inline-block rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-accent backdrop-blur-sm">
+                  <span className="mb-2 inline-block rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-accent-ink backdrop-blur-sm">
                     Coming soon
                   </span>
                 )}

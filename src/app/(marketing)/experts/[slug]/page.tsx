@@ -242,7 +242,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                 more than a pill said and in the place somebody is deciding.
               */}
               <div className="flex flex-wrap gap-2">
-                <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
+                <span className="rounded-full border border-accent/40 bg-accent/10 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent-ink">
                   The desk
                 </span>
               </div>

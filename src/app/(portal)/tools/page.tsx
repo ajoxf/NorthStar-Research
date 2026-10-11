@@ -46,12 +46,12 @@ export default async function ToolsPage() {
             className="panel group flex flex-col p-6 transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/45"
           >
             <tool.icon
-              className="mb-4 h-5 w-5 text-ink-dim transition-colors group-hover:text-accent"
+              className="mb-4 h-5 w-5 text-ink-dim transition-colors group-hover:text-accent-ink"
               aria-hidden
             />
             <h2 className="font-display text-xl leading-snug text-ink">{tool.name}</h2>
             <p className="mt-3 flex-1 text-[15px] leading-relaxed text-ink-dim">{tool.blurb}</p>
-            <span className="mt-5 flex items-center gap-1 text-[13px] text-accent transition-transform group-hover:translate-x-0.5">
+            <span className="mt-5 flex items-center gap-1 text-[13px] text-accent-ink transition-transform group-hover:translate-x-0.5">
               Open
               <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
             </span>

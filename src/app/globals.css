@@ -94,6 +94,20 @@
  * Contrast, on white: --ink 17.7:1, --ink-dim 7.6:1, --accent-ink 6.6:1, --down 6.9:1,
  * --up 5.5:1. Lime survives as a fill behind black text, which is 17:1, and nowhere else.
  */
+/*
+ * A light surface on the dark site — a light band, a white card. Lime text is around 1.2:1
+ * on these and cannot be read, so anything drawn in accent-ink turns dark olive (6.6:1),
+ * exactly as it does in the admin's light theme. Fills stay lime.
+ */
+.ground-light {
+  --accent-ink: 77 102 0;
+}
+
+/* A dark surface inside a light one (text over a photo's scrim) gets lime back. */
+.ground-dark {
+  --accent-ink: 214 253 58;
+}
+
 [data-admin-theme='light'] {
   --bg: 255 255 255;
   --bg-panel: 248 249 250;

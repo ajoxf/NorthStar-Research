@@ -150,7 +150,7 @@ function Num({ value, strong, dim }: { value: number; strong?: boolean; dim?: bo
   return (
     <td
       className={`px-3 py-2.5 font-mono text-[15px] ${
-        strong ? 'text-ink' : dim ? 'text-ink-dim/40' : 'text-ink-dim'
+        strong ? 'text-ink' : dim ? 'text-ink-dim/70' : 'text-ink-dim'
       }`}
     >
       {value}
