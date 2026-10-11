@@ -1,11 +1,13 @@
 import Link from 'next/link'
-import { headers } from 'next/headers'
+import { cookies, headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 import { PortalNav } from '@/app/(portal)/portal-nav'
 import { Wordmark } from '@/components/site-chrome'
+import { PortalTheme, PortalThemeToggle } from '@/components/portal-theme'
 import { Badge } from '@/components/ui/badge'
 import { ToastProvider } from '@/components/ui/toast'
+import { ADMIN_THEME_COOKIE, parsePortalTheme } from '@/lib/admin-theme'
 import { isAffiliateMember, isExpertMember } from '@/lib/portal-account'
 import { getCurrentMember, memberHoldsAnything } from '@/lib/auth'
 import { initials } from '@/lib/utils'
@@ -39,44 +41,52 @@ export default async function PortalLayout({ children }: { children: React.React
     isExpertMember(member.id),
   ])
 
+  // Day or night on the affiliate and expert pages only; the member pages stay night, by
+  // decision. Same mechanism and same choice as the admin console (see lib/admin-theme.ts).
+  // Outside the toast provider, so a toast wears the theme too.
+  const theme = parsePortalTheme(cookies().get(ADMIN_THEME_COOKIE)?.value)
+
   return (
-    <ToastProvider>
-      <div className="flex min-h-screen flex-col">
-        <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-md">
-          <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
-            <div className="flex items-center gap-5">
-              <Wordmark href="/dashboard" />
-              <PortalNav isAdmin={member.role === 'admin'} isAffiliate={isAffiliate} isExpert={isExpert} />
-            </div>
+    <PortalTheme initial={theme}>
+      <ToastProvider>
+        <div className="flex min-h-screen flex-col">
+          <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-md">
+            <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
+              <div className="flex items-center gap-5">
+                <Wordmark href="/dashboard" />
+                <PortalNav isAdmin={member.role === 'admin'} isAffiliate={isAffiliate} isExpert={isExpert} />
+              </div>
 
-            <div className="flex items-center gap-3">
-              {/* An expert or affiliate who does not subscribe is not inactive: their page is live. */}
-              {!holdsSomething && !isAffiliate && !isExpert && <Badge tone="down">Inactive</Badge>}
-              <Link
-                href="/account"
-                className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel font-mono text-[11px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
-                title={member.email}
-              >
-                {initials(member)}
+              <div className="flex items-center gap-3">
+                <PortalThemeToggle />
+                {/* An expert or affiliate who does not subscribe is not inactive: their page is live. */}
+                {!holdsSomething && !isAffiliate && !isExpert && <Badge tone="down">Inactive</Badge>}
+                <Link
+                  href="/account"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel font-mono text-[11px] text-ink-dim transition-colors hover:border-accent/50 hover:text-ink"
+                  title={member.email}
+                >
+                  {initials(member)}
+                </Link>
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1">{children}</main>
+
+          <footer className="border-t border-line px-5 py-7">
+            <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-ink-dim/70">
+              Reports are for educational and informational purposes only and are not financial advice.
+              Trading involves substantial risk. Your access is personal to your account and every view
+              is logged and watermarked.{' '}
+              <Link href="/disclaimer" className="underline underline-offset-4 hover:text-ink-dim">
+                Full disclaimer
               </Link>
-            </div>
-          </div>
-        </header>
-
-        <main className="flex-1">{children}</main>
-
-        <footer className="border-t border-line px-5 py-7">
-          <p className="mx-auto max-w-3xl text-center text-[11px] leading-relaxed text-ink-dim/70">
-            Reports are for educational and informational purposes only and are not financial advice.
-            Trading involves substantial risk. Your access is personal to your account and every view
-            is logged and watermarked.{' '}
-            <Link href="/disclaimer" className="underline underline-offset-4 hover:text-ink-dim">
-              Full disclaimer
-            </Link>
-            .
-          </p>
-        </footer>
-      </div>
-    </ToastProvider>
+              .
+            </p>
+          </footer>
+        </div>
+      </ToastProvider>
+    </PortalTheme>
   )
 }
