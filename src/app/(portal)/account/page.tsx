@@ -46,7 +46,7 @@ export default async function AccountPage() {
       {isExpert && (
         <p className="mt-4 text-[15px] text-ink-dim">
           Your subscribers, sales and withdrawals are on{' '}
-          <Link href="/expert" className="text-accent underline underline-offset-4">
+          <Link href="/expert" className="text-accent-ink underline underline-offset-4">
             your expert page
           </Link>
           .
@@ -55,7 +55,7 @@ export default async function AccountPage() {
       {isAffiliate && (
         <p className="mt-4 text-[15px] text-ink-dim">
           Your referral link, earnings and withdrawals are on{' '}
-          <Link href="/affiliate" className="text-accent underline underline-offset-4">
+          <Link href="/affiliate" className="text-accent-ink underline underline-offset-4">
             your affiliate page
           </Link>
           .
@@ -76,7 +76,7 @@ export default async function AccountPage() {
         {access.length === 0 ? (
           <p className="text-[15px] leading-relaxed text-ink-dim">
             Nothing active on this account yet. If you have been sent a code, redeem it on{' '}
-            <Link href="/redeem" className="text-accent underline underline-offset-4">
+            <Link href="/redeem" className="text-accent-ink underline underline-offset-4">
               the redemption page
             </Link>
             .
@@ -99,7 +99,7 @@ export default async function AccountPage() {
                   <span className="font-mono text-ink">
                     {order.amount} {order.currency}
                   </span>
-                  <a href={`/api/invoices/${order.id}`} className="text-accent underline underline-offset-4">
+                  <a href={`/api/invoices/${order.id}`} className="text-accent-ink underline underline-offset-4">
                     Invoice
                   </a>
                 </span>
@@ -236,7 +236,7 @@ function AccessTable({ lines }: { lines: AccessLine[] }) {
                 <td className="px-4 py-3 text-[13px] leading-relaxed text-ink-dim">{billingText(line)}</td>
                 <td className="whitespace-nowrap px-4 py-3 text-right">
                   {line.openHref && (
-                    <a href={line.openHref} className="text-[14px] font-medium text-accent underline underline-offset-4">
+                    <a href={line.openHref} className="text-[14px] font-medium text-accent-ink underline underline-offset-4">
                       Open
                     </a>
                   )}
@@ -265,7 +265,7 @@ function AccessTable({ lines }: { lines: AccessLine[] }) {
               <dd className="text-ink-dim">{billingText(line)}</dd>
             </dl>
             {line.openHref && (
-              <a href={line.openHref} className="mt-3 inline-block text-[14px] font-medium text-accent underline underline-offset-4">
+              <a href={line.openHref} className="mt-3 inline-block text-[14px] font-medium text-accent-ink underline underline-offset-4">
                 Open {line.name}
               </a>
             )}

@@ -73,7 +73,7 @@ export default async function ReportPage({ params }: { params: { id: string } })
       <header className="mb-10 border-b border-line pb-8">
         <div className="mb-3 flex flex-wrap items-center gap-2.5">
           {meta && (
-            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-accent-ink">
               {meta.shortLabel}
             </span>
           )}

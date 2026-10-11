@@ -105,7 +105,7 @@ export function LoginForm({ next }: { next: string | null }) {
         <button
           type="button"
           onClick={() => setLinkSent(false)}
-          className="mt-4 text-[13px] text-accent underline underline-offset-4"
+          className="mt-4 text-[13px] text-accent-ink underline underline-offset-4"
         >
           Use a different method
         </button>
@@ -160,7 +160,7 @@ export function LoginForm({ next }: { next: string | null }) {
                   setMode('magic')
                   setError(null)
                 }}
-                className="text-[13px] text-accent underline underline-offset-4"
+                className="text-[13px] text-accent-ink underline underline-offset-4"
               >
                 Forgot your password?
               </button>

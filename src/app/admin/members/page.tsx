@@ -183,7 +183,7 @@ export default async function AdminMembersPage({
                         {member._count.entitlements === 1 ? '' : 's'}
                       </span>
                     ) : (
-                      <span className="font-mono text-[14px] text-ink-dim/60">Nothing</span>
+                      <span className="font-mono text-[14px] text-ink-dim">Nothing</span>
                     )}
                   </td>
                   {/*

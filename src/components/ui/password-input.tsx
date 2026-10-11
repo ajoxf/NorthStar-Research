@@ -47,7 +47,7 @@ export const PasswordInput = React.forwardRef<
         aria-pressed={revealed}
         aria-label={revealed ? 'Hide password' : 'Show password'}
         title={revealed ? 'Hide password' : 'Show password'}
-        className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-ink-dim transition-colors hover:text-ink focus:outline-none focus-visible:text-accent"
+        className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center text-ink-dim transition-colors hover:text-ink focus:outline-none focus-visible:text-accent-ink"
       >
         {revealed ? (
           <EyeOff className="h-4 w-4" aria-hidden />

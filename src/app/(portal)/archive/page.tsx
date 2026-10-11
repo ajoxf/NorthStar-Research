@@ -93,7 +93,7 @@ export default async function ArchivePage({
             */}
             <Link
               href={`/experts/${expert.slug}`}
-              className="mt-4 inline-flex items-center gap-1.5 text-[14px] text-accent underline underline-offset-4 transition-colors hover:text-accent-hover"
+              className="mt-4 inline-flex items-center gap-1.5 text-[14px] text-accent-ink underline underline-offset-4 transition-colors hover:text-accent-hover"
             >
               About {expert.name}
             </Link>

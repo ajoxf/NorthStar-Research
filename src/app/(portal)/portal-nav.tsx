@@ -49,7 +49,7 @@ export function PortalNav({
       {isAdmin && (
         <Link
           href="/admin"
-          className="ml-1 rounded-md px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-accent transition-colors hover:text-ink"
+          className="ml-1 rounded-md px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-accent-ink transition-colors hover:text-ink"
         >
           Admin
         </Link>
