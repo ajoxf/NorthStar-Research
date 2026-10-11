@@ -21,8 +21,9 @@ export type BandTone = 'dark' | 'light' | 'lime'
 
 const GROUND: Record<BandTone, string> = {
   dark: 'bg-bg text-ink',
-  light: 'bg-paper text-ink-on-light',
-  lime: 'bg-accent text-ink-on-light',
+  // ground-light: lime text cannot be read on these, so accent-ink turns dark olive here.
+  light: 'ground-light bg-paper text-ink-on-light',
+  lime: 'ground-light bg-accent text-ink-on-light',
 }
 
 /** The hairline that shows on this ground. Near-black on light would be invisible. */

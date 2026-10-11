@@ -12,7 +12,7 @@ export function PreviewBanner() {
   return (
     <div className="border-b border-accent/30 bg-accent/[0.07]">
       <p className="mx-auto flex max-w-5xl items-start gap-2.5 px-5 py-3 text-[13px] leading-relaxed text-ink-dim">
-        <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-accent" aria-hidden />
+        <EyeOff className="mt-0.5 h-4 w-4 shrink-0 text-accent-ink" aria-hidden />
         <span>
           <strong className="font-medium text-ink">Preview — not visible to the public.</strong>{' '}
           You can see this because you are signed in as an admin. Everyone else gets a 404, and

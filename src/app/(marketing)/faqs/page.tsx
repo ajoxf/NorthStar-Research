@@ -115,7 +115,7 @@ const faqs = (
       <>
         No. Everything we publish is for educational and informational purposes only, and nothing
         in a report is a recommendation to buy or sell anything. Please read the{' '}
-        <Link href="/disclaimer" className="text-accent underline underline-offset-4">
+        <Link href="/disclaimer" className="text-accent-ink underline underline-offset-4">
           full disclaimer
         </Link>
         .

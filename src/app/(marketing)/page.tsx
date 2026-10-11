@@ -364,7 +364,7 @@ function Hero({
               { icon: CreditCard, label: 'Cancel any time' },
             ].map((item) => (
               <li key={item.label} className="flex items-center gap-2">
-                <item.icon className="h-3.5 w-3.5 text-accent" aria-hidden />
+                <item.icon className="h-3.5 w-3.5 text-accent-ink" aria-hidden />
                 <span className="text-[12px] font-medium uppercase tracking-[0.14em] text-ink">
                   {item.label}
                 </span>
@@ -512,9 +512,9 @@ function ContributorStrip({
               aria-hidden
             />
 
-            <div className="absolute inset-x-0 bottom-0 p-5">
+            <div className="ground-dark absolute inset-x-0 bottom-0 p-5">
               {contributor.soon && (
-                <span className="mb-2 inline-block rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-accent backdrop-blur-sm">
+                <span className="mb-2 inline-block rounded-full border border-accent/50 bg-accent/15 px-2.5 py-1 text-[10px] uppercase tracking-[0.12em] text-accent-ink backdrop-blur-sm">
                   Coming soon
                 </span>
               )}
@@ -942,7 +942,7 @@ function PricingSection({
           {cheapestSectionCents !== null && (
             <p className="mt-6 border-t border-line pt-6 text-center text-[14px] leading-relaxed text-ink-dim">
               Only follow one subject?{' '}
-              <Link href="/coverage" className="text-accent underline underline-offset-4">
+              <Link href="/coverage" className="text-accent-ink underline underline-offset-4">
                 Subscribe to a single expert from{' '}
                 {formatPrice(cheapestSectionCents, plan.currency)}/month
               </Link>
@@ -951,7 +951,7 @@ function PricingSection({
 
           <p className="mt-4 text-center text-[13px] text-ink-dim">
             Already paid?{' '}
-            <Link href="/redeem" className="text-accent underline underline-offset-4">
+            <Link href="/redeem" className="text-accent-ink underline underline-offset-4">
               Redeem your code
             </Link>
           </p>

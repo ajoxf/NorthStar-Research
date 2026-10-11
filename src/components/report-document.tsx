@@ -107,7 +107,7 @@ export function ReportDocument({
   if (phase === 'loading' || phase === 'charts') {
     return (
       <div className="panel flex flex-col items-center px-6 py-16 text-center">
-        <Loader2 className="mb-4 h-6 w-6 animate-spin text-accent" aria-hidden />
+        <Loader2 className="mb-4 h-6 w-6 animate-spin text-accent-ink" aria-hidden />
         <p className="font-mono text-[12px] uppercase tracking-[0.14em] text-ink-dim">
           {phase === 'loading' ? 'Opening the report' : 'Preparing the charts'}
         </p>

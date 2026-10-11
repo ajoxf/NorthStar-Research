@@ -322,7 +322,7 @@ export function RedeemWizard({
             Your membership is active. Taking you to your reports…
           </p>
           <div className="mt-6 flex justify-center">
-            <Spinner className="text-accent" />
+            <Spinner className="text-accent-ink" />
           </div>
         </div>
       )}
@@ -345,7 +345,7 @@ function Stepper({ current }: { current: number }) {
             <span
               className={cn(
                 'mt-2 block font-mono text-[10px] uppercase tracking-[0.14em] transition-colors',
-                index <= current ? 'text-accent' : 'text-ink-dim/60',
+                index <= current ? 'text-accent-ink' : 'text-ink-dim/60',
               )}
             >
               {label}

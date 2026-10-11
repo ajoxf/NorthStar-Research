@@ -35,7 +35,7 @@ export function EmptyPreview({ what }: { what: 'coverage' | 'contributors' }) {
             { step: '04', body: 'Come back here. Then file reports into it from each report page.' },
           ].map((item) => (
             <li key={item.step} className="flex gap-4">
-              <span className="font-mono text-[12px] tracking-[0.14em] text-accent">{item.step}</span>
+              <span className="font-mono text-[12px] tracking-[0.14em] text-accent-ink">{item.step}</span>
               <p className="text-[15px] leading-relaxed text-ink-dim">{item.body}</p>
             </li>
           ))}
@@ -43,7 +43,7 @@ export function EmptyPreview({ what }: { what: 'coverage' | 'contributors' }) {
 
         <Link
           href="/admin/sections"
-          className="mt-8 inline-block text-[15px] text-accent underline underline-offset-4"
+          className="mt-8 inline-block text-[15px] text-accent-ink underline underline-offset-4"
         >
           Go to Admin → Sections
         </Link>

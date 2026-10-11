@@ -16,7 +16,7 @@ export function Wordmark({ href = '/' }: { href?: string }) {
             Any find-and-replace over "NordStar Pro" therefore misses this — the second
             span has to be edited by hand or the logo keeps reading the old name. */}
         <span className="font-display text-[23px] tracking-tight text-ink">NordStar</span>
-        <span className="font-mono text-[13px] uppercase tracking-[0.22em] text-accent transition-colors group-hover:text-ink">
+        <span className="font-mono text-[13px] uppercase tracking-[0.22em] text-accent-ink transition-colors group-hover:text-ink">
           Pro
         </span>
       </span>

@@ -59,7 +59,7 @@ export function ReportCard({ report, index }: { report: ReportCardData; index?: 
           pre-sections archive, where that word is the honest answer rather than a
           placeholder.
         */}
-        <span className="truncate font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
+        <span className="truncate font-mono text-[11px] uppercase tracking-[0.16em] text-accent-ink">
           {report.authorName ??
             (typeof index === 'number' && index >= 0
               ? `Report ${index + 1}`
@@ -87,7 +87,7 @@ export function ReportCard({ report, index }: { report: ReportCardData; index?: 
           <Clock className="h-3 w-3" aria-hidden />
           {formatDate(report.publishDate)}
         </span>
-        <span className="flex items-center gap-1 text-[13px] text-accent transition-transform group-hover:translate-x-0.5">
+        <span className="flex items-center gap-1 text-[13px] text-accent-ink transition-transform group-hover:translate-x-0.5">
           Read
           <ArrowUpRight className="h-3.5 w-3.5" aria-hidden />
         </span>
@@ -112,15 +112,15 @@ export function ReportRow({ report }: { report: ReportCardData }) {
           back to the type for the untagged back catalogue. Still omitted entirely when
           there is neither, rather than filled with a word that means nothing. */}
       {(report.authorName ?? meta?.shortLabel) && (
-        <span className="w-44 shrink-0 truncate font-mono text-[11px] uppercase tracking-[0.12em] text-accent">
+        <span className="w-44 shrink-0 truncate font-mono text-[11px] uppercase tracking-[0.12em] text-accent-ink">
           {report.authorName ?? meta?.shortLabel}
         </span>
       )}
-      <span className="flex-1 text-[15px] text-ink transition-colors group-hover:text-accent">
+      <span className="flex-1 text-[15px] text-ink transition-colors group-hover:text-accent-ink">
         {report.title}
       </span>
       <ArrowUpRight
-        className="hidden h-4 w-4 shrink-0 text-ink-dim transition-transform group-hover:translate-x-0.5 group-hover:text-accent sm:block"
+        className="hidden h-4 w-4 shrink-0 text-ink-dim transition-transform group-hover:translate-x-0.5 group-hover:text-accent-ink sm:block"
         aria-hidden
       />
     </Link>

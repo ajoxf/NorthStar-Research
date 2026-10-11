@@ -66,7 +66,7 @@ export default async function LoginPage({
       <div className="mt-7 flex flex-col gap-2 border-t border-line pt-6 text-[14px] text-ink-dim">
         <p>
           Have an access code but no account yet?{' '}
-          <Link href="/redeem" className="text-accent underline underline-offset-4">
+          <Link href="/redeem" className="text-accent-ink underline underline-offset-4">
             Redeem it
           </Link>
         </p>
@@ -74,7 +74,7 @@ export default async function LoginPage({
         {offers.length > 0 && (
           <p>
             No account at all?{' '}
-            <Link href="/trial" className="text-accent underline underline-offset-4">
+            <Link href="/trial" className="text-accent-ink underline underline-offset-4">
               {offers.length === 1
                 ? `Start a ${offers[0].days}-day free trial`
                 : 'Start a free trial'}

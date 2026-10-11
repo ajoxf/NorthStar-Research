@@ -76,7 +76,7 @@ export default async function CheckoutSuccessPage({
       <div className="mx-auto max-w-lg px-5 py-24 text-center">
         {state === 'confirmed' && <ClearPaidCart />}
         <div className="mx-auto mb-7 flex h-14 w-14 items-center justify-center rounded-full border border-accent/40 bg-accent/10">
-          <Icon className="h-6 w-6 text-accent" aria-hidden />
+          <Icon className="h-6 w-6 text-accent-ink" aria-hidden />
         </div>
         {state === 'confirmed' && (
           <>
@@ -138,7 +138,7 @@ export default async function CheckoutSuccessPage({
     <div className="mx-auto max-w-lg px-5 py-24 text-center">
       <ClearPaidCart />
       <div className="mx-auto mb-7 flex h-14 w-14 items-center justify-center rounded-full border border-accent/40 bg-accent/10">
-        <MailCheck className="h-6 w-6 text-accent" aria-hidden />
+        <MailCheck className="h-6 w-6 text-accent-ink" aria-hidden />
       </div>
 
       <h1 className="text-3xl text-ink">Thank you — check your email</h1>
