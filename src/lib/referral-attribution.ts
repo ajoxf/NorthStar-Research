@@ -2,7 +2,7 @@ import 'server-only'
 
 import { cookies } from 'next/headers'
 
-import { REFERRAL_COOKIE, awardFor, normaliseSlug } from '@/lib/affiliates'
+import { CAMPAIGN_COOKIE, REFERRAL_COOKIE, awardFor, normaliseCampaign, normaliseSlug } from '@/lib/affiliates'
 import { db } from '@/lib/db'
 
 /**
@@ -26,6 +26,11 @@ export function referralSlugFromCookie(): string | null {
   const value = cookies().get(REFERRAL_COOKIE)?.value
   const slug = normaliseSlug(value ?? '')
   return slug || null
+}
+
+/** The campaign tag on the affiliate link this visitor followed, if it had one. */
+export function referralCampaignFromCookie(): string | null {
+  return normaliseCampaign(cookies().get(CAMPAIGN_COOKIE)?.value ?? '') || null
 }
 
 /**
@@ -61,6 +66,7 @@ export async function recordReferralSignup(slug: string | null, email: string, m
         email,
         memberId,
         signedUpAt: new Date(),
+        campaign: referralCampaignFromCookie(),
       },
     })
   } catch (error) {

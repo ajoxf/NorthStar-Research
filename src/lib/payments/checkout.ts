@@ -165,6 +165,7 @@ export async function startCheckout(input: {
       packageId: single?.kind === 'package' ? single.id : null,
       offerId: priced.offer?.id ?? null,
       affiliateId: referral?.affiliateId ?? null,
+      affiliateCampaign: referral?.campaign ?? null,
       status: 'pending',
       lines: {
         create: priced.lines.map((line, position) => ({
