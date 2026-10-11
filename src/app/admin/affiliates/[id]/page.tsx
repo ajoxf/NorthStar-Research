@@ -32,7 +32,7 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
   // Commission owed from before the ledger moves onto it once; then everything reads the ledger.
   await carryOverAwards(affiliate.id)
   // Counted, not read off the capped lists below, so a busy link is not undercounted.
-  const [clicks, conversions, balance, carriedRows, portalMember] = await Promise.all([
+  const [clicks, conversions, balance, carriedRows, portalMember, masters, subs] = await Promise.all([
     db.referral.count({ where: { affiliateId: affiliate.id } }),
     db.referral.count({ where: { affiliateId: affiliate.id, status: 'converted' } }),
     balanceForAffiliate(affiliate.id),
@@ -43,6 +43,17 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
     affiliate.memberId
       ? db.member.findUnique({ where: { id: affiliate.memberId }, select: { email: true, lastLoginAt: true } })
       : null,
+    // Who can be this affiliate's master: anyone not under a master themselves (one level).
+    db.affiliate.findMany({
+      where: { id: { not: affiliate.id }, parentAffiliateId: null, status: { not: 'closed' } },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, slug: true },
+    }),
+    db.affiliate.findMany({
+      where: { parentAffiliateId: affiliate.id },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, status: true },
+    }),
   ])
   const carried = new Set(carriedRows.map((row) => row.note?.slice(CARRIED_NOTE.length)))
 
@@ -81,6 +92,8 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
       </div>
 
       <AffiliatePanel
+        masters={masters}
+        subs={subs}
         affiliate={{
           id: affiliate.id,
           name: affiliate.name,
@@ -91,6 +104,8 @@ export default async function AdminAffiliatePage({ params }: { params: { id: str
           visitorDiscountPercent: affiliate.visitorDiscountPercent,
           commissionOn: affiliate.commissionOn,
           notes: affiliate.notes,
+          parentAffiliateId: affiliate.parentAffiliateId,
+          overridePercent: affiliate.overridePercent,
           link: referralLink(base, affiliate.slug),
           rewardDescription: describeReward(affiliate.rewardKind, affiliate.rewardAmount, affiliate.commissionOn),
         }}

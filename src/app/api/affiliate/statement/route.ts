@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       row.kind,
       row.orderNumber ? `NS-${row.orderNumber}` : '',
       row.items,
-      row.client ?? '',
+      row.via ? `via ${row.via}` : row.client ?? '',
       row.campaign ?? '',
       row.saleCents === null ? '' : centsToDecimal(row.saleCents),
       row.ratePercent ?? '',

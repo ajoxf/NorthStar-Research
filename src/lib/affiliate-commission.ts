@@ -2,7 +2,7 @@ import 'server-only'
 
 import type { CheckoutOrder, Prisma } from '@prisma/client'
 
-import { commissionCents, commissionClawback, earnsCommission } from '@/lib/commission-shape'
+import { SUB_AFFILIATE_OVERRIDE_PERCENT, commissionCents, commissionClawback, earnsCommission, overrideCents } from '@/lib/commission-shape'
 import { db } from '@/lib/db'
 import { DEFAULT_HOLDBACK_DAYS, payableAt } from '@/lib/earnings'
 import type { OfferShape } from '@/lib/offer'
@@ -64,6 +64,8 @@ export type CommissionPlan = {
   sharePercent: number | null
   /** A free-months reward to record for an operator to grant, on a buyer's first order. */
   freeMonths: number | null
+  /** The master partner's override on this sale, when the affiliate has an active master. */
+  override: { affiliateId: string; cents: number; percent: number } | null
 }
 
 /**
@@ -92,17 +94,44 @@ export async function planCommission(order: CheckoutOrder): Promise<CommissionPl
     const earlier = await db.referral.count({ where: { affiliateId, email: order.email, status: 'converted' } })
     if (!earnsCommission(affiliate.commissionOn, earlier)) return null
 
+    const cents = commissionCents(affiliate, paidCents)
     return {
       affiliateId,
       paidCents,
-      cents: commissionCents(affiliate, paidCents),
+      cents,
       sharePercent: affiliate.rewardKind === 'percent' ? affiliate.rewardAmount : null,
       freeMonths: affiliate.rewardKind === 'free_months' && earlier === 0 ? affiliate.rewardAmount : null,
+      override: await planOverride(affiliate, order.email, paidCents, cents),
     }
   } catch (error) {
     console.error(`[affiliate] could not work out commission for order ${order.id}; credit it by hand`, error)
     return null
   }
+}
+
+/**
+ * The master partner's cut of a sub-affiliate's sale, if there is one to pay.
+ *
+ * One level only — the master's own master is never looked up. A master who is not active
+ * earns nothing new, as with their own link; and a master buying through their own sub's
+ * link earns no override on themselves.
+ */
+async function planOverride(
+  affiliate: { id: string; parentAffiliateId: string | null; overridePercent: number | null },
+  buyerEmail: string,
+  paidCents: number,
+  subCommissionCents: number,
+): Promise<CommissionPlan['override']> {
+  if (!affiliate.parentAffiliateId || affiliate.parentAffiliateId === affiliate.id) return null
+  const master = await db.affiliate.findUnique({
+    where: { id: affiliate.parentAffiliateId },
+    select: { id: true, status: true, email: true },
+  })
+  if (!master || master.status !== 'active') return null
+  if (master.email.trim().toLowerCase() === buyerEmail.trim().toLowerCase()) return null
+  const percent = affiliate.overridePercent ?? SUB_AFFILIATE_OVERRIDE_PERCENT
+  const cents = overrideCents({ paidCents, subCommissionCents, percent })
+  return cents > 0 ? { affiliateId: master.id, cents, percent } : null
 }
 
 /**
@@ -141,15 +170,33 @@ export async function applyCommission(tx: Tx, plan: CommissionPlan, order: Check
       basisCents: plan.paidCents,
     },
   })
+  if (plan.override) {
+    await tx.ledgerEntry.create({
+      data: {
+        affiliateId: plan.override.affiliateId,
+        kind: 'override',
+        amountCents: plan.override.cents,
+        currency: order.currency,
+        payableAt: payableAt(paidAt, DEFAULT_HOLDBACK_DAYS),
+        orderId: order.id,
+        sharePercent: plan.override.percent,
+        basisCents: plan.paidCents,
+        note: `Override on ${plan.affiliateId}`,
+      },
+    })
+  }
+  // Both cuts come off before the experts' share, as the commission alone always has.
+  const totalCents = plan.cents + (plan.override?.cents ?? 0)
   await tx.checkoutOrder.update({
     where: { id: order.id },
-    data: { affiliateId: plan.affiliateId, ibFeeCents: plan.cents },
+    data: { affiliateId: plan.affiliateId, ibFeeCents: totalCents },
   })
-  return plan.cents
+  return totalCents
 }
 
 /**
- * Take back an affiliate's commission in proportion to a refund — all of it on a full one.
+ * Take back an affiliate's commission — and any master's override on it — in proportion to
+ * a refund; all of it on a full one.
  * Written beside the experts' reversals, in the refund's own transaction.
  */
 export async function clawBackCommission(
@@ -164,8 +211,10 @@ export async function clawBackCommission(
     recordedByMemberId: string | null
   },
 ): Promise<number> {
+  // The sub-affiliate's commission and the master's override alike: a refund takes back
+  // each in the same proportion.
   const commissions = await tx.ledgerEntry.findMany({
-    where: { orderId: input.orderId, kind: 'commission', affiliateId: { not: null } },
+    where: { orderId: input.orderId, kind: { in: ['commission', 'override'] }, affiliateId: { not: null } },
     select: { affiliateId: true, amountCents: true },
   })
   let total = 0

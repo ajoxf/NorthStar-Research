@@ -519,6 +519,15 @@ model Affiliate {
   /// Set when the affiliate is also a member of the product.
   memberId String?
 
+  /// The master partner who brought this affiliate in, if any. One level only: a master's
+  /// own master earns nothing from this affiliate's sales.
+  parentAffiliateId String?
+  parentAffiliate   Affiliate?  @relation("AffiliateTiers", fields: [parentAffiliateId], references: [id])
+  subAffiliates     Affiliate[] @relation("AffiliateTiers")
+  /// What the master earns on this affiliate's sales, as a percent of the sale before tax.
+  /// Null with a master set means the default (see SUB_AFFILIATE_OVERRIDE_PERCENT).
+  overridePercent   Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -532,6 +541,7 @@ model Affiliate {
 
   @@index([status])
   @@index([memberId])
+  @@index([parentAffiliateId])
 }
 
 /// One person arriving through an affiliate link, and what became of them.
@@ -1014,6 +1024,9 @@ enum LedgerEntryKind {
   /// `earning`, so the experts' sweep — which looks for orders with no earning yet — is
   /// never satisfied by an affiliate's row.
   commission
+  /// A master partner's override on a sale one of their sub-affiliates introduced. Paid on
+  /// top of the sub-affiliate's own commission, never out of it.
+  override
 }
 
 /// Every movement on a contributor's account.

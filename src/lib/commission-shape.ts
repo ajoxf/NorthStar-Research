@@ -59,3 +59,18 @@ export function commissionClawback(input: {
       : Math.round((input.commissionCents * Math.max(0, input.refundedAfterCents)) / input.grossCents)
   return Math.max(0, Math.min(target, input.commissionCents) - input.reversedSoFarCents)
 }
+
+/** What a master partner earns on a sub-affiliate's sale when no rate is set for that sub. */
+export const SUB_AFFILIATE_OVERRIDE_PERCENT = 5
+
+/**
+ * A master partner's override on a sale their sub-affiliate introduced: a percent of the
+ * sale before tax, paid on top of the sub's own commission — never out of it. Only a sale
+ * that earned the sub cash earns an override, so a free-months reward or a first-payment-
+ * only term that has run out earns the master nothing either.
+ */
+export function overrideCents(input: { paidCents: number; subCommissionCents: number; percent: number | null }): number {
+  if (input.paidCents <= 0 || input.subCommissionCents <= 0) return 0
+  const pct = Math.min(100, Math.max(0, input.percent ?? SUB_AFFILIATE_OVERRIDE_PERCENT))
+  return Math.floor((input.paidCents * pct) / 100)
+}

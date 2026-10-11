@@ -19,6 +19,10 @@ const schema = z.object({
   visitorDiscountPercent: z.number().int().min(0).max(100).nullable().optional(),
   commissionOn: z.enum(['first_payment', 'every_payment']).optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
+  /** The master partner earning an override on this affiliate's sales; null for none. */
+  parentAffiliateId: z.string().min(1).nullable().optional(),
+  /** The master's override, % of the sale before tax. Null means the default. */
+  overridePercent: z.number().int().min(0).max(50).nullable().optional(),
   /** Mark an award paid. Settlement happens outside this system — see below. */
   settleAwardId: z.string().optional(),
   /** Add an award by hand: a bonus, a correction, a deal struck off-ledger. */
@@ -101,6 +105,23 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json({ ok: true })
   }
 
+  // One level of partners: a master cannot itself sit under a master, and an affiliate who
+  // has sub-affiliates of their own cannot be put under one.
+  if (data.parentAffiliateId) {
+    if (data.parentAffiliateId === affiliate.id) {
+      return NextResponse.json({ error: 'An affiliate cannot be their own master partner.' }, { status: 400 })
+    }
+    const master = await db.affiliate.findUnique({ where: { id: data.parentAffiliateId }, select: { parentAffiliateId: true } })
+    if (!master) return NextResponse.json({ error: 'That master partner does not exist.' }, { status: 400 })
+    if (master.parentAffiliateId) {
+      return NextResponse.json({ error: 'That partner is a sub-affiliate themselves; masters go one level deep.' }, { status: 400 })
+    }
+    const subs = await db.affiliate.count({ where: { parentAffiliateId: affiliate.id } })
+    if (subs > 0) {
+      return NextResponse.json({ error: 'This affiliate has sub-affiliates of their own, so cannot be put under a master.' }, { status: 400 })
+    }
+  }
+
   const updated = await db.affiliate.update({
     where: { id: affiliate.id },
     data: {
@@ -113,6 +134,8 @@ export async function PATCH(request: Request, { params }: { params: { id: string
         data.visitorDiscountPercent === undefined ? undefined : data.visitorDiscountPercent,
       commissionOn: data.commissionOn ?? undefined,
       notes: data.notes === undefined ? undefined : data.notes,
+      parentAffiliateId: data.parentAffiliateId === undefined ? undefined : data.parentAffiliateId,
+      overridePercent: data.overridePercent === undefined ? undefined : data.overridePercent,
     },
   })
 
