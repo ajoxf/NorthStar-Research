@@ -10,7 +10,8 @@ export const dynamic = 'force-dynamic'
 
 const schema = z.object({
   amountCents: z.number().int().positive('Enter an amount greater than zero.'),
-  destination: z.string().trim().min(1, 'Say where the money should go.').max(200),
+  /** Left out to use the saved payout details. */
+  destination: z.string().trim().max(200).optional(),
   note: z.string().trim().max(500).optional(),
 })
 
@@ -39,7 +40,7 @@ export async function POST(request: Request) {
   const result = await requestPayout({
     authorId: author.id,
     amountCents: parsed.data.amountCents,
-    destination: parsed.data.destination,
+    destination: parsed.data.destination || null,
     note: parsed.data.note || null,
     requestedByMemberId: member.id,
   })

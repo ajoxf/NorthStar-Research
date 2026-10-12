@@ -198,6 +198,10 @@ enum EmailKind {
   partner_application
   /// A subject matter expert invited to their page in the member portal.
   expert_invite
+  /// An expert or affiliate told that a withdrawal of theirs has been sent.
+  payout_sent
+  /// An expert or affiliate told that their saved payout details were changed.
+  payout_details_changed
 }
 
 /// What happened to one inbound provider callback.
@@ -552,6 +556,8 @@ model Affiliate {
   awards    AffiliateAward[]
   ledger    LedgerEntry[]
   payouts   Payout[]
+  /// Where their withdrawals go, once they have said. See PayoutDetails.
+  payoutDetails PayoutDetails?
   orders    CheckoutOrder[]
   /// The discount visitors arriving by this affiliate's link receive. See Offer.affiliateId.
   offers    Offer[]
@@ -582,6 +588,12 @@ model Referral {
   /// The campaign tag on the link they followed (`?c=` or `utm_campaign`), so an affiliate
   /// can tell which of their posts or videos sends people. Null for an untagged link.
   campaign String?
+
+  /// Where the click came from: the referring site's host ("youtube.com"), or null for a
+  /// direct visit or a browser that sent no referrer. A host only, never the full URL.
+  referrerHost String?
+  /// The visitor's country as the edge saw it (ISO 3166 alpha-2), or null if unknown.
+  country      String?
 
   visitedAt   DateTime  @default(now())
   signedUpAt  DateTime?
@@ -1121,6 +1133,43 @@ model LedgerEntry {
 }
 
 /// How far along a withdrawal is.
+enum PayoutMethod {
+  bank
+  paypal
+  wise
+  crypto
+}
+
+/// Where an expert or affiliate wants their withdrawals sent, kept so they do not retype
+/// it on every request. One row per party, changed in place.
+///
+/// A withdrawal copies these into its own `destination` when it is asked for, so changing
+/// them later never alters where an earlier withdrawal said to send the money — the
+/// payout keeps the record of what was approved. Every change emails the account owner,
+/// since a quietly swapped bank account is how a hijacked login turns into stolen money.
+model PayoutDetails {
+  id          String     @id @default(cuid())
+  /// Whose details: an expert or an affiliate, exactly one.
+  authorId    String?    @unique
+  author      Author?    @relation(fields: [authorId], references: [id])
+  affiliateId String?    @unique
+  affiliate   Affiliate? @relation(fields: [affiliateId], references: [id])
+
+  method     PayoutMethod
+  /// The name on the account.
+  holderName String
+  /// IBAN or account number for a bank; the account email for PayPal or Wise; the wallet
+  /// address for crypto.
+  account    String
+  /// SWIFT/BIC for a bank; the coin and network for crypto ("USDT on TRON (TRC-20)").
+  routing    String?
+  bankName   String?
+
+  updatedByMemberId String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
 enum PayoutStatus {
   /// Written down, waiting for someone to approve it.
   requested
@@ -1414,6 +1463,8 @@ model Author {
 
   ledger  LedgerEntry[]
   payouts Payout[]
+  /// Where their withdrawals go, once they have said. See PayoutDetails.
+  payoutDetails PayoutDetails?
 
   @@index([archivedAt])
   @@index([memberId])

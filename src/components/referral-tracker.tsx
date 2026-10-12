@@ -34,7 +34,8 @@ export function ReferralTracker() {
     void fetch('/api/referral/visit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug }),
+      // The page that sent them, if the browser says. Only its host is kept on the server.
+      body: JSON.stringify({ slug, referrer: document.referrer || undefined }),
       keepalive: true,
     }).catch(() => {})
   }, [])

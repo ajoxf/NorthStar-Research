@@ -121,6 +121,14 @@ export class TwilioWhatsAppProvider implements NotificationProvider {
     return { status: 'failed', provider: this.name, error: 'Twilio provider does not send email.' }
   }
 
+  async sendPayoutSent(): Promise<DeliveryResult> {
+    return { status: 'failed', provider: this.name, error: 'Twilio provider does not send email.' }
+  }
+
+  async sendPayoutDetailsChanged(): Promise<DeliveryResult> {
+    return { status: 'failed', provider: this.name, error: 'Twilio provider does not send email.' }
+  }
+
   async sendCodeExpiring(): Promise<DeliveryResult> {
     return { status: 'failed', provider: this.name, error: 'Twilio provider does not send email.' }
   }

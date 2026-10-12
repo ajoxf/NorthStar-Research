@@ -3,7 +3,9 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { Download, FileDown } from 'lucide-react'
 
-import { WithdrawalForm } from '@/app/(portal)/affiliate/affiliate-forms'
+import { PayoutDetailsForm, WithdrawalForm } from '@/app/(portal)/affiliate/affiliate-forms'
+import { ChartFrame } from '@/components/charts/chart-parts'
+import { DailyBars } from '@/components/charts/daily-bars'
 import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember } from '@/lib/auth'
@@ -14,6 +16,9 @@ import { expertSubscribers, type ExpertSubscriber } from '@/lib/expert-subscribe
 import { summariseByPeriod, totalsByProduct, type Period } from '@/lib/expert-statement'
 import { balanceWithTotals, postPendingEarnings } from '@/lib/ledger'
 import { formatPrice } from '@/lib/package-shape'
+import { dailySeries, parsePeriod, periodLabel, weeklySeries, type Period as Range } from '@/lib/partner-report-shape'
+import { payoutDetailsFor } from '@/lib/payout-details'
+import { describePayoutDetails } from '@/lib/payout-details-shape'
 import { db } from '@/lib/db'
 import { formatDate } from '@/lib/utils'
 
@@ -29,6 +34,9 @@ const STATUS_LABEL: Record<string, string> = {
   failed: 'Failed',
 }
 
+/** Ranges for the earnings chart. No 7 days: in weekly bars that would be a single bar. */
+const RANGES = [30, 90, 365] as const
+
 const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' })
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 
@@ -40,7 +48,7 @@ const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', t
  * week, by month and by product; there is no list of payments and no amount per person,
  * because on a small section a dated amount beside a name is a buyer's bill.
  */
-export default async function ExpertPage() {
+export default async function ExpertPage({ searchParams = {} }: { searchParams?: Record<string, string | string[] | undefined> }) {
   const member = await getCurrentMember()
   if (!member) redirect('/login?next=/expert')
   const author = await authorForMember(member.id)
@@ -50,7 +58,9 @@ export default async function ExpertPage() {
   // here are never a sweep behind. Idempotent; see postPendingEarnings.
   await postPendingEarnings({ limit: 200 })
 
-  const [weekly, statement, balance, payouts, shareSetting, subscribers] = await Promise.all([
+  const asked = parsePeriod(searchParams.range, 90)
+  const range: Range = (RANGES as readonly number[]).includes(asked) ? asked : 90
+  const [weekly, statement, balance, payouts, shareSetting, subscribers, details] = await Promise.all([
     authorWeek(author.id),
     expertStatement(author.id),
     balanceWithTotals({ authorId: author.id }),
@@ -62,11 +72,18 @@ export default async function ExpertPage() {
     }),
     author.revenueSharePercent ?? DEFAULT_SHARE_PERCENT,
     expertSubscribers(author.id),
+    payoutDetailsFor({ authorId: author.id }),
   ])
   const week = weekly?.week
   const months = summariseByPeriod(statement.entries, 'month', 12)
   const weeks = summariseByPeriod(statement.entries, 'week', 12)
   const products = totalsByProduct(statement.entries)
+  // Your share per week, refunds taken off in the week they happened. Weekly, not daily:
+  // beside the subscriber list's start dates, a day's figure could be one person's bill.
+  const earningsByWeek = weeklySeries(
+    dailySeries(statement.entries.map((entry) => ({ at: entry.at, value: entry.amountCents })), range),
+  )
+  const rangeTotal = earningsByWeek.reduce((sum, point) => sum + point.value, 0)
 
   const pendingCents = payouts
     .filter((payout) => payout.status === 'requested' || payout.status === 'approved')
@@ -86,6 +103,15 @@ export default async function ExpertPage() {
         </Link>{' '}
         · your share is {shareSetting}% of each sale after fees, tax and any affiliate commission.
       </p>
+
+      {!details && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-4 py-3">
+          <p className="text-[15px] text-ink">Add your payout details so your withdrawals can be paid without retyping them.</p>
+          <a href="#payout-details" className="text-[14px] text-accent-ink hover:underline">
+            Add payout details →
+          </a>
+        </div>
+      )}
 
       {/* Subscribers ------------------------------------------------------------------ */}
       <section className="panel mt-8 p-6">
@@ -180,7 +206,49 @@ export default async function ExpertPage() {
             ? ` Refunds have already taken back ${formatPrice(balance.heldCents - Math.max(0, balance.earnedCents))} from sales still being held; that comes off what they release.`
             : ''}
         </p>
-        <WithdrawalForm availableCents={free} endpoint="/api/expert/withdrawals" />
+        <WithdrawalForm availableCents={free} endpoint="/api/expert/withdrawals" saved={details ? describePayoutDetails(details) : null} />
+      </section>
+
+      <section className="mt-8">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="eyebrow">Your share, week by week</h2>
+          <div role="group" aria-label="Range" className="inline-flex rounded-full border border-line p-1">
+            {RANGES.map((option) => (
+              <Link
+                key={option}
+                href={`/expert?range=${option}#earnings-chart`}
+                scroll={false}
+                aria-current={option === range ? 'true' : undefined}
+                className={`rounded-full px-3 py-1.5 font-mono text-[13px] ${
+                  option === range ? 'bg-accent text-on-accent' : 'text-ink-dim hover:text-ink'
+                }`}
+              >
+                {option === 365 ? '1y' : `${option}d`}
+              </Link>
+            ))}
+          </div>
+        </div>
+        <div id="earnings-chart">
+          <ChartFrame title={`${formatPrice(Math.max(0, rangeTotal))} in the last ${periodLabel(range)}`}>
+            <DailyBars points={earningsByWeek} format={(cents) => (cents < 0 ? `−${formatPrice(-cents)}` : formatPrice(cents))} label="Your share per week" />
+          </ChartFrame>
+        </div>
+        <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+          Each bar is a week, labelled with its first day; refunds come off in the week they were made. Shown by week rather
+          than by day so no single subscriber's payment can be picked out.
+        </p>
+      </section>
+
+      <section id="payout-details" className="panel mt-8 p-6">
+        <h2 className="eyebrow mb-5">Payout details</h2>
+        <PayoutDetailsForm
+          endpoint="/api/expert/payout-details"
+          current={
+            details
+              ? { summary: describePayoutDetails(details), holderName: details.holderName, method: details.method, updatedAt: formatDate(details.updatedAt) }
+              : null
+          }
+        />
       </section>
 
       <section className="mt-8">

@@ -494,6 +494,65 @@ export function partnerApplicationEmail(application: {
   }
 }
 
+export function payoutSentEmail(input: {
+  name?: string | null
+  amount: string
+  /** Masked: where it went, recognisable but not copyable from an inbox. */
+  to: string
+  reference?: string | null
+  pageUrl: string
+}) {
+  const greeting = input.name ? `Hello ${escapeHtml(input.name)},` : 'Hello,'
+  const body = `
+    <p style="margin:0 0 18px;color:${INK};font-size:16px;">${greeting}</p>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:22px;line-height:1.3;font-weight:600;color:${INK};">${escapeHtml(input.amount)} is on its way</h1>
+    <p style="margin:0 0 8px;color:${INK_DIM};font-size:15px;line-height:1.6;">Sent to ${escapeHtml(input.to)}.</p>
+    ${input.reference ? `<p style="margin:0 0 8px;color:${INK_DIM};font-size:14px;">Reference: <span style="color:${INK};font-family:'IBM Plex Mono',Consolas,monospace;">${escapeHtml(input.reference)}</span></p>` : ''}
+    <p style="margin:14px 0 0;color:${INK_DIM};font-size:14px;line-height:1.6;">Depending on how it was sent, it can take a few days to arrive. If it has not arrived within a week, reply to this email.</p>
+    ${button(input.pageUrl, 'See your withdrawals')}
+  `
+  const subject = `Your withdrawal of ${input.amount} has been sent`
+  return {
+    subject,
+    html: shell(subject, body),
+    text:
+      `${input.name ? `Hello ${input.name},` : 'Hello,'}\n\n${input.amount} is on its way, sent to ${input.to}.\n` +
+      `${input.reference ? `Reference: ${input.reference}\n` : ''}` +
+      `\nDepending on how it was sent, it can take a few days to arrive. If it has not arrived within a week, reply to this email.\n\n` +
+      `Your withdrawals: ${input.pageUrl}\n`,
+  }
+}
+
+export function payoutDetailsChangedEmail(input: {
+  name?: string | null
+  /** Masked, as shown on the page. */
+  now: string
+  pageUrl: string
+}) {
+  const greeting = input.name ? `Hello ${escapeHtml(input.name)},` : 'Hello,'
+  const body = `
+    <p style="margin:0 0 18px;color:${INK};font-size:16px;">${greeting}</p>
+    <p style="margin:0 0 14px;color:${INK_DIM};font-size:15px;line-height:1.6;">
+      The details your NordStar Pro withdrawals are paid to were just changed. They are now:
+    </p>
+    <p style="margin:0 0 14px;color:${INK};font-size:15px;font-family:'IBM Plex Mono',Consolas,monospace;">${escapeHtml(input.now)}</p>
+    <p style="margin:0 0 8px;color:${INK_DIM};font-size:15px;line-height:1.6;">
+      If you made this change, there is nothing to do. <strong style="color:${INK};">If you did not, reply to this email straight away</strong> —
+      so we can stop any withdrawal going there.
+    </p>
+    ${button(input.pageUrl, 'Check your payout details')}
+  `
+  const subject = 'Your payout details were changed'
+  return {
+    subject,
+    html: shell(subject, body),
+    text:
+      `${input.name ? `Hello ${input.name},` : 'Hello,'}\n\nThe details your NordStar Pro withdrawals are paid to were just changed. They are now:\n\n${input.now}\n\n` +
+      `If you made this change, there is nothing to do. If you did not, reply to this email straight away — so we can stop any withdrawal going there.\n\n` +
+      `Check them: ${input.pageUrl}\n`,
+  }
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { Download } from 'lucide-react'
 
-import { AffiliateLink, LinkBuilder, WithdrawalForm } from '@/app/(portal)/affiliate/affiliate-forms'
+import { AffiliateLink, LinkBuilder, PayoutDetailsForm, WithdrawalForm } from '@/app/(portal)/affiliate/affiliate-forms'
 import { ChartFrame } from '@/components/charts/chart-parts'
 import { DailyBars } from '@/components/charts/daily-bars'
 import { Badge } from '@/components/ui/badge'
@@ -23,6 +23,8 @@ import { DEFAULT_HOLDBACK_DAYS } from '@/lib/earnings'
 import { appBaseUrl } from '@/lib/env'
 import { balanceForAffiliate } from '@/lib/ledger'
 import { formatPrice } from '@/lib/package-shape'
+import { payoutDetailsFor } from '@/lib/payout-details'
+import { describePayoutDetails } from '@/lib/payout-details-shape'
 import { PERIODS, type Period, parsePeriod, percentOf, periodLabel } from '@/lib/partner-report-shape'
 import { formatDate } from '@/lib/utils'
 
@@ -123,7 +125,11 @@ export default async function AffiliatePage({ searchParams }: { searchParams: Re
 // ---------------------------------------------------------------------------------------
 
 async function OverviewTab({ affiliateId, days }: { affiliateId: string; days: Period }) {
-  const [overview, balance] = await Promise.all([affiliateOverview(affiliateId, days), balanceForAffiliate(affiliateId)])
+  const [overview, balance, details] = await Promise.all([
+    affiliateOverview(affiliateId, days),
+    balanceForAffiliate(affiliateId),
+    payoutDetailsFor({ affiliateId }),
+  ])
   const funnel = [
     { label: 'Clicks', value: overview.clicks },
     { label: 'Signed up', value: overview.signups },
@@ -132,6 +138,7 @@ async function OverviewTab({ affiliateId, days }: { affiliateId: string; days: P
 
   return (
     <div className="space-y-8">
+      {!details && <PayoutNudge />}
       <PeriodPicker tab="overview" days={days} />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -173,6 +180,34 @@ async function OverviewTab({ affiliateId, days }: { affiliateId: string; days: P
         <ChartFrame title="Sign-ups per day">
           <DailyBars points={overview.series.signups} label="Sign-ups per day" />
         </ChartFrame>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <BarList
+          title="Where your clicks come from"
+          empty="No clicks in this period."
+          rows={overview.sources.map((row) => ({
+            label: row.key === 'other' ? 'Other sites' : (row.key ?? 'Direct or not shared'),
+            value: row.count,
+            mono: row.key !== null && row.key !== 'other',
+          }))}
+          note="The site a click came from, when the browser says. Apps and private browsing often do not."
+        />
+        <BarList
+          title="Clicks by country"
+          empty="No clicks in this period."
+          rows={overview.countries.map((row) => ({
+            label: row.key === 'other' ? 'Other countries' : row.key ? countryName(row.key) : 'Unknown',
+            value: row.count,
+          }))}
+        />
+        <BarList
+          title="What your clients bought"
+          empty="No sales in this period."
+          rows={overview.products.map((row) => ({ label: row.name, value: row.revenueCents, hint: `${row.sales} ${row.sales === 1 ? 'sale' : 'sales'}` }))}
+          format={money}
+          note="After tax and refunds."
+        />
       </div>
 
       <Balances balance={balance} />
@@ -482,8 +517,9 @@ async function SubsTab({ affiliateId, slug, canInvite, days }: { affiliateId: st
 }
 
 async function WithdrawalsTab({ affiliateId }: { affiliateId: string }) {
-  const [balance, payouts] = await Promise.all([
+  const [balance, details, payouts] = await Promise.all([
     balanceForAffiliate(affiliateId),
+    payoutDetailsFor({ affiliateId }),
     db.payout.findMany({
       where: { affiliateId },
       orderBy: { createdAt: 'desc' },
@@ -506,7 +542,19 @@ async function WithdrawalsTab({ affiliateId }: { affiliateId: string }) {
           A refunded payment takes its commission back.
           {pendingCents > 0 ? ` ${formatPrice(pendingCents)} is on a withdrawal already in progress.` : ''}
         </p>
-        <WithdrawalForm availableCents={free} />
+        <WithdrawalForm availableCents={free} saved={details ? describePayoutDetails(details) : null} />
+      </section>
+
+      <section id="payout-details" className="panel p-6">
+        <h2 className="eyebrow mb-5">Payout details</h2>
+        <PayoutDetailsForm
+          endpoint="/api/affiliate/payout-details"
+          current={
+            details
+              ? { summary: describePayoutDetails(details), holderName: details.holderName, method: details.method, updatedAt: formatDate(details.updatedAt) }
+              : null
+          }
+        />
       </section>
 
       <section>
@@ -568,6 +616,73 @@ function BalanceTiles({ balance, free }: { balance: BalanceShape; free: number }
       <Stat label={`Held (${DEFAULT_HOLDBACK_DAYS} days)`} value={formatPrice(balance.heldCents)} />
       <Stat label="Available" value={formatPrice(free)} accent={free > 0} />
       <Stat label="Paid out" value={formatPrice(balance.paidCents)} />
+    </div>
+  )
+}
+
+const REGION = new Intl.DisplayNames(['en'], { type: 'region' })
+
+function countryName(code: string): string {
+  try {
+    return REGION.of(code) ?? code
+  } catch {
+    return code
+  }
+}
+
+/** A short ranked list with a bar per row, for the breakdowns under the charts. */
+function BarList({
+  title,
+  rows,
+  empty,
+  note,
+  format = (value) => String(value),
+}: {
+  title: string
+  rows: { label: string; value: number; hint?: string; mono?: boolean }[]
+  empty: string
+  note?: string
+  format?: (value: number) => string
+}) {
+  const max = Math.max(...rows.map((row) => row.value), 0)
+  return (
+    <section className="panel p-5">
+      <h2 className="eyebrow mb-4">{title}</h2>
+      {rows.length === 0 || max === 0 ? (
+        <p className="text-[14px] text-ink-dim">{empty}</p>
+      ) : (
+        <ul className="space-y-3">
+          {rows.map((row) => (
+            <li key={row.label}>
+              <div className="flex items-baseline justify-between gap-3">
+                <span className={`min-w-0 truncate text-[14px] text-ink ${row.mono ? 'font-mono' : ''}`} title={row.label}>
+                  {row.label}
+                </span>
+                <span className="shrink-0 font-mono text-[14px] text-ink">
+                  {format(row.value)}
+                  {row.hint && <span className="ml-2 text-ink-dim">{row.hint}</span>}
+                </span>
+              </div>
+              <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-panel-2">
+                <span className="block h-full rounded-full bg-accent" style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {note && <p className="mt-4 text-[12px] leading-relaxed text-ink-dim">{note}</p>}
+    </section>
+  )
+}
+
+/** Asked once, up front, so the first withdrawal is not where they find out. */
+function PayoutNudge() {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent/40 bg-accent/5 px-4 py-3">
+      <p className="text-[15px] text-ink">Add your payout details so your withdrawals can be paid without retyping them.</p>
+      <Link href="/affiliate?tab=withdrawals#payout-details" className="text-[14px] text-accent-ink hover:underline">
+        Add payout details →
+      </Link>
     </div>
   )
 }

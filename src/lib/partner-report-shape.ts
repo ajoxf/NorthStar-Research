@@ -71,6 +71,62 @@ export function dailySeries(events: { at: Date; value?: number }[], days: number
 }
 
 /**
+ * The same series in 7-day buckets, counted back from the last day so the newest bucket
+ * always ends today; the oldest may be short. Each point is labelled with its first day.
+ * For figures where a single day could single out one payment, a week is the finest grain.
+ */
+export function weeklySeries(daily: DayPoint[]): DayPoint[] {
+  const weeks: DayPoint[] = []
+  for (let end = daily.length; end > 0; end -= 7) {
+    const slice = daily.slice(Math.max(0, end - 7), end)
+    weeks.unshift({ day: slice[0].day, value: slice.reduce((sum, point) => sum + point.value, 0) })
+  }
+  return weeks
+}
+
+/**
+ * The host a click came from, for "where your clicks come from": "youtube.com", not the
+ * page. A full referring URL can carry someone's search terms or a private link, so only
+ * the host is ever kept. "www." is dropped so the same site counts once; our own pages,
+ * and anything that is not an http(s) URL, count as no referrer.
+ */
+export function referrerHostOf(referrer: string | null | undefined, ownHost?: string | null): string | null {
+  if (!referrer) return null
+  let url: URL
+  try {
+    url = new URL(referrer)
+  } catch {
+    return null
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
+  const host = url.hostname.toLowerCase().replace(/^www\./, '').slice(0, 100)
+  if (!host) return null
+  const own = (ownHost ?? '').toLowerCase().split(':')[0].replace(/^www\./, '')
+  return own && host === own ? null : host
+}
+
+/** An ISO country code as the edge reports it, or null for anything that is not one ("XX" included). */
+export function countryCodeOf(value: string | null | undefined): string | null {
+  const code = (value ?? '').trim().toUpperCase()
+  return /^[A-Z]{2}$/.test(code) && code !== 'XX' ? code : null
+}
+
+/**
+ * The most common values with their counts, largest first, the rest folded into one
+ * "other" row so a long tail does not push the list off the page. Null counts as its own
+ * key (a direct visit, an unknown country) and is kept.
+ */
+export function topCounts<T extends string | null>(values: T[], limit: number): { key: T | 'other'; count: number }[] {
+  const counts = new Map<T, number>()
+  for (const value of values) counts.set(value, (counts.get(value) ?? 0) + 1)
+  const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])))
+  const top: { key: T | 'other'; count: number }[] = sorted.slice(0, limit).map(([key, count]) => ({ key, count }))
+  const rest = sorted.slice(limit).reduce((sum, [, count]) => sum + count, 0)
+  if (rest > 0) top.push({ key: 'other', count: rest })
+  return top
+}
+
+/**
  * One CSV field, quoted, with quotes doubled. A field a spreadsheet would read as a
  * formula (=, +, -, @, tab, return) is prefixed with an apostrophe: a client's name is
  * typed by the client, and opening a statement must never run what they typed.
