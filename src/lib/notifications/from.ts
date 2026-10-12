@@ -14,4 +14,15 @@
  * `EMAIL_FROM` still wins when set, which is what lets a staging deployment send from
  * somewhere else.
  */
-export const DEFAULT_EMAIL_FROM = 'NordStar Pro <team@fincoursa.com>'
+export const DEFAULT_EMAIL_FROM = 'NordStar Insights <team@nordstarpro.com>'
+
+/**
+ * "Name<address>" with the space a mail client expects before the angle bracket.
+ *
+ * Resend accepts the address without it today, but the format every client and RFC 5322
+ * example uses has it, and a provider that turns strict would otherwise reject every send
+ * at once. Anything else is returned untouched.
+ */
+export function normaliseFrom(value: string): string {
+  return value.trim().replace(/([^\s<])<(?=[^<>\s]+@[^<>\s]+>$)/, '$1 <')
+}
