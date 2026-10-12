@@ -132,6 +132,7 @@ export default async function AdminSectionsPage() {
             currency: section.currency,
             interval: section.interval,
             audience: section.audience,
+            reviewsEnabled: section.reviewsEnabled,
             sortOrder: section.sortOrder,
             imageUrl: section.imageUrl,
             itemSlug: section.item?.slug ?? null,

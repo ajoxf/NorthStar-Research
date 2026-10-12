@@ -352,6 +352,9 @@ model Member {
 
   role Role @default(member)
 
+  reviews        SectionReview[] @relation("ReviewAuthor")
+  reviewsDecided SectionReview[] @relation("ReviewModerator")
+
   subscriptionStatus    SubscriptionStatus @default(pending)
   subscriptionStartedAt DateTime?
   /// End of the paid period. Access is denied once this passes, whichever provider
@@ -1481,6 +1484,10 @@ model Section {
   stripeProductId String?
 
   /// Off the shelf without being deleted — existing subscribers keep reading.
+  /// Whether members can rate and review this section, and approved reviews are shown.
+  /// Off by default: an admin turns it on once the section has readers to say something.
+  reviewsEnabled Boolean @default(false)
+
   archivedAt DateTime?
   sortOrder  Int       @default(0)
 
@@ -1502,6 +1509,7 @@ model Section {
   /// One section per topic per author. A second "Energy by Sarah" is a mistake, not a product.
   /// Order lines that bought this.
   orderLines OrderLine[]
+  reviews    SectionReview[]
 
   @@unique([topicId, authorId])
   @@index([archivedAt, sortOrder])
@@ -1854,4 +1862,45 @@ model TaxRate {
   isActive         Boolean  @default(false)
 
   updatedAt DateTime @updatedAt
+}
+
+/// Where a review stands. Nothing is shown until an admin approves it.
+enum ReviewStatus {
+  pending
+  approved
+  rejected
+}
+
+/// A member's star rating and comment on a section.
+///
+/// Moderated before display, never after: a review of financial research that claims a
+/// return is a performance claim the platform would be publishing. One per member per
+/// section — editing it puts it back in the queue — so one person cannot stack the average.
+model SectionReview {
+  id        String  @id @default(cuid())
+  sectionId String
+  section   Section @relation(fields: [sectionId], references: [id])
+  memberId  String
+  member    Member  @relation("ReviewAuthor", fields: [memberId], references: [id])
+
+  /// 1 to 5.
+  rating Int
+  body   String?
+
+  status ReviewStatus @default(pending)
+  /// Set when the text reads like a claim about returns, so the admin looks harder.
+  flagReason String?
+  /// The reviewer held this section (now or before) when they wrote it.
+  verified Boolean @default(false)
+
+  decidedAt         DateTime?
+  decidedByMemberId String?
+  decidedBy         Member?   @relation("ReviewModerator", fields: [decidedByMemberId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([sectionId, memberId])
+  @@index([sectionId, status])
+  @@index([status, createdAt])
 }

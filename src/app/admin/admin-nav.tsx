@@ -18,6 +18,7 @@ const LINKS = [
   { href: '/admin/offers', label: 'Discounts' },
   { href: '/admin/earnings', label: 'Earnings' },
   { href: '/admin/affiliates', label: 'Affiliates' },
+  { href: '/admin/reviews', label: 'Reviews' },
   { href: '/admin/emails', label: 'Emails' },
 ]
 

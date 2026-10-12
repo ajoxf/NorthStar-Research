@@ -15,6 +15,11 @@ import { trialOffers } from '@/lib/trial'
 import { comingSoonVisible, sectionName } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
 import { formatDate } from '@/lib/utils'
+import { ReviewForm } from '@/app/(marketing)/experts/[slug]/review-form'
+import { Stars } from '@/components/stars'
+import { getCurrentMember } from '@/lib/auth'
+import { reviewCountLabel } from '@/lib/review-shape'
+import { ownReviews, publicReviews } from '@/lib/reviews'
 import { UploadedImage } from '@/components/uploaded-image'
 
 export const dynamic = 'force-dynamic'
@@ -67,6 +72,15 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
    * visual emphasis only; every package on the page is one click to buy.
    */
   const packages = await packagesForAuthor(author.id)
+
+  // Reviews, for the sections an admin has opened to them. Approved ones only, always.
+  const reviewable = author.sections.filter((section) => section.reviewsEnabled)
+  const [reviews, member] = await Promise.all([
+    publicReviews(reviewable.map((section) => section.id)),
+    getCurrentMember().catch(() => null),
+  ])
+  const mine = member ? await ownReviews(member.id, reviewable.map((section) => section.id)) : new Map()
+  const anyApproved = reviewable.some((section) => (reviews.get(section.id)?.reviews.length ?? 0) > 0)
 
   /*
    * Which of those packages a trial is actually open on, and for how many days.
@@ -282,7 +296,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
         </div>
       </section>
 
-      <div className="bg-paper text-ink-on-light">
+      <div className="ground-light bg-paper text-ink-on-light">
       <div className="mx-auto max-w-5xl px-5 py-16 sm:py-24">
         {/*
           Label left, prose right — the reference's shape, and a useful one: the biography
@@ -512,6 +526,14 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
                         {section.cadence}
                       </span>
                     )}
+                    {reviews.get(section.id)?.summary && (
+                      <a href="#reviews" className="mt-2 flex items-center gap-2 text-[13px] text-ink-on-light-dim hover:text-ink-on-light">
+                        <Stars rating={reviews.get(section.id)!.summary!.average} />
+                        <span>
+                          {reviews.get(section.id)!.summary!.average.toFixed(1)} · {reviewCountLabel(reviews.get(section.id)!.summary!.count)}
+                        </span>
+                      </a>
+                    )}
                   </div>
                   <span className="shrink-0 text-right">
                     <span className="block font-display text-[26px] font-medium leading-none tracking-[-0.03em] text-ink-on-light">
@@ -543,6 +565,71 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
             ))}
           </div>
         </section>
+        )}
+
+        {reviewable.length > 0 && (
+          <section id="reviews" className="mt-14 scroll-mt-24">
+            <h2 className="font-display text-[28px] font-medium leading-[1.1] tracking-[-0.03em] text-ink-on-light">
+              What members say
+            </h2>
+            {anyApproved ? (
+              <div className="mt-5 space-y-6">
+                {reviewable.map((section) => {
+                  const entry = reviews.get(section.id)
+                  if (!entry || entry.reviews.length === 0) return null
+                  return (
+                    <div key={section.id}>
+                      {reviewable.length > 1 && (
+                        <h3 className="mb-3 flex flex-wrap items-center gap-2 text-[16px] text-ink-on-light">
+                          {sectionName(section)}
+                          {entry.summary && (
+                            <span className="flex items-center gap-1.5 text-[13px] text-ink-on-light-dim">
+                              <Stars rating={entry.summary.average} /> {entry.summary.average.toFixed(1)}
+                            </span>
+                          )}
+                        </h3>
+                      )}
+                      <ul className="grid gap-3 sm:grid-cols-2">
+                        {entry.reviews.slice(0, 12).map((review) => (
+                          <li key={review.id} className="rounded-2xl bg-paper-card p-5 shadow-[0_1px_2px_rgba(17,24,39,0.06)]">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <Stars rating={review.rating} />
+                              <span className="font-mono text-[12px] text-ink-on-light-dim">{formatDate(review.at)}</span>
+                            </div>
+                            {review.body && <p className="mt-3 whitespace-pre-line text-[15px] leading-[1.6] text-ink-on-light">{review.body}</p>}
+                            <p className="mt-3 text-[13px] text-ink-on-light-dim">
+                              {review.name}
+                              {review.verified && <span className="ml-2 rounded-full border border-ink-on-light/25 px-2 py-0.5 text-[11px] text-ink-on-light">Verified subscriber</span>}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="mt-3 text-[15px] text-ink-on-light-dim">No reviews yet.</p>
+            )}
+            <p className="mt-4 text-[13px] leading-relaxed text-ink-on-light-dim">
+              Reviews are members&rsquo; opinions of the research, checked before they appear. They are not investment
+              advice, and we do not publish claims about returns.
+            </p>
+            <div className="mt-6 max-w-xl">
+              {member ? (
+                <ReviewForm
+                  sections={reviewable.map((section) => ({ id: section.id, name: sectionName(section), mine: mine.get(section.id) ?? null }))}
+                />
+              ) : (
+                <p className="text-[15px] text-ink-on-light">
+                  <Link href={`/login?next=${encodeURIComponent(`/experts/${author.slug}#reviews`)}`} className="text-accent-ink underline underline-offset-4">
+                    Sign in
+                  </Link>{' '}
+                  to write a review.
+                </p>
+              )}
+            </div>
+          </section>
         )}
 
         {recent.length > 0 && (

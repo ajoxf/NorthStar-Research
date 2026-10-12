@@ -27,6 +27,7 @@ const schema = sectionInputSchema
   .partial()
   .extend({
     archived: z.boolean().optional(),
+    reviewsEnabled: z.boolean().optional(),
     // Overrides the create form's version so the picture can actually be taken off: there
     // `''` means "none given", here it has to mean "remove the one that is there".
     imageUrl: clearableUrl,
@@ -39,7 +40,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   const existing = await db.section.findUnique({ where: { id: params.id } })
   if (!existing) return NextResponse.json({ error: 'No such section.' }, { status: 404 })
 
-  const { archived, ...f } = input.data
+  const { archived, reviewsEnabled, ...f } = input.data
 
   /*
    * A price change applies to new subscribers only.
@@ -68,6 +69,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
       ...(f.audience !== undefined ? { audience: f.audience } : {}),
       ...(f.sortOrder !== undefined ? { sortOrder: f.sortOrder } : {}),
       ...(archived === undefined ? {} : { archivedAt: archived ? new Date() : null }),
+      ...(reviewsEnabled === undefined ? {} : { reviewsEnabled }),
     },
     include: { topic: true, author: true },
   })

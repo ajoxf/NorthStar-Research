@@ -36,6 +36,9 @@
    */
   --accent-ink: 214 253 58;
   --on-accent: 0 0 0;
+  /* Rating stars: amber on the dark ground; a deeper amber on light ones (see below), so a
+     filled star still stands off white at better than 3:1. */
+  --star: 245 184 61;
   --imprint: 216 207 192;
   --up: 0 224 138;
   --down: 255 77 94;
@@ -101,6 +104,7 @@
  */
 .ground-light {
   --accent-ink: 77 102 0;
+  --star: 176 106 0;
 }
 
 /* A dark surface inside a light one (text over a photo's scrim) gets lime back. */
@@ -110,6 +114,7 @@
 
 [data-admin-theme='light'] {
   --bg: 255 255 255;
+  --star: 176 106 0;
   --bg-panel: 248 249 250;
   --bg-panel-2: 241 243 245;
   --line: 222 226 231;
@@ -129,6 +134,7 @@
 @media (prefers-color-scheme: light) {
   [data-admin-theme='system'] {
     --bg: 255 255 255;
+    --star: 176 106 0;
     --bg-panel: 248 249 250;
     --bg-panel-2: 241 243 245;
     --line: 222 226 231;
