@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { ToastProvider } from '@/components/ui/toast'
 import { ADMIN_THEME_COOKIE, parsePortalTheme } from '@/lib/admin-theme'
 import { isAffiliateMember, isExpertMember } from '@/lib/portal-account'
-import { getCurrentMember, memberHoldsAnything } from '@/lib/auth'
+import { getCurrentMember, memberHasAnyAccess, memberHoldsAnything } from '@/lib/auth'
 import { initials } from '@/lib/utils'
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -35,8 +35,10 @@ export default async function PortalLayout({ children }: { children: React.React
    * truth. What they may actually open is still decided by memberHasAnyAccess, on the
    * pages that decide it.
    */
-  const [holdsSomething, isAffiliate, isExpert] = await Promise.all([
+  const [holdsSomething, canRead, isAffiliate, isExpert] = await Promise.all([
     memberHoldsAnything(member),
+    // The same test the reports, archive and dashboard pages use to let somebody in.
+    memberHasAnyAccess(member),
     isAffiliateMember(member.id),
     isExpertMember(member.id),
   ])
@@ -46,6 +48,10 @@ export default async function PortalLayout({ children }: { children: React.React
   // Outside the toast provider, so a toast wears the theme too.
   const theme = parsePortalTheme(cookies().get(ADMIN_THEME_COOKIE)?.value)
 
+  // An expert or affiliate who does not subscribe has no reports to open, so the logo
+  // takes them to their own page rather than to a dashboard of nothing.
+  const home = canRead ? '/dashboard' : isExpert ? '/expert' : isAffiliate ? '/affiliate' : '/dashboard'
+
   return (
     <PortalTheme initial={theme}>
       <ToastProvider>
@@ -53,8 +59,8 @@ export default async function PortalLayout({ children }: { children: React.React
           <header className="sticky top-0 z-40 border-b border-line bg-bg/85 backdrop-blur-md">
             <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-5">
               <div className="flex items-center gap-5">
-                <Wordmark href="/dashboard" />
-                <PortalNav isAdmin={member.role === 'admin'} isAffiliate={isAffiliate} isExpert={isExpert} />
+                <Wordmark href={home} />
+                <PortalNav isAdmin={member.role === 'admin'} canRead={canRead} isAffiliate={isAffiliate} isExpert={isExpert} />
               </div>
 
               <div className="flex items-center gap-3">

@@ -5,27 +5,36 @@ import { usePathname } from 'next/navigation'
 
 import { cn } from '@/lib/utils'
 
-const LINKS = [
+/** What a reader gets. Tools is off the menu for now; its page still works by address. */
+const READER_LINKS = [
   { href: '/dashboard', label: 'Reports' },
   { href: '/archive', label: 'Archive' },
-  { href: '/tools', label: 'Tools' },
-  { href: '/account', label: 'Account' },
 ]
 
+/**
+ * Only links the person can use. A subject matter expert or affiliate who does not
+ * subscribe gets their own page and Account — Reports and Archive would only bounce them
+ * to an empty dashboard. Someone who is both sees everything.
+ */
 export function PortalNav({
   isAdmin,
+  canRead,
   isAffiliate,
   isExpert,
 }: {
   isAdmin: boolean
+  /** Holds something they can read: the same test the reports pages use. */
+  canRead: boolean
   isAffiliate: boolean
   isExpert: boolean
 }) {
-  const links = [
-    ...LINKS,
+  const own = [
     ...(isExpert ? [{ href: '/expert', label: 'Expert' }] : []),
     ...(isAffiliate ? [{ href: '/affiliate', label: 'Affiliate' }] : []),
   ]
+  const account = { href: '/account', label: 'Account' }
+  // A lapsed member who is neither keeps Reports: their dashboard is where renewing starts.
+  const links = canRead || own.length === 0 ? [...READER_LINKS, account, ...own] : [...own, account]
   const pathname = usePathname()
 
   return (
