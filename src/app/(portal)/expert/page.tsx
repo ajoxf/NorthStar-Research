@@ -180,14 +180,17 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
               title: report.title,
               section: report.section ? sectionName(report.section) : null,
               submittedAt: formatDate(report.submittedAt ?? report.publishDate),
-              status: report.reviewStatus ?? 'pending',
+              byDesk: report.submittedByAuthorId !== author.id,
+              // A desk upload needs no review; listed only once published.
+              status: report.submittedByAuthorId === author.id ? (report.reviewStatus ?? 'pending') : 'approved',
               note: report.reviewNote,
               publishedAt: report.published && report.publishedAt ? formatDate(report.publishedAt) : null,
             }))}
           />
         </div>
         <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
-          Uploads go to the team for review. Once they publish one, it is sent to your subscribers.
+          Uploads go to the team for review. Once they publish one, it is sent to your subscribers. Preview opens a report
+          exactly as your subscribers see it; your own views are not counted as reads.
         </p>
       </section>
 

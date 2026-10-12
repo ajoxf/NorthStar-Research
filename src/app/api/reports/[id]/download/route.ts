@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { canReadReport, hasAnyAccess } from '@/lib/entitlements'
 import { db } from '@/lib/db'
+import { expertOwnsReport } from '@/lib/expert-reports'
 import { getCurrentMember, loadEntitlements, requestFingerprint } from '@/lib/auth'
 import { REPORT_TOKEN_TTL_SECONDS, mintReportToken } from '@/lib/report-access'
 import { DOWNLOADS_DISABLED_MESSAGE, DOWNLOADS_ENABLED } from '@/lib/downloads'
@@ -40,15 +41,16 @@ export async function POST(_request: Request, { params }: { params: { id: string
   // Loaded once and reused for both checks below. Empty, without a query, for an
   // all-access member — which is everyone who has not bought a single section.
   const entitlements = await loadEntitlements(member)
-  if (!hasAnyAccess(member, entitlements)) {
+  const report = await db.report.findUnique({ where: { id: params.id } })
+  const own = report ? await expertOwnsReport(member.id, report) : false
+  if (!own && !hasAnyAccess(member, entitlements)) {
     return NextResponse.json({ error: 'Your membership is not active.' }, { status: 403 })
   }
 
-  const report = await db.report.findUnique({ where: { id: params.id } })
-  if (!report || (!report.published && member.role !== 'admin')) {
+  if (!report || (!report.published && member.role !== 'admin' && !own)) {
     return NextResponse.json({ error: 'Report not found.' }, { status: 404 })
   }
-  if (!canReadReport(member, report, entitlements)) {
+  if (!own && !canReadReport(member, report, entitlements)) {
     return NextResponse.json(
       { error: 'This report is not part of your subscription.' },
       { status: 403 },
@@ -61,16 +63,19 @@ export async function POST(_request: Request, { params }: { params: { id: string
   const { token, tokenId } = await mintReportToken(member.id, report.id, 'download')
   const { ipAddress, userAgent } = requestFingerprint()
 
-  await db.reportView.create({
-    data: {
-      reportId: report.id,
-      memberId: member.id,
-      ipAddress,
-      userAgent,
-      signedTokenId: tokenId,
-      downloaded: true,
-    },
-  })
+  // An expert taking a copy of their own work is not a reader's download.
+  if (!own) {
+    await db.reportView.create({
+      data: {
+        reportId: report.id,
+        memberId: member.id,
+        ipAddress,
+        userAgent,
+        signedTokenId: tokenId,
+        downloaded: true,
+      },
+    })
+  }
 
   return NextResponse.json({
     url: `/api/reports/${report.id}/file?token=${encodeURIComponent(token)}`,
