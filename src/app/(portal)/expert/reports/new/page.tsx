@@ -30,7 +30,7 @@ export default async function ExpertNewReportPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
-      <Link href="/expert#reports" className="mb-6 inline-flex items-center gap-1.5 text-[14px] text-ink-dim hover:text-ink">
+      <Link href="/expert#reports" className="mb-6 flex w-fit items-center gap-1.5 text-[14px] text-ink-dim hover:text-ink">
         <ArrowLeft className="h-3.5 w-3.5" aria-hidden />
         Back to your page
       </Link>
