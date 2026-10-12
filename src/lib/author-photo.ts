@@ -31,8 +31,15 @@ export const AUTHOR_BLOB_PREFIX = 'authors/'
  */
 export const SECTION_BLOB_PREFIX = 'sections/'
 
+/**
+ * Where an expert's own upload of their photograph goes, for a profile change an admin
+ * has not approved yet. Separate from the admins' area so a token an expert can mint
+ * never reaches a portrait the desk put up, or a section image.
+ */
+export const EXPERT_PHOTO_PREFIX = 'expert-photos/'
+
 /** Every area this app will mint an upload token for. Nothing else is permitted. */
-export const IMAGE_BLOB_PREFIXES = [AUTHOR_BLOB_PREFIX, SECTION_BLOB_PREFIX] as const
+export const IMAGE_BLOB_PREFIXES = [AUTHOR_BLOB_PREFIX, SECTION_BLOB_PREFIX, EXPERT_PHOTO_PREFIX] as const
 
 export type ImageBlobPrefix = (typeof IMAGE_BLOB_PREFIXES)[number]
 
@@ -76,6 +83,11 @@ export function isBlobImageUrl(value: string, prefix: string): boolean {
 
 export function isAuthorPhotoUrl(value: string): boolean {
   return isBlobImageUrl(value, AUTHOR_BLOB_PREFIX)
+}
+
+/** A photograph an expert uploaded themselves. */
+export function isExpertPhotoUrl(value: string): boolean {
+  return isBlobImageUrl(value, EXPERT_PHOTO_PREFIX)
 }
 
 /** The same question for a section's title image. */

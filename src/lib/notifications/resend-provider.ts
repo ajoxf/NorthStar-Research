@@ -13,6 +13,7 @@ import {
   reportEmail,
   pricingInviteEmail,
   partnerApplicationEmail,
+  expertProfileSubmittedEmail,
   payoutDetailsChangedEmail,
   payoutSentEmail,
   sampleReportRequestEmail,
@@ -23,6 +24,7 @@ import type {
   LatestReport,
   ReceiptDetails,
   NotificationProvider,
+  ExpertProfileSubmission,
   PartnerApplication,
   PayoutDetailsChangedNotice,
   PayoutSentNotice,
@@ -145,6 +147,11 @@ export class ResendProvider implements NotificationProvider {
 
   async sendPartnerApplication(to: string, application: PartnerApplication): Promise<DeliveryResult> {
     const { subject, html, text } = partnerApplicationEmail(application)
+    return this.send(to, subject, html, text)
+  }
+
+  async sendExpertProfileSubmitted(to: string, submission: ExpertProfileSubmission): Promise<DeliveryResult> {
+    const { subject, html, text } = expertProfileSubmittedEmail(submission)
     return this.send(to, subject, html, text)
   }
 

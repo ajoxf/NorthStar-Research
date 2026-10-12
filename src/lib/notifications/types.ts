@@ -45,6 +45,7 @@ export type PartnerApplication = {
 
 export type PayoutSentNotice = { amount: string; to: string; reference?: string | null; pageUrl: string }
 export type PayoutDetailsChangedNotice = { now: string; pageUrl: string }
+export type ExpertProfileSubmission = { expert: string; changed: string[]; flag?: string | null; reviewUrl: string }
 
 export type SampleReportRequest = {
   name: string
@@ -100,6 +101,8 @@ export interface NotificationProvider {
 
   /** Tell one admin that somebody applied to be a partner. `to` is an admin's own address. */
   sendPartnerApplication(to: string, application: PartnerApplication): Promise<DeliveryResult>
+  /** Tell one admin that an expert proposed changes to their public profile. `to` is an admin's own address. */
+  sendExpertProfileSubmitted(to: string, submission: ExpertProfileSubmission): Promise<DeliveryResult>
   /** Tell an expert or affiliate that a withdrawal of theirs has been sent. */
   sendPayoutSent(recipient: { email: string; name?: string | null }, payout: PayoutSentNotice): Promise<DeliveryResult>
   /** Tell an expert or affiliate that their saved payout details changed — theirs to stop if it was not them. */

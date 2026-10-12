@@ -202,6 +202,8 @@ enum EmailKind {
   payout_sent
   /// An expert or affiliate told that their saved payout details were changed.
   payout_details_changed
+  /// An admin told that an expert submitted changes to their public profile.
+  expert_profile_submitted
 }
 
 /// What happened to one inbound provider callback.
@@ -1133,6 +1135,46 @@ model LedgerEntry {
 }
 
 /// How far along a withdrawal is.
+enum ProfileDraftStatus {
+  pending
+  approved
+  rejected
+}
+
+/// An expert's proposed edit to their own public profile.
+///
+/// The public profile is the site speaking about a person, so nothing an expert types goes
+/// live on their say-so: it waits here until an admin approves, and only then is copied
+/// onto the Author row. One draft per expert, rewritten by each submission; an approved or
+/// rejected draft stays as the record of the last decision until the next one replaces it.
+/// Name, link, ordering and revenue share are not in it — those remain the desk's.
+model AuthorProfileDraft {
+  id       String @id @default(cuid())
+  authorId String @unique
+  author   Author @relation(fields: [authorId], references: [id])
+
+  headline    String?
+  bio         String?
+  photoUrl    String?
+  credentials String[] @default([])
+  websiteUrl  String?
+  linkedinUrl String?
+  xUrl        String?
+
+  status              ProfileDraftStatus @default(pending)
+  submittedByMemberId String?
+  submittedAt         DateTime           @default(now())
+  decidedByMemberId   String?
+  decidedAt           DateTime?
+  /// Why it was not approved, shown to the expert so they can fix it.
+  rejectReason        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
 enum PayoutMethod {
   bank
   paypal
@@ -1465,6 +1507,8 @@ model Author {
   payouts Payout[]
   /// Where their withdrawals go, once they have said. See PayoutDetails.
   payoutDetails PayoutDetails?
+  /// Changes they have proposed to their own profile, waiting for an admin. See AuthorProfileDraft.
+  profileDraft  AuthorProfileDraft?
 
   @@index([archivedAt])
   @@index([memberId])

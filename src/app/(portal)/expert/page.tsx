@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import { Download, FileDown } from 'lucide-react'
 
 import { PayoutDetailsForm, WithdrawalForm } from '@/app/(portal)/affiliate/affiliate-forms'
+import { ProfileForm } from '@/app/(portal)/expert/profile-form'
 import { ChartFrame } from '@/components/charts/chart-parts'
 import { DailyBars } from '@/components/charts/daily-bars'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +13,7 @@ import { getCurrentMember } from '@/lib/auth'
 import { authorWeek } from '@/lib/author-week'
 import { DEFAULT_HOLDBACK_DAYS, DEFAULT_SHARE_PERCENT } from '@/lib/earnings'
 import { authorForMember, expertStatement } from '@/lib/expert-account'
+import { profileForExpert } from '@/lib/expert-profile'
 import { expertSubscribers, type ExpertSubscriber } from '@/lib/expert-subscribers'
 import { summariseByPeriod, totalsByProduct, type Period } from '@/lib/expert-statement'
 import { balanceWithTotals, postPendingEarnings } from '@/lib/ledger'
@@ -60,7 +62,7 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
 
   const asked = parsePeriod(searchParams.range, 90)
   const range: Range = (RANGES as readonly number[]).includes(asked) ? asked : 90
-  const [weekly, statement, balance, payouts, shareSetting, subscribers, details] = await Promise.all([
+  const [weekly, statement, balance, payouts, shareSetting, subscribers, details, profile] = await Promise.all([
     authorWeek(author.id),
     expertStatement(author.id),
     balanceWithTotals({ authorId: author.id }),
@@ -73,7 +75,12 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
     author.revenueSharePercent ?? DEFAULT_SHARE_PERCENT,
     expertSubscribers(author.id),
     payoutDetailsFor({ authorId: author.id }),
+    profileForExpert(author.id),
   ])
+  // A draft still waiting, or one sent back, is what they were last working on; otherwise
+  // they start from what is live.
+  const openDraft = profile.draft && profile.draft.status !== 'approved' ? profile.draft : null
+  const profileStart = openDraft ?? profile.live
   const week = weekly?.week
   const months = summariseByPeriod(statement.entries, 'month', 12)
   const weeks = summariseByPeriod(statement.entries, 'week', 12)
@@ -112,6 +119,47 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
           </a>
         </div>
       )}
+
+      <details id="profile" className="panel mt-6 p-6" open={profile.draft?.status === 'rejected' || undefined}>
+        <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3">
+          <span className="eyebrow">Your public profile</span>
+          <span className="text-[14px] text-ink-dim">
+            {profile.draft?.status === 'pending'
+              ? `Changes sent ${formatDate(profile.draft.submittedAt)} — waiting for approval`
+              : profile.draft?.status === 'rejected'
+                ? 'Changes not approved — see why below'
+                : 'Edit your photo, headline, biography and links'}
+          </span>
+        </summary>
+        <div className="mt-5">
+          {profile.draft?.status === 'pending' && (
+            <p className="mb-5 rounded-lg border border-line bg-panel-2 px-4 py-3 text-[14px] leading-relaxed text-ink-dim">
+              The team is reviewing your changes. Your{' '}
+              <Link href={`/experts/${author.slug}`} className="underline underline-offset-4 hover:text-ink">
+                live profile
+              </Link>{' '}
+              stays as it is until they are approved. Sending again replaces what you sent.
+            </p>
+          )}
+          {profile.draft?.status === 'rejected' && (
+            <p className="mb-5 rounded-lg border border-accent/40 bg-accent/5 px-4 py-3 text-[14px] leading-relaxed text-ink">
+              Not approved: {profile.draft.rejectReason}. Edit below and send again.
+            </p>
+          )}
+          <ProfileForm
+            name={author.name}
+            initial={{
+              headline: profileStart.headline,
+              bio: profileStart.bio,
+              photoUrl: profileStart.photoUrl,
+              credentials: profileStart.credentials,
+              websiteUrl: profileStart.websiteUrl,
+              linkedinUrl: profileStart.linkedinUrl,
+              xUrl: profileStart.xUrl,
+            }}
+          />
+        </div>
+      </details>
 
       {/* Subscribers ------------------------------------------------------------------ */}
       <section className="panel mt-8 p-6">

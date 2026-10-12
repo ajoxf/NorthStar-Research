@@ -553,6 +553,25 @@ export function payoutDetailsChangedEmail(input: {
   }
 }
 
+export function expertProfileSubmittedEmail(submission: { expert: string; changed: string[]; flag?: string | null; reviewUrl: string }) {
+  const body = `
+    <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">Profile changes to approve</p>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:22px;line-height:1.3;font-weight:600;color:${INK};">${escapeHtml(submission.expert)}</h1>
+    <p style="margin:0 0 8px;color:${INK_DIM};font-size:15px;line-height:1.6;">Wants to change: <span style="color:${INK};">${escapeHtml(submission.changed.join(', '))}</span>.</p>
+    ${submission.flag ? `<p style="margin:12px 0 0;color:${INK};font-size:14px;line-height:1.6;">⚠ ${escapeHtml(submission.flag)}</p>` : ''}
+    ${button(submission.reviewUrl, 'Review the changes')}
+    <p style="margin:18px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Nothing is live until you approve it: the public profile keeps its current text and photograph.</p>
+  `
+  const subject = `Profile changes — ${submission.expert}`
+  return {
+    subject,
+    html: shell(subject, body),
+    text:
+      `Profile changes to approve\n\n${submission.expert} wants to change: ${submission.changed.join(', ')}.\n` +
+      `${submission.flag ? `\n${submission.flag}\n` : ''}\nReview them: ${submission.reviewUrl}\n`,
+  }
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
