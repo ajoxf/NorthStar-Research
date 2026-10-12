@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { appBaseUrl } from '@/lib/env'
 import { type ProfileFields, acceptableExpertPhoto, profileChanges, profileClaim } from '@/lib/expert-profile-shape'
 import { getNotificationProvider } from '@/lib/notifications'
+import { EXPERT_PAGE } from '@/lib/portal-account'
 
 /**
  * An expert proposing changes to their own public profile, and an admin deciding on them.
@@ -68,7 +69,7 @@ export type DecideResult = { ok: true } | { ok: false; error: string; status: nu
 export async function decideProfileDraft(authorId: string, decision: 'approve' | 'reject', adminId: string, reason?: string | null): Promise<DecideResult> {
   if (decision === 'reject' && !reason?.trim()) return { ok: false, error: 'Say why, so they can fix it.', status: 400 }
 
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const claimed = await tx.authorProfileDraft.updateMany({
       where: { authorId, status: 'pending' },
       data: {
@@ -85,6 +86,29 @@ export async function decideProfileDraft(authorId: string, decision: 'approve' |
     }
     return { ok: true as const }
   })
+  if (result.ok) await tellExpert(authorId, decision === 'approve', reason?.trim() ?? null)
+  return result
+}
+
+/**
+ * Tell the expert what was decided. Best-effort, after the write: the decision stands
+ * whether or not the email lands, and the expert's page says the same thing either way.
+ */
+async function tellExpert(authorId: string, approved: boolean, reason: string | null) {
+  try {
+    const author = await db.author.findUnique({ where: { id: authorId }, select: { name: true, slug: true, memberId: true } })
+    const member = author?.memberId
+      ? await db.member.findUnique({ where: { id: author.memberId }, select: { email: true, firstName: true } })
+      : null
+    if (!author || !member) return
+    const result = await getNotificationProvider().sendExpertProfileDecided(
+      { email: member.email, name: member.firstName ?? author.name },
+      { approved, reason, url: `${appBaseUrl()}${approved ? `/experts/${author.slug}` : `${EXPERT_PAGE}#profile`}` },
+    )
+    if (result.status === 'failed') console.error(`[expert-profile] could not tell ${member.email} the decision: ${result.error}`)
+  } catch (error) {
+    console.error('[expert-profile] could not send the decision email', error)
+  }
 }
 
 /** Every draft waiting for an admin, with what it would change. */

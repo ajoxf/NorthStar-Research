@@ -204,6 +204,8 @@ enum EmailKind {
   payout_details_changed
   /// An admin told that an expert submitted changes to their public profile.
   expert_profile_submitted
+  /// An expert told that their profile changes were approved, or sent back with a reason.
+  expert_profile_decided
 }
 
 /// What happened to one inbound provider callback.

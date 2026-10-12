@@ -1,6 +1,7 @@
 import type {
   DeliveryResult,
   NotificationProvider,
+  ExpertProfileDecision,
   ExpertProfileSubmission,
   PartnerApplication,
   PayoutDetailsChangedNotice,
@@ -121,6 +122,11 @@ export class ConsoleProvider implements NotificationProvider {
 
   async sendExpertProfileSubmitted(to: string, submission: ExpertProfileSubmission): Promise<DeliveryResult> {
     console.info(`[notifications:console] PROFILE CHANGES → ${to} | ${submission.expert}: ${submission.changed.join(', ')}`)
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
+  async sendExpertProfileDecided(recipient: { email: string }, decision: ExpertProfileDecision): Promise<DeliveryResult> {
+    console.info(`[notifications:console] PROFILE ${decision.approved ? 'APPROVED' : 'SENT BACK'} → ${recipient.email}${decision.reason ? ` | ${decision.reason}` : ''}`)
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
 
