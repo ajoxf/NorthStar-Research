@@ -28,14 +28,24 @@ export async function imageUploadToken(
   prefix: ImageBlobPrefix,
   /** What these files are, for the error an operator reads. */
   label: string,
+  /**
+   * Who may upload here. Admins, unless the caller says otherwise — the expert photo route
+   * passes its own check, for its own prefix only, so no admin area ever widens.
+   */
+  authorize?: () => Promise<string | null>,
 ): Promise<NextResponse> {
-  try {
-    await requireAdmin()
-  } catch (error) {
-    if (error instanceof ForbiddenError) {
-      return NextResponse.json({ error: error.message }, { status: 403 })
+  if (authorize) {
+    const refusal = await authorize()
+    if (refusal) return NextResponse.json({ error: refusal }, { status: 403 })
+  } else {
+    try {
+      await requireAdmin()
+    } catch (error) {
+      if (error instanceof ForbiddenError) {
+        return NextResponse.json({ error: error.message }, { status: 403 })
+      }
+      throw error
     }
-    throw error
   }
 
   let token: string

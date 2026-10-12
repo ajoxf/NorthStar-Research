@@ -1,6 +1,7 @@
 import type {
   DeliveryResult,
   NotificationProvider,
+  ExpertProfileSubmission,
   PartnerApplication,
   PayoutDetailsChangedNotice,
   PayoutSentNotice,
@@ -115,6 +116,11 @@ export class ConsoleProvider implements NotificationProvider {
 
   async sendPartnerApplication(to: string, application: PartnerApplication): Promise<DeliveryResult> {
     console.info(`[notifications:console] PARTNER APPLICATION → ${to} | ${application.name} <${application.email}> wants "${application.slug}"`)
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
+  async sendExpertProfileSubmitted(to: string, submission: ExpertProfileSubmission): Promise<DeliveryResult> {
+    console.info(`[notifications:console] PROFILE CHANGES → ${to} | ${submission.expert}: ${submission.changed.join(', ')}`)
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
 

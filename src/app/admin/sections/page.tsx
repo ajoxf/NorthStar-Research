@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 import { AuthorManager } from '@/app/admin/sections/author-manager'
+import { ProfileChanges } from '@/app/admin/sections/profile-changes'
 import { SectionManager } from '@/app/admin/sections/section-manager'
 import { TopicManager } from '@/app/admin/sections/topic-manager'
 import { VisibilityToggle } from '@/app/admin/sections/visibility-toggle'
@@ -8,6 +9,8 @@ import { RepairPanel } from '@/app/admin/sections/repair-panel'
 import { ToastProvider } from '@/components/ui/toast'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
+import { pendingProfileDrafts } from '@/lib/expert-profile'
+import { formatDate } from '@/lib/utils'
 import { sectionsPublic } from '@/lib/sections-mode'
 
 export const metadata: Metadata = { title: 'Sections', robots: { index: false, follow: false } }
@@ -24,7 +27,7 @@ export const dynamic = 'force-dynamic'
 export default async function AdminSectionsPage() {
   await requireAdmin()
 
-  const [visible, topics, authors, sections, unlinked] = await Promise.all([
+  const [visible, topics, authors, sections, unlinked, profileDrafts] = await Promise.all([
     sectionsPublic(),
     db.topic.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -47,6 +50,7 @@ export default async function AdminSectionsPage() {
     // Sections that cannot be put in a package. Counted here so the repair panel appears
     // exactly when there is something to repair, rather than sitting on a healthy screen.
     db.section.count({ where: { itemId: null } }),
+    pendingProfileDrafts(),
   ])
 
   const live = sections.filter((section) => section.archivedAt === null).length
@@ -74,6 +78,8 @@ export default async function AdminSectionsPage() {
           </p>
           <VisibilityToggle visible={visible} ready={live > 0} />
         </div>
+
+        <ProfileChanges pending={profileDrafts.map((draft) => ({ ...draft, submittedAt: formatDate(draft.submittedAt) }))} />
 
         <RepairPanel unlinked={unlinked} />
 
