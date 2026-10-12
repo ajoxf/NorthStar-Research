@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
 import { db } from '@/lib/db'
+import { expertOwnsReport } from '@/lib/expert-reports'
 import { verifyReportToken } from '@/lib/report-access'
 
 export const runtime = 'nodejs'
@@ -32,7 +33,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
   // Re-check membership at fetch time: a token minted before a cancellation must not
   // outlive the subscription it was granted under.
-  if (!member || (member.subscriptionStatus !== 'active' && member.role !== 'admin')) {
+  // An expert opening their own report has no membership to re-check; ownership is
+  // re-checked instead, so a token outlives neither.
+  if (!member || (member.subscriptionStatus !== 'active' && member.role !== 'admin' && !(report && (await expertOwnsReport(member.id, report))))) {
     return NextResponse.json({ error: 'Your membership is not active.' }, { status: 403 })
   }
   if (!report?.pdfBlobUrl) {

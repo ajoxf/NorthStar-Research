@@ -1,7 +1,9 @@
 'use client'
 
 import * as React from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Eye } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button, Spinner } from '@/components/ui/button'
@@ -15,6 +17,8 @@ export type Submission = {
   status: 'pending' | 'approved' | 'rejected' | 'withdrawn'
   note: string | null
   publishedAt: string | null
+  /** Uploaded by the desk into one of their sections, rather than submitted by them. */
+  byDesk: boolean
 }
 
 const STATUS: Record<Submission['status'], { label: string; tone: 'accent' | 'up' | 'muted' }> = {
@@ -60,15 +64,23 @@ function Row({ submission }: { submission: Submission }) {
       <div className="min-w-0">
         <div className="text-[15px] text-ink">{submission.title}</div>
         <div className="mt-0.5 text-[13px] text-ink-dim">
-          {submission.section ?? 'No section'} · sent {submission.submittedAt}
+          {submission.section ?? 'No section'} · {submission.byDesk ? 'uploaded by the team' : `sent ${submission.submittedAt}`}
           {submission.publishedAt ? ` · published ${submission.publishedAt}` : ''}
         </div>
         {submission.status === 'rejected' && submission.note && (
           <p className="mt-2 text-[14px] leading-relaxed text-ink">Sent back: {submission.note}</p>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <Badge tone={status.tone}>{status.label}</Badge>
+        {/* The member reader itself, as subscribers see it. See expertOwnsReport. */}
+        <Link
+          href={`/reports/${submission.id}`}
+          className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[13px] text-ink hover:border-accent/50"
+        >
+          <Eye className="h-3.5 w-3.5" aria-hidden />
+          {submission.status === 'approved' ? 'View' : 'Preview'}
+        </Link>
         {submission.status === 'pending' && (
           <Button size="sm" variant="secondary" onClick={withdraw} disabled={busy}>
             {busy && <Spinner />}

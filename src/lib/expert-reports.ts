@@ -100,11 +100,30 @@ async function tellExpert(reportId: string, approved: boolean, reason: string | 
   }
 }
 
-/** The expert's own submissions, newest first, for their page. */
+/**
+ * Is this report the signed-in member's own, as a subject matter expert?
+ *
+ * True for a report they submitted, or one filed in a section of theirs — the reports
+ * published under their name, whoever uploaded them. Owning one lets them open it in the
+ * member reader at any stage, without a subscription, and without counting as a read.
+ * Nothing else opens up: another expert's section, or all-access reports, stay closed.
+ */
+export async function expertOwnsReport(memberId: string, report: { sectionId: string | null; submittedByAuthorId: string | null }): Promise<boolean> {
+  const author = await db.author.findFirst({ where: { memberId }, select: { id: true } })
+  if (!author) return false
+  if (report.submittedByAuthorId === author.id) return true
+  if (!report.sectionId) return false
+  return (await db.section.count({ where: { id: report.sectionId, authorId: author.id } })) > 0
+}
+
+/**
+ * The expert's reports for their page: everything they submitted, at any stage, and the
+ * published reports the desk filed in their sections. Newest first.
+ */
 export async function submissionsFor(authorId: string) {
   return db.report.findMany({
-    where: { submittedByAuthorId: authorId },
-    orderBy: { submittedAt: 'desc' },
+    where: { OR: [{ submittedByAuthorId: authorId }, { section: { authorId }, published: true }] },
+    orderBy: [{ publishDate: 'desc' }, { createdAt: 'desc' }],
     take: 50,
     select: {
       id: true,
@@ -113,6 +132,7 @@ export async function submissionsFor(authorId: string) {
       submittedAt: true,
       reviewStatus: true,
       reviewNote: true,
+      submittedByAuthorId: true,
       published: true,
       publishedAt: true,
       section: { include: { topic: true, author: true } },
