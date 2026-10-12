@@ -36,6 +36,24 @@ if (isPlaceholder) {
   process.exit(0)
 }
 
+/*
+ * 3. **Preview builds do not touch the schema.** A preview shares the production
+ *    database unless it is given its own, and a preview of an unmerged branch pushing its
+ *    schema there leaves production ahead of `main` — after which every production build
+ *    fails, because `main`'s schema would drop what the preview added. That happened once.
+ *    Set ALLOW_PREVIEW_DB_PUSH=true on Preview only once previews have their own database
+ *    (a Neon branch, say). Until then a preview whose PR adds a column builds fine but may
+ *    error on the pages that read it; production is never at risk from a preview.
+ */
+if (process.env.VERCEL_ENV === 'preview' && process.env.ALLOW_PREVIEW_DB_PUSH !== 'true') {
+  console.warn('')
+  console.warn('  ⚠  Preview build — skipping the schema sync so this branch cannot change the')
+  console.warn('     production database. Set ALLOW_PREVIEW_DB_PUSH=true for Preview once')
+  console.warn('     previews have a database of their own.')
+  console.warn('')
+  process.exit(0)
+}
+
 console.log('  → Syncing database schema (prisma db push)…')
 
 try {
