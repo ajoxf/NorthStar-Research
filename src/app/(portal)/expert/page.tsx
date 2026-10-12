@@ -17,7 +17,6 @@ import { authorForMember, expertStatement } from '@/lib/expert-account'
 import { profileForExpert } from '@/lib/expert-profile'
 import { submissionsFor } from '@/lib/expert-reports'
 import { sectionName } from '@/lib/section-shape'
-import { expertSubscribers, type ExpertSubscriber } from '@/lib/expert-subscribers'
 import { summariseByPeriod, totalsByProduct, type Period } from '@/lib/expert-statement'
 import { balanceWithTotals, postPendingEarnings } from '@/lib/ledger'
 import { formatPrice } from '@/lib/package-shape'
@@ -46,12 +45,13 @@ const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric'
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 
 /**
- * A subject matter expert's own page: their subscribers, their sales and their money.
+ * A subject matter expert's own page: their subscriber numbers, their sales and their money.
  *
- * Subscribers are listed masked — "Sarah K.", "s•••@gmail.com" — with their section and
- * dates, the way an affiliate sees their clients. **Money stays in totals.** Sales are by
- * week, by month and by product; there is no list of payments and no amount per person,
- * because on a small section a dated amount beside a name is a buyer's bill.
+ * **Everything about subscribers is a total.** No subscriber is listed, not even masked —
+ * the people who pay are the site's customers, and an expert sees how many there are and
+ * how that moves, never who. Sales are likewise by week, by month and by product; there is
+ * no list of payments and no amount per person, because on a small section a dated amount
+ * is one buyer's bill.
  */
 export default async function ExpertPage({ searchParams = {} }: { searchParams?: Record<string, string | string[] | undefined> }) {
   const member = await getCurrentMember()
@@ -65,7 +65,7 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
 
   const asked = parsePeriod(searchParams.range, 90)
   const range: Range = (RANGES as readonly number[]).includes(asked) ? asked : 90
-  const [weekly, statement, balance, payouts, shareSetting, subscribers, details, profile, submissions] = await Promise.all([
+  const [weekly, statement, balance, payouts, shareSetting, details, profile, submissions] = await Promise.all([
     authorWeek(author.id),
     expertStatement(author.id),
     balanceWithTotals({ authorId: author.id }),
@@ -76,7 +76,6 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
       select: { id: true, amountCents: true, status: true, createdAt: true, rejectedReason: true },
     }),
     author.revenueSharePercent ?? DEFAULT_SHARE_PERCENT,
-    expertSubscribers(author.id),
     payoutDetailsFor({ authorId: author.id }),
     profileForExpert(author.id),
     submissionsFor(author.id),
@@ -90,7 +89,7 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
   const weeks = summariseByPeriod(statement.entries, 'week', 12)
   const products = totalsByProduct(statement.entries)
   // Your share per week, refunds taken off in the week they happened. Weekly, not daily:
-  // beside the subscriber list's start dates, a day's figure could be one person's bill.
+  // on a small section, a day's figure could be one person's bill.
   const earningsByWeek = weeklySeries(
     dailySeries(statement.entries.map((entry) => ({ at: entry.at, value: entry.amountCents })), range),
   )
@@ -265,8 +264,6 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
           <p className="text-[15px] text-ink-dim">No subscriber figures yet.</p>
         )}
       </section>
-
-      <SubscriberList subscribers={subscribers} />
 
       {/* Money --------------------------------------------------------------------- */}
       <section className="panel mt-8 p-6">
@@ -472,70 +469,5 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
       <div className={`mt-1 font-mono text-xl ${accent ? 'text-accent-ink' : 'text-ink'}`}>{value}</div>
     </div>
-  )
-}
-
-const SUBSCRIBER_STATUS: Record<string, { label: string; tone: 'accent' | 'muted' }> = {
-  active: { label: 'Subscribed', tone: 'accent' },
-  trialing: { label: 'Trial', tone: 'accent' },
-  cancelled: { label: 'Cancelled', tone: 'muted' },
-  expired: { label: 'Lapsed', tone: 'muted' },
-}
-
-function SubscriberList({ subscribers }: { subscribers: ExpertSubscriber[] }) {
-  const live = subscribers.filter((row) => row.status === 'active' || row.status === 'trialing').length
-  return (
-    <section className="mt-8">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="eyebrow">Your subscribers</h2>
-        <span className="text-[14px] text-ink-dim">
-          {live} live · {subscribers.length - live} lapsed
-        </span>
-      </div>
-      <div className="panel relative max-h-[32rem] overflow-auto">
-        {subscribers.length === 0 ? (
-          <p className="px-5 py-8 text-center text-[15px] text-ink-dim">Nobody has subscribed to your sections yet.</p>
-        ) : (
-          <table className="w-full min-w-[44rem] text-left">
-            <thead className="sticky top-0 bg-panel">
-              <tr className="border-b border-line">
-                <th className="eyebrow px-4 py-3">Subscriber</th>
-                <th className="eyebrow px-4 py-3">Section</th>
-                <th className="eyebrow px-4 py-3">Country</th>
-                <th className="eyebrow px-4 py-3">Since</th>
-                <th className="eyebrow px-4 py-3">Renews</th>
-                <th className="eyebrow px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subscribers.map((row) => {
-                const live = row.status === 'active' || row.status === 'trialing'
-                return (
-                  <tr key={row.id} className="border-b border-line/60 align-top last:border-0">
-                    <td className="px-4 py-3">
-                      <div className="text-[15px] text-ink">{row.name}</div>
-                      <div className="font-mono text-[13px] text-ink-dim">{row.email}</div>
-                    </td>
-                    <td className="px-4 py-3 text-[14px] text-ink-dim">{row.section}</td>
-                    <td className="px-4 py-3 font-mono text-[14px] text-ink-dim">{row.country ?? '—'}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">{formatDate(row.since)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">
-                      {live && row.renewsAt ? `${row.ending ? 'Ends' : 'Renews'} ${formatDate(row.renewsAt)}` : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={SUBSCRIBER_STATUS[row.status]?.tone ?? 'muted'}>{SUBSCRIBER_STATUS[row.status]?.label ?? row.status}</Badge>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-      <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
-        For their privacy, subscribers are shown by first name and last initial with a masked email. All-access members
-        who can also read you are counted above, not listed.
-      </p>
-    </section>
   )
 }
