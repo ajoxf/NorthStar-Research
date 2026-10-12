@@ -13,9 +13,9 @@
  * at all; keeping one copy means the two cannot drift into explaining the same failure two
  * different ways.
  */
-export async function explainUploadFailure(error: unknown): Promise<string> {
+export async function explainUploadFailure(error: unknown, tokenUrl = '/api/admin/reports/upload'): Promise<string> {
   try {
-    const response = await fetch('/api/admin/reports/upload', {
+    const response = await fetch(tokenUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
@@ -23,7 +23,7 @@ export async function explainUploadFailure(error: unknown): Promise<string> {
     const data = await response.json().catch(() => null)
 
     if (response.status === 403) {
-      return 'Your admin session has expired. Sign in again, then re-upload the PDF.'
+      return 'Your session has expired. Sign in again, then re-upload the PDF.'
     }
     if (data?.error) return data.error
   } catch {

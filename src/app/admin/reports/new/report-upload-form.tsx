@@ -11,7 +11,7 @@ import { FieldError, Hint, Input, Label, Select, Textarea } from '@/components/u
 import { useToast } from '@/components/ui/toast'
 import { compressReportPdf } from '@/lib/pdf-compress'
 import { explainUploadFailure } from '@/app/admin/reports/upload-failure'
-import { MAX_PDF_BYTES, REPORT_BLOB_PREFIX, formatBytes, slugify } from '@/lib/report-upload'
+import { EXPERT_REPORT_PREFIX, MAX_PDF_BYTES, REPORT_BLOB_PREFIX, formatBytes, slugify } from '@/lib/report-upload'
 
 /** Starter JSON so an admin can see the shape of the instrument table without docs. */
 const INSTRUMENT_TEMPLATE = JSON.stringify(
@@ -35,12 +35,25 @@ const INSTRUMENT_TEMPLATE = JSON.stringify(
   2,
 )
 
+/** Where each kind of uploader's requests go. An expert's are their own, narrower routes. */
+const ROUTES = {
+  admin: { token: '/api/admin/reports/upload', create: '/api/admin/reports', prefix: REPORT_BLOB_PREFIX },
+  expert: { token: '/api/expert/reports/upload', create: '/api/expert/reports', prefix: EXPERT_REPORT_PREFIX },
+} as const
+
 export function ReportUploadForm({
   sections,
+  mode = 'admin',
 }: {
-  /** Every section on sale, so the edition can be filed as it is uploaded. */
+  /** Every section on sale, so the edition can be filed as it is uploaded. An expert's own only. */
   sections: { id: string; name: string }[]
+  /**
+   * An expert's upload is a submission: it goes to their routes, must be filed in one of
+   * their sections (never all-access), and lands back on their page awaiting review.
+   */
+  mode?: 'admin' | 'expert'
 }) {
+  const routes = ROUTES[mode]
   const router = useRouter()
   const toast = useToast()
 
@@ -134,10 +147,10 @@ export function ReportUploadForm({
         setProgress(0)
         let blob
         try {
-          blob = await upload(`${REPORT_BLOB_PREFIX}${slugify(String(form.get('title')))}.pdf`, toUpload, {
+          blob = await upload(`${routes.prefix}${slugify(String(form.get('title')))}.pdf`, toUpload, {
             access: 'public',
             contentType: 'application/pdf',
-            handleUploadUrl: '/api/admin/reports/upload',
+            handleUploadUrl: routes.token,
             // Large files upload in parts, so a stalled connection resumes rather than
             // restarting a 15 MB transfer from zero.
             multipart: true,
@@ -148,7 +161,7 @@ export function ReportUploadForm({
           // which tells an operator nothing about what to fix. Ask our own endpoint for
           // the real reason — it knows whether storage is unconfigured, the session has
           // expired, or the file was refused.
-          setError(await explainUploadFailure(uploadError))
+          setError(await explainUploadFailure(uploadError, routes.token))
           return
         }
 
@@ -157,7 +170,7 @@ export function ReportUploadForm({
         setProgress(100)
       }
 
-      const response = await fetch('/api/admin/reports', { method: 'POST', body: form })
+      const response = await fetch(routes.create, { method: 'POST', body: form })
       // Parsed defensively: a failure from the platform rather than the app comes back as
       // HTML, and calling .json() on it would throw away the status entirely.
       const data = await response.json().catch(() => null)
@@ -175,10 +188,10 @@ export function ReportUploadForm({
       if (data.warning) {
         toast(data.warning, 'info')
       } else {
-        toast('Report saved as a draft', 'success')
+        toast(mode === 'expert' ? 'Sent for review — the team will publish it' : 'Report saved as a draft', 'success')
       }
 
-      router.push(`/admin/reports/${data.reportId}`)
+      router.push(mode === 'expert' ? '/expert#reports' : `/admin/reports/${data.reportId}`)
       router.refresh()
     } catch (err) {
       // Includes upload failures, which now carry a real reason from Blob rather than
@@ -251,7 +264,19 @@ export function ReportUploadForm({
         */}
         <div>
           <Label htmlFor="sectionId">Section</Label>
-          {sections.length > 0 ? (
+          {mode === 'expert' ? (
+            <>
+              <Select id="sectionId" name="sectionId" defaultValue={sections.length === 1 ? sections[0].id : ''} required>
+                {sections.length !== 1 && <option value="">Choose one of your sections</option>}
+                {sections.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {section.name}
+                  </option>
+                ))}
+              </Select>
+              <Hint>Who will receive it once published: this section&rsquo;s subscribers, plus all-access members.</Hint>
+            </>
+          ) : sections.length > 0 ? (
             <>
               <Select id="sectionId" name="sectionId" defaultValue="">
                 <option value="">All-access only — no section</option>
@@ -401,6 +426,8 @@ export function ReportUploadForm({
               <Spinner />
               {stage === 'compressing' ? 'Shrinking…' : 'Uploading…'}
             </>
+          ) : mode === 'expert' ? (
+            'Send for review'
           ) : (
             'Save as draft'
           )}

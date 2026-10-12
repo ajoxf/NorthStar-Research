@@ -1,3 +1,4 @@
+import * as React from 'react'
 import Link from 'next/link'
 import type { Metadata } from 'next'
 
@@ -30,6 +31,7 @@ export default async function AdminReportsPage() {
         // For the Section column. Which section a report is filed under decides who can
         // read it and whose card it appears behind, so it belongs in the list.
         section: { include: { topic: true, author: true } },
+        submittedByAuthor: { select: { name: true } },
       },
     }),
     db.report.count({ where: { sectionId: null } }),
@@ -40,6 +42,8 @@ export default async function AdminReportsPage() {
     }),
   ])
 
+  const awaiting = reports.filter((report) => report.reviewStatus === 'pending')
+
   return (
     <ToastProvider>
     <div className="mx-auto max-w-6xl px-5 py-10">
@@ -49,6 +53,19 @@ export default async function AdminReportsPage() {
           <p className="mt-1 font-mono text-[14px] text-ink-dim">
             {reports.length} total. Reports are never deleted — un-publish to hide one from members.
           </p>
+          {awaiting.length > 0 && (
+            <p className="mt-2 text-[15px] text-ink">
+              {awaiting.length} from experts waiting for review:{' '}
+              {awaiting.map((report, index) => (
+                <React.Fragment key={report.id}>
+                  {index > 0 && ', '}
+                  <Link href={`/admin/reports/${report.id}`} className="text-accent-ink underline underline-offset-4">
+                    {report.title}
+                  </Link>
+                </React.Fragment>
+              ))}
+            </p>
+          )}
         </div>
         <ButtonLink href="/admin/reports/new" size="sm">
           Upload a report
@@ -178,9 +195,18 @@ export default async function AdminReportsPage() {
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge tone={report.published ? 'up' : 'muted'}>
-                        {report.published ? 'Published' : 'Draft'}
-                      </Badge>
+                      {report.reviewStatus === 'pending' ? (
+                        <Badge tone="accent">Awaiting review</Badge>
+                      ) : report.reviewStatus === 'rejected' && !report.published ? (
+                        <Badge tone="muted">Sent back</Badge>
+                      ) : report.reviewStatus === 'withdrawn' ? (
+                        <Badge tone="muted">Withdrawn</Badge>
+                      ) : (
+                        <Badge tone={report.published ? 'up' : 'muted'}>
+                          {report.published ? 'Published' : 'Draft'}
+                        </Badge>
+                      )}
+                      {report.submittedByAuthor && <Badge tone="muted">by {report.submittedByAuthor.name}</Badge>}
                       {/* Surfaced in the list too, so an unreadable report is obvious
                           without opening every row. */}
                       {report.pdfBlobUrl && !report.htmlContent && (

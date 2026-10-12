@@ -1,8 +1,10 @@
 import type {
   DeliveryResult,
   NotificationProvider,
-  ExpertProfileDecision,
   ExpertProfileSubmission,
+  ExpertProfileDecision,
+  ExpertReportDecision,
+  ExpertReportSubmission,
   PartnerApplication,
   PayoutDetailsChangedNotice,
   PayoutSentNotice,
@@ -127,6 +129,16 @@ export class ConsoleProvider implements NotificationProvider {
 
   async sendExpertProfileDecided(recipient: { email: string }, decision: ExpertProfileDecision): Promise<DeliveryResult> {
     console.info(`[notifications:console] PROFILE ${decision.approved ? 'APPROVED' : 'SENT BACK'} → ${recipient.email}${decision.reason ? ` | ${decision.reason}` : ''}`)
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
+  async sendExpertReportSubmitted(to: string, submission: ExpertReportSubmission): Promise<DeliveryResult> {
+    console.info(`[notifications:console] REPORT SUBMITTED → ${to} | ${submission.expert}: ${submission.title}`)
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
+  async sendExpertReportDecided(recipient: { email: string }, decision: ExpertReportDecision): Promise<DeliveryResult> {
+    console.info(`[notifications:console] REPORT ${decision.approved ? 'PUBLISHED' : 'SENT BACK'} → ${recipient.email} | ${decision.title}${decision.reason ? ` | ${decision.reason}` : ''}`)
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
 

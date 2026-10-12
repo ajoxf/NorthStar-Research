@@ -15,6 +15,8 @@ import {
   partnerApplicationEmail,
   expertProfileSubmittedEmail,
   expertProfileDecidedEmail,
+  expertReportDecidedEmail,
+  expertReportSubmittedEmail,
   payoutDetailsChangedEmail,
   payoutSentEmail,
   sampleReportRequestEmail,
@@ -25,8 +27,10 @@ import type {
   LatestReport,
   ReceiptDetails,
   NotificationProvider,
-  ExpertProfileDecision,
   ExpertProfileSubmission,
+  ExpertProfileDecision,
+  ExpertReportDecision,
+  ExpertReportSubmission,
   PartnerApplication,
   PayoutDetailsChangedNotice,
   PayoutSentNotice,
@@ -159,6 +163,16 @@ export class ResendProvider implements NotificationProvider {
 
   async sendExpertProfileDecided(recipient: { email: string; name?: string | null }, decision: ExpertProfileDecision): Promise<DeliveryResult> {
     const { subject, html, text } = expertProfileDecidedEmail({ name: recipient.name, ...decision })
+    return this.send(recipient.email, subject, html, text)
+  }
+
+  async sendExpertReportSubmitted(to: string, submission: ExpertReportSubmission): Promise<DeliveryResult> {
+    const { subject, html, text } = expertReportSubmittedEmail(submission)
+    return this.send(to, subject, html, text)
+  }
+
+  async sendExpertReportDecided(recipient: { email: string; name?: string | null }, decision: ExpertReportDecision): Promise<DeliveryResult> {
+    const { subject, html, text } = expertReportDecidedEmail({ name: recipient.name, ...decision })
     return this.send(recipient.email, subject, html, text)
   }
 
