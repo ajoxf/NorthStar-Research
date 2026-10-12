@@ -5,6 +5,7 @@ import { ArrowLeft, Users } from 'lucide-react'
 
 import { PdfAttach } from '@/app/admin/reports/[id]/pdf-attach'
 import { ReportAdminPanel } from '@/app/admin/reports/[id]/report-admin-panel'
+import { SubmissionReview } from '@/app/admin/reports/[id]/submission-review'
 import { sectionName } from '@/lib/section-shape'
 import { ShareLinks } from '@/app/admin/reports/[id]/share-links'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +23,7 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
 
   const report = await db.report.findUnique({
     where: { id: params.id },
-    include: { _count: { select: { views: true, deliveryLogs: true } } },
+    include: { _count: { select: { views: true, deliveryLogs: true } }, submittedByAuthor: { select: { name: true } } },
   })
   if (!report) notFound()
 
@@ -65,6 +66,17 @@ export default async function AdminReportDetailPage({ params }: { params: { id: 
         Publish date {formatDate(report.publishDate)}
         {report.publishedAt && ` · sent ${formatDate(report.publishedAt)}`}
       </p>
+
+      {report.submittedByAuthor && report.reviewStatus && (
+        <SubmissionReview
+          reportId={report.id}
+          expert={report.submittedByAuthor.name}
+          submittedAt={formatDate(report.submittedAt ?? report.createdAt)}
+          status={report.reviewStatus}
+          note={report.reviewNote}
+          hasPdf={Boolean(report.pdfBlobUrl)}
+        />
+      )}
 
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Stat label="Deliveries" value={sent} />

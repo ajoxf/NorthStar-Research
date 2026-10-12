@@ -204,6 +204,10 @@ enum EmailKind {
   payout_details_changed
   /// An admin told that an expert submitted changes to their public profile.
   expert_profile_submitted
+  /// An admin told that an expert submitted a report for review.
+  expert_report_submitted
+  /// An expert told that their report was published, or sent back with a reason.
+  expert_report_decided
 }
 
 /// What happened to one inbound provider callback.
@@ -1334,6 +1338,20 @@ model Report {
   sectionId String?
   section   Section? @relation(fields: [sectionId], references: [id])
 
+  /// Set when a subject matter expert uploaded this edition themselves. Such a report is
+  /// a draft like any other — nothing reaches a member until an admin publishes it — and
+  /// publishing it is the admin's approval. Null for everything the desk uploaded.
+  submittedByAuthorId String?
+  submittedByAuthor   Author?             @relation("ReportSubmissions", fields: [submittedByAuthorId], references: [id])
+  submittedByMemberId String?
+  submittedAt         DateTime?
+  /// Where an expert's submission stands. Null for a desk upload, which needs no review.
+  reviewStatus        ReportReviewStatus?
+  /// Why it was sent back, shown to the expert.
+  reviewNote          String?
+  reviewedAt          DateTime?
+  reviewedByMemberId  String?
+
   views        ReportView[]
   deliveryLogs DeliveryLog[]
   /// One line written for sharing — the hook that makes somebody open the link.
@@ -1342,6 +1360,19 @@ model Report {
 
   @@index([type, publishDate])
   @@index([publishDate])
+  @@index([reviewStatus])
+  @@index([submittedByAuthorId])
+}
+
+enum ReportReviewStatus {
+  /// Uploaded by the expert, waiting for an admin.
+  pending
+  /// Published by an admin — approval and publishing are one act.
+  approved
+  /// Sent back with a reason. Stays as a record; the expert uploads again.
+  rejected
+  /// Taken back by the expert before anyone reviewed it.
+  withdrawn
 }
 
 model ReportView {
@@ -1509,6 +1540,8 @@ model Author {
   payoutDetails PayoutDetails?
   /// Changes they have proposed to their own profile, waiting for an admin. See AuthorProfileDraft.
   profileDraft  AuthorProfileDraft?
+  /// Reports they uploaded themselves, for an admin to publish. See Report.submittedByAuthorId.
+  reportSubmissions Report[] @relation("ReportSubmissions")
 
   @@index([archivedAt])
   @@index([memberId])

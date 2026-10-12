@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { deliverReportToActiveMembers } from '@/lib/delivery'
+import { approveOnPublish } from '@/lib/expert-reports'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,8 +18,9 @@ export const maxDuration = 300
  * Kit later does not touch this file.
  */
 export async function POST(_request: Request, { params }: { params: { id: string } }) {
+  let admin
   try {
-    await requireAdmin()
+    admin = await requireAdmin()
   } catch (error) {
     if (error instanceof ForbiddenError) {
       return NextResponse.json({ error: error.message }, { status: 403 })
@@ -31,6 +33,11 @@ export async function POST(_request: Request, { params }: { params: { id: string
     return NextResponse.json({ error: 'Report not found.' }, { status: 404 })
   }
 
+  // Taken back by the expert who wrote it: theirs to resubmit, not the desk's to send.
+  if (report.reviewStatus === 'withdrawn') {
+    return NextResponse.json({ error: 'The expert withdrew this report, so it cannot be published.' }, { status: 409 })
+  }
+
   const published = await db.report.update({
     where: { id: report.id },
     data: report.published
@@ -40,6 +47,9 @@ export async function POST(_request: Request, { params }: { params: { id: string
 
   // Idempotent: members who already received this report are skipped, so re-publishing
   // to catch stragglers after a partial failure will not send anyone a duplicate.
+  // An expert's submission: publishing it is the approval, and they are told it went out.
+  if (report.submittedByAuthorId) await approveOnPublish(report.id, admin.id)
+
   const summary = await deliverReportToActiveMembers(published)
 
   return NextResponse.json({ ok: true, summary })

@@ -1,10 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { Download, FileDown } from 'lucide-react'
+import { Download, FileDown, FileUp } from 'lucide-react'
 
 import { PayoutDetailsForm, WithdrawalForm } from '@/app/(portal)/affiliate/affiliate-forms'
 import { ProfileForm } from '@/app/(portal)/expert/profile-form'
+import { ReportSubmissions } from '@/app/(portal)/expert/report-submissions'
 import { ChartFrame } from '@/components/charts/chart-parts'
 import { DailyBars } from '@/components/charts/daily-bars'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +15,8 @@ import { authorWeek } from '@/lib/author-week'
 import { DEFAULT_HOLDBACK_DAYS, DEFAULT_SHARE_PERCENT } from '@/lib/earnings'
 import { authorForMember, expertStatement } from '@/lib/expert-account'
 import { profileForExpert } from '@/lib/expert-profile'
+import { submissionsFor } from '@/lib/expert-reports'
+import { sectionName } from '@/lib/section-shape'
 import { expertSubscribers, type ExpertSubscriber } from '@/lib/expert-subscribers'
 import { summariseByPeriod, totalsByProduct, type Period } from '@/lib/expert-statement'
 import { balanceWithTotals, postPendingEarnings } from '@/lib/ledger'
@@ -62,7 +65,7 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
 
   const asked = parsePeriod(searchParams.range, 90)
   const range: Range = (RANGES as readonly number[]).includes(asked) ? asked : 90
-  const [weekly, statement, balance, payouts, shareSetting, subscribers, details, profile] = await Promise.all([
+  const [weekly, statement, balance, payouts, shareSetting, subscribers, details, profile, submissions] = await Promise.all([
     authorWeek(author.id),
     expertStatement(author.id),
     balanceWithTotals({ authorId: author.id }),
@@ -76,6 +79,7 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
     expertSubscribers(author.id),
     payoutDetailsFor({ authorId: author.id }),
     profileForExpert(author.id),
+    submissionsFor(author.id),
   ])
   // A draft still waiting, or one sent back, is what they were last working on; otherwise
   // they start from what is live.
@@ -160,6 +164,32 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
           />
         </div>
       </details>
+
+      <section id="reports" className="mt-8">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="eyebrow">Your reports</h2>
+          <ButtonLink size="sm" href="/expert/reports/new">
+            <FileUp className="h-3.5 w-3.5" aria-hidden />
+            Upload a report
+          </ButtonLink>
+        </div>
+        <div className="panel overflow-hidden">
+          <ReportSubmissions
+            submissions={submissions.map((report) => ({
+              id: report.id,
+              title: report.title,
+              section: report.section ? sectionName(report.section) : null,
+              submittedAt: formatDate(report.submittedAt ?? report.publishDate),
+              status: report.reviewStatus ?? 'pending',
+              note: report.reviewNote,
+              publishedAt: report.published && report.publishedAt ? formatDate(report.publishedAt) : null,
+            }))}
+          />
+        </div>
+        <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
+          Uploads go to the team for review. Once they publish one, it is sent to your subscribers.
+        </p>
+      </section>
 
       {/* Subscribers ------------------------------------------------------------------ */}
       <section className="panel mt-8 p-6">

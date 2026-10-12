@@ -11,6 +11,10 @@ describe('isReportBlobUrl', () => {
     )
   })
 
+  it("accepts an expert's own upload area too", () => {
+    assert.equal(isReportBlobUrl('https://abc123.public.blob.vercel-storage.com/expert-reports/oil-7Hd.pdf'), true)
+  })
+
   it('rejects a blob URL outside the reports area', () => {
     // A token is only ever minted for reports/, so anything else did not come from us.
     assert.equal(
