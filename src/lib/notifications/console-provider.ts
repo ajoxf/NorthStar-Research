@@ -2,6 +2,8 @@ import type {
   DeliveryResult,
   NotificationProvider,
   PartnerApplication,
+  PayoutDetailsChangedNotice,
+  PayoutSentNotice,
   ReceiptDetails,
   Recipient,
   ReportSummary,
@@ -113,6 +115,16 @@ export class ConsoleProvider implements NotificationProvider {
 
   async sendPartnerApplication(to: string, application: PartnerApplication): Promise<DeliveryResult> {
     console.info(`[notifications:console] PARTNER APPLICATION → ${to} | ${application.name} <${application.email}> wants "${application.slug}"`)
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
+  async sendPayoutSent(recipient: { email: string }, payout: PayoutSentNotice): Promise<DeliveryResult> {
+    console.info(`[notifications:console] PAYOUT SENT → ${recipient.email} | ${payout.amount} to ${payout.to}`)
+    return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
+  }
+
+  async sendPayoutDetailsChanged(recipient: { email: string }, change: PayoutDetailsChangedNotice): Promise<DeliveryResult> {
+    console.info(`[notifications:console] PAYOUT DETAILS CHANGED → ${recipient.email} | now ${change.now}`)
     return { status: 'sent', provider: this.name, providerMessageId: `console-${Date.now()}` }
   }
 

@@ -3,6 +3,11 @@ import 'server-only'
 import { db } from '@/lib/db'
 import { withdrawable } from '@/lib/earnings'
 import { balanceFor, balanceForAffiliate } from '@/lib/ledger'
+import { appBaseUrl } from '@/lib/env'
+import { getNotificationProvider } from '@/lib/notifications'
+import { describePayoutDetails, destinationFrom } from '@/lib/payout-details-shape'
+import { formatPrice } from '@/lib/package-shape'
+import { AFFILIATE_PAGE, EXPERT_PAGE } from '@/lib/portal-account'
 import { canTransition, type PayoutStatusValue } from '@/lib/payout-flow'
 
 /**
@@ -75,11 +80,23 @@ export async function requestPayout(
     }
   }
 
+  // No destination typed means "where I said to pay me": the saved details, copied onto
+  // this withdrawal in full so a later change to them cannot redirect it.
+  let destination = input.destination?.trim() || null
+  if (!destination) {
+    const saved = await db.payoutDetails.findUnique({
+      where: 'authorId' in party ? { authorId: party.authorId } : { affiliateId: party.affiliateId },
+      select: { method: true, holderName: true, account: true, routing: true, bankName: true },
+    })
+    if (!saved) return { ok: false, error: 'Add your payout details first, or say where this one should go.', status: 400 }
+    destination = destinationFrom(saved)
+  }
+
   const payout = await db.payout.create({
     data: {
       ...party,
       amountCents: input.amountCents,
-      destination: input.destination ?? null,
+      destination,
       note: input.note ?? null,
       requestedByMemberId: input.requestedByMemberId,
       status: 'requested',
@@ -119,6 +136,7 @@ export async function advancePayout(input: {
       currency: true,
       status: true,
       requestedByMemberId: true,
+      destination: true,
     },
   })
   if (!payout) return { ok: false, error: 'No such withdrawal.', status: 404 }
@@ -192,7 +210,62 @@ export async function advancePayout(input: {
     }
   })
 
+  if (input.to === 'sent') await tellPayee(payout, input.externalReference ?? null)
+
   return { ok: true }
+}
+
+/**
+ * Tell the expert or affiliate that their money has gone.
+ *
+ * Best-effort, after the write: the transfer is recorded whether or not the email lands,
+ * and a failure is logged rather than shown to the operator as if the payout had failed.
+ * Where it went is shown masked — an inbox is not where a full account number belongs.
+ */
+async function tellPayee(
+  payout: { authorId: string | null; affiliateId: string | null; amountCents: number; destination: string | null },
+  reference: string | null,
+) {
+  try {
+    let recipient: { email: string; name: string | null } | null = null
+    if (payout.authorId) {
+      const author = await db.author.findUnique({
+        where: { id: payout.authorId },
+        select: { name: true, memberId: true },
+      })
+      const member = author?.memberId
+        ? await db.member.findUnique({ where: { id: author.memberId }, select: { email: true, firstName: true } })
+        : null
+      // An expert with no login has nowhere to be told; the desk pays them its own way.
+      if (member) recipient = { email: member.email, name: member.firstName ?? author?.name ?? null }
+    } else if (payout.affiliateId) {
+      const affiliate = await db.affiliate.findUnique({
+        where: { id: payout.affiliateId },
+        select: { name: true, email: true, memberId: true },
+      })
+      const member = affiliate?.memberId
+        ? await db.member.findUnique({ where: { id: affiliate.memberId }, select: { email: true, firstName: true } })
+        : null
+      if (affiliate) recipient = { email: member?.email ?? affiliate.email, name: member?.firstName ?? affiliate.name }
+    }
+    if (!recipient) return
+
+    const saved = await db.payoutDetails.findUnique({
+      where: payout.authorId ? { authorId: payout.authorId } : { affiliateId: payout.affiliateId as string },
+      select: { method: true, holderName: true, account: true, routing: true, bankName: true },
+    })
+    const to = saved && payout.destination === destinationFrom(saved) ? describePayoutDetails(saved) : 'the details on your request'
+
+    const result = await getNotificationProvider().sendPayoutSent(recipient, {
+      amount: formatPrice(payout.amountCents),
+      to,
+      reference,
+      pageUrl: `${appBaseUrl()}${payout.authorId ? EXPERT_PAGE : `${AFFILIATE_PAGE}?tab=withdrawals`}`,
+    })
+    if (result.status === 'failed') console.error(`[payouts] could not tell ${recipient.email} a withdrawal was sent: ${result.error}`)
+  } catch (error) {
+    console.error('[payouts] could not send the withdrawal-sent email', error)
+  }
 }
 
 /**

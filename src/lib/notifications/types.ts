@@ -43,6 +43,9 @@ export type PartnerApplication = {
   reviewUrl: string
 }
 
+export type PayoutSentNotice = { amount: string; to: string; reference?: string | null; pageUrl: string }
+export type PayoutDetailsChangedNotice = { now: string; pageUrl: string }
+
 export type SampleReportRequest = {
   name: string
   email: string
@@ -97,6 +100,10 @@ export interface NotificationProvider {
 
   /** Tell one admin that somebody applied to be a partner. `to` is an admin's own address. */
   sendPartnerApplication(to: string, application: PartnerApplication): Promise<DeliveryResult>
+  /** Tell an expert or affiliate that a withdrawal of theirs has been sent. */
+  sendPayoutSent(recipient: { email: string; name?: string | null }, payout: PayoutSentNotice): Promise<DeliveryResult>
+  /** Tell an expert or affiliate that their saved payout details changed — theirs to stop if it was not them. */
+  sendPayoutDetailsChanged(recipient: { email: string; name?: string | null }, change: PayoutDetailsChangedNotice): Promise<DeliveryResult>
   /** Pricing, sent to one person who asked for it. See PricingEnquiry. */
   sendPricingInvite(
     recipient: { email: string; name?: string | null },

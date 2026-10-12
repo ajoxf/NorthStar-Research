@@ -8,6 +8,7 @@ import {
   maskEmail,
   maskName,
   periodStart,
+  topCounts,
 } from '@/lib/partner-report-shape'
 
 /**
@@ -42,7 +43,7 @@ const ORDER_SELECT = {
   billingCountry: true,
   affiliateCampaign: true,
   refunds: { select: { amountCents: true } },
-  lines: { select: { name: true }, orderBy: { position: 'asc' as const } },
+  lines: { select: { name: true, chargeCents: true }, orderBy: { position: 'asc' as const } },
 } as const
 
 /** The affiliate's paid orders, newest first. Operator live-mode probes are not sales. */
@@ -87,6 +88,35 @@ export type AffiliateOverview = {
   revenueCents: number
   commissionCents: number
   series: { commission: DayPoint[]; clicks: DayPoint[]; signups: DayPoint[] }
+  /** Clicks by referring site; null is a direct visit or a browser that sent no referrer. */
+  sources: { key: string | null; count: number }[]
+  /** Clicks by country; null is unknown. */
+  countries: { key: string | null; count: number }[]
+  /** What the referred buyers bought, by product name, with sales after tax and refunds. */
+  products: { name: string; sales: number; revenueCents: number }[]
+}
+
+/**
+ * Sales per product. An order's net is shared across its lines by what each was charged,
+ * so a two-item cart does not count its whole amount against both.
+ */
+function productTotals(orders: { lines: { name: string; chargeCents: number }[]; amount: string; grossCents: number | null; taxCents: number | null; refunds: { amountCents: number }[] }[]) {
+  const byName = new Map<string, { sales: number; revenueCents: number }>()
+  for (const order of orders) {
+    const net = netCents(order)
+    const lines = order.lines.length > 0 ? order.lines : [{ name: 'Membership', chargeCents: 1 }]
+    const weight = lines.reduce((sum, line) => sum + Math.max(0, line.chargeCents), 0)
+    lines.forEach((line) => {
+      const row = byName.get(line.name) ?? { sales: 0, revenueCents: 0 }
+      row.sales += 1
+      row.revenueCents += weight > 0 ? Math.round((net * Math.max(0, line.chargeCents)) / weight) : Math.round(net / lines.length)
+      byName.set(line.name, row)
+    })
+  }
+  return [...byName.entries()]
+    .map(([name, row]) => ({ name, ...row }))
+    .sort((a, b) => b.revenueCents - a.revenueCents || b.sales - a.sales)
+    .slice(0, 8)
 }
 
 /** The period's funnel and daily series. */
@@ -95,7 +125,7 @@ export async function affiliateOverview(affiliateId: string, days: number, now: 
   const [clickRows, signupRows, orders, commissions] = await Promise.all([
     // Every referral row began as a click: a sign-up takes over the click that led to it
     // rather than adding a row, so counting rows counts clicks — as the page always has.
-    db.referral.findMany({ where: { affiliateId, visitedAt: { gte: since } }, select: { visitedAt: true } }),
+    db.referral.findMany({ where: { affiliateId, visitedAt: { gte: since } }, select: { visitedAt: true, referrerHost: true, country: true } }),
     db.referral.findMany({ where: { affiliateId, signedUpAt: { gte: since } }, select: { signedUpAt: true } }),
     paidOrders(affiliateId, since),
     db.ledgerEntry.findMany({
@@ -115,6 +145,9 @@ export async function affiliateOverview(affiliateId: string, days: number, now: 
       clicks: dailySeries(clickRows.map((row) => ({ at: row.visitedAt })), days, now),
       signups: dailySeries(signupRows.flatMap((row) => (row.signedUpAt ? [{ at: row.signedUpAt }] : [])), days, now),
     },
+    sources: topCounts(clickRows.map((row) => row.referrerHost), 6).map((row) => ({ key: row.key, count: row.count })),
+    countries: topCounts(clickRows.map((row) => row.country), 6).map((row) => ({ key: row.key, count: row.count })),
+    products: productTotals(orders),
   }
 }
 

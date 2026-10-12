@@ -8,6 +8,8 @@ import type {
   LatestReport,
   NotificationProvider,
   PartnerApplication,
+  PayoutDetailsChangedNotice,
+  PayoutSentNotice,
   ReceiptDetails,
   Recipient,
   ReportSummary,
@@ -105,6 +107,14 @@ class CompositeProvider implements NotificationProvider {
 
   sendPartnerApplication(to: string, application: PartnerApplication) {
     return sendAndRecord('partner_application', to, () => this.email.sendPartnerApplication(to, application))
+  }
+
+  sendPayoutSent(recipient: { email: string; name?: string | null }, payout: PayoutSentNotice) {
+    return sendAndRecord('payout_sent', recipient.email, () => this.email.sendPayoutSent(recipient, payout))
+  }
+
+  sendPayoutDetailsChanged(recipient: { email: string; name?: string | null }, change: PayoutDetailsChangedNotice) {
+    return sendAndRecord('payout_details_changed', recipient.email, () => this.email.sendPayoutDetailsChanged(recipient, change))
   }
 
   sendWelcomeEmail(

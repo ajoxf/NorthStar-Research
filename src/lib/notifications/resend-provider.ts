@@ -13,6 +13,8 @@ import {
   reportEmail,
   pricingInviteEmail,
   partnerApplicationEmail,
+  payoutDetailsChangedEmail,
+  payoutSentEmail,
   sampleReportRequestEmail,
   portalInviteEmail,
 } from '@/lib/notifications/templates'
@@ -22,6 +24,8 @@ import type {
   ReceiptDetails,
   NotificationProvider,
   PartnerApplication,
+  PayoutDetailsChangedNotice,
+  PayoutSentNotice,
   Recipient,
   ReportSummary,
   PortalInvite,
@@ -142,6 +146,16 @@ export class ResendProvider implements NotificationProvider {
   async sendPartnerApplication(to: string, application: PartnerApplication): Promise<DeliveryResult> {
     const { subject, html, text } = partnerApplicationEmail(application)
     return this.send(to, subject, html, text)
+  }
+
+  async sendPayoutSent(recipient: { email: string; name?: string | null }, payout: PayoutSentNotice): Promise<DeliveryResult> {
+    const { subject, html, text } = payoutSentEmail({ name: recipient.name, ...payout })
+    return this.send(recipient.email, subject, html, text)
+  }
+
+  async sendPayoutDetailsChanged(recipient: { email: string; name?: string | null }, change: PayoutDetailsChangedNotice): Promise<DeliveryResult> {
+    const { subject, html, text } = payoutDetailsChangedEmail({ name: recipient.name, ...change })
+    return this.send(recipient.email, subject, html, text)
   }
 
   async sendCodeExpiring(
