@@ -1,7 +1,7 @@
 import { Resend } from 'resend'
 
 import { optionalEnv, requireEnv } from '@/lib/env'
-import { DEFAULT_EMAIL_FROM } from '@/lib/notifications/from'
+import { DEFAULT_EMAIL_FROM, normaliseFrom } from '@/lib/notifications/from'
 import { withRateLimitRetry } from '@/lib/notifications/retry'
 import {
   codeExpiringEmail,
@@ -41,7 +41,7 @@ export class ResendProvider implements NotificationProvider {
   }
 
   private from(): string {
-    return optionalEnv('EMAIL_FROM', DEFAULT_EMAIL_FROM)
+    return normaliseFrom(optionalEnv('EMAIL_FROM', DEFAULT_EMAIL_FROM))
   }
 
   /**

@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { optionalEnv } from '@/lib/env'
-import { DEFAULT_EMAIL_FROM } from '@/lib/notifications/from'
+import { DEFAULT_EMAIL_FROM, normaliseFrom } from '@/lib/notifications/from'
 import { providerNames } from '@/lib/notifications'
 import { emailPreviews } from '@/lib/notifications/previews'
 import { formatDate } from '@/lib/utils'
@@ -40,7 +40,7 @@ export default async function AdminEmailsPage() {
 
   const previews = emailPreviews()
   const provider = providerNames().email
-  const from = optionalEnv('EMAIL_FROM', DEFAULT_EMAIL_FROM)
+  const from = normaliseFrom(optionalEnv('EMAIL_FROM', DEFAULT_EMAIL_FROM))
   const deskAddress = optionalEnv('SAMPLE_REPORT_REQUEST_TO', from)
   const live = provider !== 'console'
 

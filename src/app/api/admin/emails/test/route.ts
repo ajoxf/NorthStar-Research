@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { ForbiddenError, requireAdmin } from '@/lib/auth'
 import { emailSchema } from '@/lib/validation'
 import { appBaseUrl, optionalEnv } from '@/lib/env'
-import { DEFAULT_EMAIL_FROM } from '@/lib/notifications/from'
+import { DEFAULT_EMAIL_FROM, normaliseFrom } from '@/lib/notifications/from'
 import { emailProviderForTesting, providerNames } from '@/lib/notifications'
 import { recordEmail } from '@/lib/notifications/record'
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
   const to = parsed.data.to.trim().toLowerCase()
   const provider = providerNames().email
-  const from = optionalEnv('EMAIL_FROM', DEFAULT_EMAIL_FROM)
+  const from = normaliseFrom(optionalEnv('EMAIL_FROM', DEFAULT_EMAIL_FROM))
 
   // Answered before spending a round trip, because it is the most likely cause and the
   // one the provider itself can never report — nothing is sent, so nothing can fail.
