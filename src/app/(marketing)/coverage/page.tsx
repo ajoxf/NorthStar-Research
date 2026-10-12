@@ -12,6 +12,7 @@ import { liveOffers } from '@/lib/offers'
 import { sectionName } from '@/lib/section-shape'
 import { sectionsVisibility } from '@/lib/sections-mode'
 import { trialOffers } from '@/lib/trial'
+import { ratingSummaries } from '@/lib/reviews'
 
 export const metadata: Metadata = { title: 'Coverage' }
 export const dynamic = 'force-dynamic'
@@ -71,7 +72,7 @@ export default async function CoveragePage() {
   const sectionsById = new Map(
     covered.flatMap((topic) => topic.sections).map((section) => [section.id, section]),
   )
-  const offers = await liveOffers()
+  const [offers, ratings] = await Promise.all([liveOffers(), ratingSummaries([...sectionsById.keys()])])
   const now = new Date()
   const saleFor = (sectionId: string) => {
     const section = sectionsById.get(sectionId)
@@ -115,6 +116,7 @@ export default async function CoveragePage() {
               },
               cadence: section.cadence,
               description: section.description,
+              rating: ratings.get(section.id) ?? null,
               priceCents: section.priceCents,
               /*
                * Resolved here, with the live offers loaded once above rather than queried

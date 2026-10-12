@@ -36,6 +36,8 @@ export type SectionRow = {
   interval: string
   /** 'retail' | 'institutional' | null. Null is unclassified — see the Audience enum. */
   audience: string | null
+  /** Members can review it, and approved reviews are shown. */
+  reviewsEnabled: boolean
   sortOrder: number
   archived: boolean
   reportCount: number
@@ -428,6 +430,22 @@ export function SectionManager({
                     )
                   }
                 />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy}
+                  aria-pressed={section.reviewsEnabled}
+                  onClick={() =>
+                    send(
+                      `/api/admin/sections/${section.id}`,
+                      'PATCH',
+                      { reviewsEnabled: !section.reviewsEnabled },
+                      section.reviewsEnabled ? 'Reviews turned off' : 'Reviews turned on',
+                    )
+                  }
+                >
+                  {section.reviewsEnabled ? 'Reviews: on' : 'Reviews: off'}
+                </Button>
                 <Button
                   size="sm"
                   variant="secondary"

@@ -16,6 +16,7 @@ import {
 } from '@/lib/browse-filter'
 import { formatPrice } from '@/lib/package-shape'
 import { UploadedImage } from '@/components/uploaded-image'
+import { Stars } from '@/components/stars'
 
 export type CoverageRow = {
   id: string
@@ -27,6 +28,8 @@ export type CoverageRow = {
   author: { name: string; slug: string; photoUrl: string | null }
   cadence: string | null
   description: string | null
+  /** Approved reviews' average and count; null when reviews are off or none are approved. */
+  rating: { average: number; count: number } | null
   priceCents: number
   /**
    * What a buyer pays today, when a public sale covers this section. Null when nothing is
@@ -213,6 +216,15 @@ function SubjectCard({ row, showTopic = false }: { row: CoverageRow; showTopic?:
                     <span className="rounded-full border border-ink-on-light/20 px-2.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink-on-light-dim">
                       {row.cadence}
                     </span>
+                  )}
+                  {row.rating && (
+                    <Link
+                      href={`/experts/${row.author.slug}#reviews`}
+                      className="flex items-center gap-1.5 text-[13px] text-ink-on-light-dim hover:text-ink-on-light"
+                    >
+                      <Stars rating={row.rating.average} size={13} />
+                      {row.rating.average.toFixed(1)} ({row.rating.count})
+                    </Link>
                   )}
                   {/* Who it is priced for. Unclassified sections say nothing rather than
                       guessing, which is why the column is nullable. */}
