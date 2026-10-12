@@ -572,6 +572,51 @@ export function expertProfileSubmittedEmail(submission: { expert: string; change
   }
 }
 
+export function expertReportSubmittedEmail(input: { expert: string; title: string; section: string | null; reviewUrl: string }) {
+  const body = `
+    <p style="margin:0 0 18px;color:${INK_DIM};font-size:14px;">Report to review</p>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:22px;line-height:1.3;font-weight:600;color:${INK};">${escapeHtml(input.title)}</h1>
+    <p style="margin:0 0 8px;color:${INK_DIM};font-size:15px;line-height:1.6;">Uploaded by <span style="color:${INK};">${escapeHtml(input.expert)}</span>${input.section ? ` for <span style="color:${INK};">${escapeHtml(input.section)}</span>` : ''}.</p>
+    ${button(input.reviewUrl, 'Review the report')}
+    <p style="margin:18px 0 0;color:${INK_DIM};font-size:12px;line-height:1.6;">Nothing has been sent to members. Publishing it is your approval, and sends it to the section's subscribers.</p>
+  `
+  const subject = `Report to review — ${input.title}`
+  return {
+    subject,
+    html: shell(subject, body),
+    text: `Report to review\n\n${input.title}\nUploaded by ${input.expert}${input.section ? ` for ${input.section}` : ''}.\n\nReview it: ${input.reviewUrl}\n\nNothing has been sent to members. Publishing it is your approval.\n`,
+  }
+}
+
+export function expertReportDecidedEmail(input: { name?: string | null; title: string; approved: boolean; reason?: string | null; url: string }) {
+  const greeting = input.name ? `Hello ${escapeHtml(input.name)},` : 'Hello,'
+  const headline = input.approved ? 'Your report is published' : 'Your report needs another look'
+  const body = `
+    <p style="margin:0 0 18px;color:${INK};font-size:16px;">${greeting}</p>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:22px;line-height:1.3;font-weight:600;color:${INK};">${headline}</h1>
+    <p style="margin:0 0 8px;color:${INK};font-size:15px;line-height:1.6;">${escapeHtml(input.title)}</p>
+    ${
+      input.approved
+        ? `<p style="margin:0 0 8px;color:${INK_DIM};font-size:15px;line-height:1.6;">The team approved it and it has gone out to your subscribers.</p>`
+        : `<p style="margin:0 0 8px;color:${INK_DIM};font-size:15px;line-height:1.6;">The team could not publish it as it is:</p>
+    <p style="margin:0 0 14px;color:${INK};font-size:15px;line-height:1.6;">${escapeHtml(input.reason ?? '')}</p>
+    <p style="margin:0 0 8px;color:${INK_DIM};font-size:15px;line-height:1.6;">Nothing was sent to members. Upload a corrected version when it is ready.</p>`
+    }
+    ${button(input.url, 'See your reports')}
+  `
+  const subject = `${headline}: ${input.title}`
+  return {
+    subject,
+    html: shell(subject, body),
+    text:
+      `${input.name ? `Hello ${input.name},` : 'Hello,'}\n\n${headline}: ${input.title}\n\n` +
+      (input.approved
+        ? 'The team approved it and it has gone out to your subscribers.\n'
+        : `The team could not publish it as it is:\n\n${input.reason ?? ''}\n\nNothing was sent to members. Upload a corrected version when it is ready.\n`) +
+      `\n${input.url}\n`,
+  }
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

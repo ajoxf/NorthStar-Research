@@ -23,6 +23,12 @@ export const MAX_PDF_BYTES = 100 * 1024 * 1024
 
 export const REPORT_BLOB_PREFIX = 'reports/'
 
+/**
+ * Where a subject matter expert's own upload goes. Its own area, so the token an expert
+ * can mint never reaches a PDF the desk uploaded; a report in either place is a report.
+ */
+export const EXPERT_REPORT_PREFIX = 'expert-reports/'
+
 /** Vercel Blob's public hostname. Every store lives on a subdomain of it. */
 const BLOB_HOST_SUFFIX = '.public.blob.vercel-storage.com'
 
@@ -43,7 +49,8 @@ export function isReportBlobUrl(value: string): boolean {
 
   if (url.protocol !== 'https:') return false
   if (!url.hostname.endsWith(BLOB_HOST_SUFFIX)) return false
-  return url.pathname.replace(/^\//, '').startsWith(REPORT_BLOB_PREFIX)
+  const path = url.pathname.replace(/^\//, '')
+  return path.startsWith(REPORT_BLOB_PREFIX) || path.startsWith(EXPERT_REPORT_PREFIX)
 }
 
 /** Blob path component derived from the report title. A random suffix is added by Blob. */
