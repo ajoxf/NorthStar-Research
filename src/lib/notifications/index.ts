@@ -8,6 +8,7 @@ import type {
   LatestReport,
   NotificationProvider,
   ExpertProfileSubmission,
+  ExpertProfileDecision,
   ExpertReportDecision,
   ExpertReportSubmission,
   PartnerApplication,
@@ -114,6 +115,10 @@ class CompositeProvider implements NotificationProvider {
 
   sendExpertProfileSubmitted(to: string, submission: ExpertProfileSubmission) {
     return sendAndRecord('expert_profile_submitted', to, () => this.email.sendExpertProfileSubmitted(to, submission))
+  }
+
+  sendExpertProfileDecided(recipient: { email: string; name?: string | null }, decision: ExpertProfileDecision) {
+    return sendAndRecord('expert_profile_decided', recipient.email, () => this.email.sendExpertProfileDecided(recipient, decision))
   }
 
   sendExpertReportSubmitted(to: string, submission: ExpertReportSubmission) {

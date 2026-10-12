@@ -617,6 +617,39 @@ export function expertReportDecidedEmail(input: { name?: string | null; title: s
   }
 }
 
+export function expertProfileDecidedEmail(input: {
+  name?: string | null
+  approved: boolean
+  reason?: string | null
+  /** The public profile when approved; their own page's profile section when sent back. */
+  url: string
+}) {
+  const greeting = input.name ? `Hello ${escapeHtml(input.name)},` : 'Hello,'
+  const body = input.approved
+    ? `
+    <p style="margin:0 0 18px;color:${INK};font-size:16px;">${greeting}</p>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:22px;line-height:1.3;font-weight:600;color:${INK};">Your profile changes are live</h1>
+    <p style="margin:0 0 8px;color:${INK_DIM};font-size:15px;line-height:1.6;">The team approved the changes you sent, and your public profile now shows them.</p>
+    ${button(input.url, 'See your profile')}
+  `
+    : `
+    <p style="margin:0 0 18px;color:${INK};font-size:16px;">${greeting}</p>
+    <h1 style="margin:0 0 14px;font-family:Inter,Helvetica,Arial,sans-serif;letter-spacing:-0.02em;font-size:22px;line-height:1.3;font-weight:600;color:${INK};">Your profile changes need another look</h1>
+    <p style="margin:0 0 8px;color:${INK_DIM};font-size:15px;line-height:1.6;">The team could not publish them as they are:</p>
+    <p style="margin:0 0 14px;color:${INK};font-size:15px;line-height:1.6;">${escapeHtml(input.reason ?? '')}</p>
+    <p style="margin:0 0 8px;color:${INK_DIM};font-size:15px;line-height:1.6;">Your public profile is unchanged. Edit your changes and send them again.</p>
+    ${button(input.url, 'Edit your profile')}
+  `
+  const subject = input.approved ? 'Your profile changes are live' : 'Your profile changes need another look'
+  return {
+    subject,
+    html: shell(subject, body),
+    text: input.approved
+      ? `${input.name ? `Hello ${input.name},` : 'Hello,'}\n\nThe team approved your profile changes, and your public profile now shows them.\n\n${input.url}\n`
+      : `${input.name ? `Hello ${input.name},` : 'Hello,'}\n\nThe team could not publish your profile changes as they are:\n\n${input.reason ?? ''}\n\nYour public profile is unchanged. Edit and send them again: ${input.url}\n`,
+  }
+}
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

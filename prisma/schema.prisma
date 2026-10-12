@@ -208,6 +208,8 @@ enum EmailKind {
   expert_report_submitted
   /// An expert told that their report was published, or sent back with a reason.
   expert_report_decided
+  /// An expert told that their profile changes were approved, or sent back with a reason.
+  expert_profile_decided
 }
 
 /// What happened to one inbound provider callback.
