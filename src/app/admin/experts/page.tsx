@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Eye, FileDown, Pencil } from 'lucide-react'
+import { Eye, Pencil } from 'lucide-react'
 
 import { ExpertPortalAccess } from '@/app/admin/sections/author-manager'
 import { ProfileChanges } from '@/app/admin/sections/profile-changes'
@@ -128,13 +128,6 @@ export default async function AdminExpertsPage() {
                       <Eye className="h-3.5 w-3.5" aria-hidden />
                       View as expert
                     </Link>
-                    <a
-                      href={`/api/admin/authors/${author.id}/weekly-report`}
-                      className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[13px] text-ink hover:border-accent/50"
-                    >
-                      <FileDown className="h-3.5 w-3.5" aria-hidden />
-                      Weekly report
-                    </a>
                     <Link
                       href="/admin/sections"
                       className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[13px] text-ink hover:border-accent/50"
