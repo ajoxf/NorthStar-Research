@@ -1,7 +1,6 @@
 import type { Metadata } from 'next'
 
 import { AuthorManager } from '@/app/admin/sections/author-manager'
-import { ProfileChanges } from '@/app/admin/sections/profile-changes'
 import { SectionManager } from '@/app/admin/sections/section-manager'
 import { TopicManager } from '@/app/admin/sections/topic-manager'
 import { VisibilityToggle } from '@/app/admin/sections/visibility-toggle'
@@ -10,7 +9,6 @@ import { ToastProvider } from '@/components/ui/toast'
 import { requireAdmin } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { pendingProfileDrafts } from '@/lib/expert-profile'
-import { formatDate } from '@/lib/utils'
 import { sectionsPublic } from '@/lib/sections-mode'
 
 export const metadata: Metadata = { title: 'Sections', robots: { index: false, follow: false } }
@@ -79,7 +77,12 @@ export default async function AdminSectionsPage() {
           <VisibilityToggle visible={visible} ready={live > 0} />
         </div>
 
-        <ProfileChanges pending={profileDrafts.map((draft) => ({ ...draft, submittedAt: formatDate(draft.submittedAt) }))} />
+        {profileDrafts.length > 0 && (
+          <p className="mb-8 rounded-lg border border-accent/40 bg-accent/5 px-4 py-3 text-[15px] text-ink">
+            {profileDrafts.length} expert profile change{profileDrafts.length === 1 ? ' is' : 's are'} waiting for approval on{' '}
+            <a href="/admin/experts#profile-changes" className="text-accent-ink underline underline-offset-4">Experts</a>.
+          </p>
+        )}
 
         <RepairPanel unlinked={unlinked} />
 

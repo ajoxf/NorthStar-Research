@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Eye } from 'lucide-react'
+import { Eye, Pencil } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button, Spinner } from '@/components/ui/button'
@@ -29,20 +29,20 @@ const STATUS: Record<Submission['status'], { label: string; tone: 'accent' | 'up
 }
 
 /** The expert's own uploads and where each stands. A waiting one can be taken back. */
-export function ReportSubmissions({ submissions }: { submissions: Submission[] }) {
+export function ReportSubmissions({ submissions, readOnly = false }: { submissions: Submission[]; readOnly?: boolean }) {
   if (submissions.length === 0) {
     return <p className="px-5 py-8 text-center text-[15px] text-ink-dim">You have not uploaded a report yet.</p>
   }
   return (
     <ul className="divide-y divide-line/60">
       {submissions.map((submission) => (
-        <Row key={submission.id} submission={submission} />
+        <Row key={submission.id} submission={submission} readOnly={readOnly} />
       ))}
     </ul>
   )
 }
 
-function Row({ submission }: { submission: Submission }) {
+function Row({ submission, readOnly }: { submission: Submission; readOnly: boolean }) {
   const router = useRouter()
   const toast = useToast()
   const [busy, setBusy] = React.useState(false)
@@ -81,7 +81,16 @@ function Row({ submission }: { submission: Submission }) {
           <Eye className="h-3.5 w-3.5" aria-hidden />
           {submission.status === 'approved' ? 'View' : 'Preview'}
         </Link>
-        {submission.status === 'pending' && (
+        {!readOnly && (submission.status === 'pending' || submission.status === 'rejected') && !submission.byDesk && (
+          <Link
+            href={`/expert/reports/${submission.id}`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[13px] text-ink hover:border-accent/50"
+          >
+            <Pencil className="h-3.5 w-3.5" aria-hidden />
+            {submission.status === 'rejected' ? 'Fix and resend' : 'Edit'}
+          </Link>
+        )}
+        {!readOnly && submission.status === 'pending' && (
           <Button size="sm" variant="secondary" onClick={withdraw} disabled={busy}>
             {busy && <Spinner />}
             Withdraw

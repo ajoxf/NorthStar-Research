@@ -362,7 +362,7 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
  * Inviting links the member with that email (or creates one holding nothing) and emails a
  * link to the sign-in page; see portal-account.ts.
  */
-function ExpertPortalAccess({
+export function ExpertPortalAccess({
   authorId,
   name,
   portal,

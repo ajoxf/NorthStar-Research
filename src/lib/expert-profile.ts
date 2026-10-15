@@ -23,7 +23,7 @@ const PROFILE_SELECT = {
   xUrl: true,
 } as const
 
-export const PROFILE_REVIEW_PATH = '/admin/sections#profile-changes'
+export const PROFILE_REVIEW_PATH = '/admin/experts#profile-changes'
 
 export type SubmitResult = { ok: true; changed: number } | { ok: false; error: string; status: number }
 
