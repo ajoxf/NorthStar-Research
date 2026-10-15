@@ -57,6 +57,30 @@ export async function withdrawSubmission(reportId: string, authorId: string): Pr
   return { ok: true }
 }
 
+/**
+ * The submission an expert may still change: their own, not published, and either waiting
+ * for review or sent back. Once published it is the desk's; once withdrawn it is closed.
+ */
+export async function editableSubmission(reportId: string, authorId: string) {
+  return db.report.findFirst({
+    where: { id: reportId, submittedByAuthorId: authorId, published: false, reviewStatus: { in: ['pending', 'rejected'] } },
+  })
+}
+
+/**
+ * Send a sent-back report for review again, after the expert has fixed it. Clears the old
+ * note and tells the admins, exactly as a first submission does.
+ */
+export async function resubmitSubmission(reportId: string, authorId: string, memberId: string): Promise<ReviewResult> {
+  const updated = await db.report.updateMany({
+    where: { id: reportId, submittedByAuthorId: authorId, published: false, reviewStatus: 'rejected' },
+    data: { reviewStatus: 'pending', reviewNote: null, reviewedAt: null, reviewedByMemberId: null, submittedAt: new Date(), submittedByMemberId: memberId },
+  })
+  if (updated.count === 0) return { ok: false, error: 'Only a report that was sent back can be sent again.', status: 409 }
+  await notifySubmission(reportId)
+  return { ok: true }
+}
+
 /** An admin sends a submission back with a reason. Nothing reaches members. */
 export async function sendBackSubmission(reportId: string, adminId: string, reason: string): Promise<ReviewResult> {
   if (!reason.trim()) return { ok: false, error: 'Say why, so they can fix it.', status: 400 }
