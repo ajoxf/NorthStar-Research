@@ -414,7 +414,7 @@ export function portalInviteEmail(input: {
   const greeting = input.name ? `Hello ${escapeHtml(input.name)},` : 'Hello,'
   const what =
     input.role === 'expert'
-      ? 'your sales and earnings by week and month, your subscriber numbers and trend, your weekly report, and a button to ask for a withdrawal'
+      ? 'your sales and earnings by week and month, your reports and a place to upload new ones, and a button to ask for a withdrawal'
       : 'your referral link, how many people it has brought in, what you have earned, and a button to ask for a withdrawal'
   const page = input.role === 'expert' ? 'expert' : 'affiliate'
   const body = `

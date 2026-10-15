@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
-import { Download, FileDown, FileUp } from 'lucide-react'
+import { Download, FileUp } from 'lucide-react'
 
 import { PayoutDetailsForm, WithdrawalForm } from '@/app/(portal)/affiliate/affiliate-forms'
 import { ProfileForm } from '@/app/(portal)/expert/profile-form'
@@ -11,13 +11,11 @@ import { DailyBars } from '@/components/charts/daily-bars'
 import { Badge } from '@/components/ui/badge'
 import { ButtonLink } from '@/components/ui/button'
 import { getCurrentMember } from '@/lib/auth'
-import { authorWeek } from '@/lib/author-week'
 import { DEFAULT_HOLDBACK_DAYS, DEFAULT_SHARE_PERCENT } from '@/lib/earnings'
 import { authorForMember, expertStatement } from '@/lib/expert-account'
 import { profileForExpert } from '@/lib/expert-profile'
 import { submissionsFor } from '@/lib/expert-reports'
 import { sectionName } from '@/lib/section-shape'
-import { expertSubscribers, type ExpertSubscriber } from '@/lib/expert-subscribers'
 import { summariseByPeriod, totalsByProduct, type Period } from '@/lib/expert-statement'
 import { balanceWithTotals, postPendingEarnings } from '@/lib/ledger'
 import { formatPrice } from '@/lib/package-shape'
@@ -46,12 +44,12 @@ const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'short', year: 'numeric'
 const DAY = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
 
 /**
- * A subject matter expert's own page: their subscribers, their sales and their money.
+ * A subject matter expert's own page: their reports, their sales and their money.
  *
- * Subscribers are listed masked — "Sarah K.", "s•••@gmail.com" — with their section and
- * dates, the way an affiliate sees their clients. **Money stays in totals.** Sales are by
- * week, by month and by product; there is no list of payments and no amount per person,
- * because on a small section a dated amount beside a name is a buyer's bill.
+ * **Nothing about subscribers.** No list, no counts, no weekly subscriber report — the
+ * people who pay are the site's customers, and that stays with the desk. Sales are shown
+ * as money only, by week, by month and by product; there is no list of payments and no
+ * amount per person, because on a small section a dated amount is one buyer's bill.
  */
 export default async function ExpertPage({ searchParams = {} }: { searchParams?: Record<string, string | string[] | undefined> }) {
   const member = await getCurrentMember()
@@ -65,8 +63,7 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
 
   const asked = parsePeriod(searchParams.range, 90)
   const range: Range = (RANGES as readonly number[]).includes(asked) ? asked : 90
-  const [weekly, statement, balance, payouts, shareSetting, subscribers, details, profile, submissions] = await Promise.all([
-    authorWeek(author.id),
+  const [statement, balance, payouts, shareSetting, details, profile, submissions] = await Promise.all([
     expertStatement(author.id),
     balanceWithTotals({ authorId: author.id }),
     db.payout.findMany({
@@ -76,7 +73,6 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
       select: { id: true, amountCents: true, status: true, createdAt: true, rejectedReason: true },
     }),
     author.revenueSharePercent ?? DEFAULT_SHARE_PERCENT,
-    expertSubscribers(author.id),
     payoutDetailsFor({ authorId: author.id }),
     profileForExpert(author.id),
     submissionsFor(author.id),
@@ -85,12 +81,11 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
   // they start from what is live.
   const openDraft = profile.draft && profile.draft.status !== 'approved' ? profile.draft : null
   const profileStart = openDraft ?? profile.live
-  const week = weekly?.week
   const months = summariseByPeriod(statement.entries, 'month', 12)
   const weeks = summariseByPeriod(statement.entries, 'week', 12)
   const products = totalsByProduct(statement.entries)
   // Your share per week, refunds taken off in the week they happened. Weekly, not daily:
-  // beside the subscriber list's start dates, a day's figure could be one person's bill.
+  // on a small section, a day's figure could be one person's bill.
   const earningsByWeek = weeklySeries(
     dailySeries(statement.entries.map((entry) => ({ at: entry.at, value: entry.amountCents })), range),
   )
@@ -193,80 +188,6 @@ export default async function ExpertPage({ searchParams = {} }: { searchParams?:
           exactly as your subscribers see it; your own views are not counted as reads.
         </p>
       </section>
-
-      {/* Subscribers ------------------------------------------------------------------ */}
-      <section className="panel mt-8 p-6">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="eyebrow">Subscribers</h2>
-          <ButtonLink size="sm" variant="secondary" href="/api/expert/weekly-report">
-            <FileDown className="h-3.5 w-3.5" aria-hidden />
-            Weekly report (PDF)
-          </ButtonLink>
-        </div>
-        {week ? (
-          <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Stat label="Subscribed now" value={String(week.totals.live)} />
-              <Stat label="New this week" value={String(week.totals.started)} />
-              <Stat label="Lapsed this week" value={String(week.totals.lapsed)} />
-              <Stat label="Renewals due (30 days)" value={String(week.renewalsDue)} />
-            </div>
-            <p className="mt-4 text-[14px] leading-relaxed text-ink-dim">
-              Week to {formatDate(new Date(week.to.getTime() - 1))}.
-              {week.weekOnWeek !== null
-                ? ` ${week.weekOnWeek >= 0 ? '+' : ''}${week.weekOnWeek} on the week before.`
-                : ''}{' '}
-              {week.allAccessReaders > 0
-                ? `${week.allAccessReaders} all-access member${week.allAccessReaders === 1 ? '' : 's'} can also read you.`
-                : ''}{' '}
-              {week.reads > 0 ? `${week.reads} report opens this week.` : ''}
-            </p>
-
-            {week.sections.length > 0 && (
-              <div className="mt-5 overflow-x-auto">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-line">
-                      <th className="eyebrow py-2 pr-4">Section</th>
-                      <Th>Now</Th>
-                      <Th>New</Th>
-                      <Th>Lapsed</Th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {week.sections.map((section) => (
-                      <tr key={section.name} className="border-b border-line/60 last:border-0">
-                        <td className="py-2 pr-4 text-[15px] text-ink">{section.name}</td>
-                        <Td>{section.live}</Td>
-                        <Td>{section.started}</Td>
-                        <Td>{section.lapsed}</Td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <h3 className="mt-6 text-[15px] text-ink">Subscribed, week by week</h3>
-            <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-8">
-              {week.history.map((point) => (
-                <div key={point.to.toISOString()} className="rounded-md border border-line px-2 py-2 text-center">
-                  <div className="font-mono text-[11px] text-ink-dim">{DAY.format(new Date(point.to.getTime() - 1))}</div>
-                  <div className="font-mono text-[17px] text-ink">{point.live}</div>
-                </div>
-              ))}
-            </div>
-            <p className="mt-3 text-[13px] text-ink-dim">
-              How they pay: {week.composition.card} card · {week.composition.crypto} crypto · {week.composition.code} code ·{' '}
-              {week.composition.comp} complimentary.
-            </p>
-          </>
-        ) : (
-          <p className="text-[15px] text-ink-dim">No subscriber figures yet.</p>
-        )}
-      </section>
-
-      <SubscriberList subscribers={subscribers} />
 
       {/* Money --------------------------------------------------------------------- */}
       <section className="panel mt-8 p-6">
@@ -472,70 +393,5 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-ink-dim">{label}</div>
       <div className={`mt-1 font-mono text-xl ${accent ? 'text-accent-ink' : 'text-ink'}`}>{value}</div>
     </div>
-  )
-}
-
-const SUBSCRIBER_STATUS: Record<string, { label: string; tone: 'accent' | 'muted' }> = {
-  active: { label: 'Subscribed', tone: 'accent' },
-  trialing: { label: 'Trial', tone: 'accent' },
-  cancelled: { label: 'Cancelled', tone: 'muted' },
-  expired: { label: 'Lapsed', tone: 'muted' },
-}
-
-function SubscriberList({ subscribers }: { subscribers: ExpertSubscriber[] }) {
-  const live = subscribers.filter((row) => row.status === 'active' || row.status === 'trialing').length
-  return (
-    <section className="mt-8">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="eyebrow">Your subscribers</h2>
-        <span className="text-[14px] text-ink-dim">
-          {live} live · {subscribers.length - live} lapsed
-        </span>
-      </div>
-      <div className="panel relative max-h-[32rem] overflow-auto">
-        {subscribers.length === 0 ? (
-          <p className="px-5 py-8 text-center text-[15px] text-ink-dim">Nobody has subscribed to your sections yet.</p>
-        ) : (
-          <table className="w-full min-w-[44rem] text-left">
-            <thead className="sticky top-0 bg-panel">
-              <tr className="border-b border-line">
-                <th className="eyebrow px-4 py-3">Subscriber</th>
-                <th className="eyebrow px-4 py-3">Section</th>
-                <th className="eyebrow px-4 py-3">Country</th>
-                <th className="eyebrow px-4 py-3">Since</th>
-                <th className="eyebrow px-4 py-3">Renews</th>
-                <th className="eyebrow px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subscribers.map((row) => {
-                const live = row.status === 'active' || row.status === 'trialing'
-                return (
-                  <tr key={row.id} className="border-b border-line/60 align-top last:border-0">
-                    <td className="px-4 py-3">
-                      <div className="text-[15px] text-ink">{row.name}</div>
-                      <div className="font-mono text-[13px] text-ink-dim">{row.email}</div>
-                    </td>
-                    <td className="px-4 py-3 text-[14px] text-ink-dim">{row.section}</td>
-                    <td className="px-4 py-3 font-mono text-[14px] text-ink-dim">{row.country ?? '—'}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">{formatDate(row.since)}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[14px] text-ink-dim">
-                      {live && row.renewsAt ? `${row.ending ? 'Ends' : 'Renews'} ${formatDate(row.renewsAt)}` : '—'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge tone={SUBSCRIBER_STATUS[row.status]?.tone ?? 'muted'}>{SUBSCRIBER_STATUS[row.status]?.label ?? row.status}</Badge>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-      <p className="mt-3 text-[13px] leading-relaxed text-ink-dim">
-        For their privacy, subscribers are shown by first name and last initial with a masked email. All-access members
-        who can also read you are counted above, not listed.
-      </p>
-    </section>
   )
 }
