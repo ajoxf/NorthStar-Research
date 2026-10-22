@@ -92,7 +92,7 @@ export async function openTrialOnEverySection(): Promise<number> {
       kind: 'section',
       archivedAt: null,
       trialEnabled: false,
-      section: { is: { archivedAt: null } },
+      section: { is: { archivedAt: null, author: { archivedAt: null } } },
     },
     data: { trialEnabled: true },
   })
@@ -147,7 +147,7 @@ const OFFER_SELECT = {
   archivedAt: true,
   trialEnabled: true,
   trialDays: true,
-  section: { select: { archivedAt: true } },
+  section: { select: { archivedAt: true, author: { select: { archivedAt: true } } } },
 } as const
 
 function toOffer(
@@ -158,7 +158,7 @@ function toOffer(
     archivedAt: Date | null
     trialEnabled: boolean
     trialDays: number | null
-    section: { archivedAt: Date | null } | null
+    section: { archivedAt: Date | null; author: { archivedAt: Date | null } } | null
   },
   defaultDays: number,
 ): TrialOffer | null {
@@ -179,7 +179,7 @@ const PACKAGE_ITEM_SELECT = {
   id: true,
   archivedAt: true,
   kind: true,
-  section: { select: { id: true, archivedAt: true } },
+  section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true } } } },
 } as const
 
 const PACKAGE_OFFER_SELECT = {
@@ -195,7 +195,7 @@ const PACKAGE_OFFER_SELECT = {
           id: true,
           archivedAt: true,
           kind: true,
-          section: { select: { id: true, archivedAt: true } },
+          section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true } } } },
         },
       },
     },
@@ -208,7 +208,7 @@ type PackageOfferRow = {
   archivedAt: Date | null
   trialEnabled: boolean
   trialDays: number | null
-  items: { item: { id: string; archivedAt: Date | null; kind: 'section' | 'product'; section: { id: string; archivedAt: Date | null } | null } }[]
+  items: { item: { id: string; archivedAt: Date | null; kind: 'section' | 'product'; section: { id: string; archivedAt: Date | null; author: { archivedAt: Date | null } } | null } }[]
 }
 
 function toPackageOffer(pkg: PackageOfferRow, defaultDays: number): TrialOffer | null {

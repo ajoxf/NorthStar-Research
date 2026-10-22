@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 
-import { clampTrialDays, itemTrial, offerUsable } from '@/lib/trial-offer-shape'
+import { clampTrialDays, itemTrial, offerUsable, sectionOnShelf } from '@/lib/trial-offer-shape'
 import { clampDays } from '@/lib/trial-shape'
 
 const live = { archivedAt: null, kind: 'product' as const, section: null }
@@ -88,4 +88,15 @@ test('the two day clamps agree, since one is a copy of the other', () => {
   for (const n of [-5, 0, 1, 14, 365, 400, 1e6]) {
     assert.equal(clampTrialDays(n), clampDays(n), `clamp disagreed at ${n}`)
   }
+})
+
+test("a retired expert's section is off the shelf", () => {
+  const retired = { archivedAt: new Date() }
+  assert.equal(sectionOnShelf({ archivedAt: null, author: { archivedAt: null } }), true)
+  assert.equal(sectionOnShelf({ archivedAt: null, author: retired }), false)
+  assert.equal(sectionOnShelf({ archivedAt: new Date(), author: { archivedAt: null } }), false)
+  assert.equal(
+    offerUsable({ archivedAt: null, kind: 'section', section: { archivedAt: null, author: retired } }),
+    false,
+  )
 })

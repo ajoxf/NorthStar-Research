@@ -49,7 +49,7 @@ export default async function PackagesPage() {
                 id: true,
                 archivedAt: true,
                 kind: true,
-                section: { select: { id: true, archivedAt: true } },
+                section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true } } } },
               },
             },
           },

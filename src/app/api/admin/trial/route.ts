@@ -69,7 +69,7 @@ export async function PATCH(request: Request) {
    */
   const item = await db.item.findUnique({
     where: { slug: parsed.data.itemSlug },
-    select: { archivedAt: true, kind: true, section: { select: { archivedAt: true } } },
+    select: { archivedAt: true, kind: true, section: { select: { archivedAt: true, author: { select: { archivedAt: true } } } } },
   })
   if (!offerUsable(item)) {
     return NextResponse.json(
