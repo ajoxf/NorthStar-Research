@@ -56,7 +56,8 @@ export default async function LandingPage() {
         orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
         include: {
           sections: {
-            where: { archivedAt: null },
+            // Not a retired expert's: they are no longer a subject on sale.
+            where: { archivedAt: null, author: { archivedAt: null } },
             orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
             include: { topic: true, author: true, item: { select: { slug: true } } },
           },

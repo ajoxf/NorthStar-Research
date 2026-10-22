@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { getCurrentMember, hashPassword, startSession } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { grantableItems, packageSlugFromTrial, packageTrialHeldEver } from '@/lib/package-trial'
+import { sectionOnShelf } from '@/lib/trial-offer-shape'
 import {
   refusalMessage,
   researchTrialRefusal,
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
       name: true,
       kind: true,
       archivedAt: true,
-      section: { select: { id: true, archivedAt: true } },
+      section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true } } } },
     },
   })
   const sectionId = item?.section?.id ?? null
@@ -115,7 +116,7 @@ export async function POST(request: Request) {
     item &&
       !item.archivedAt &&
       // A section item with no section row is a half-finished backfill, not an offer.
-      (item.kind !== 'section' || (item.section && !item.section.archivedAt)),
+      (item.kind !== 'section' || sectionOnShelf(item.section)),
   )
 
   const signedIn = await getCurrentMember()
@@ -265,7 +266,7 @@ async function grantPackageTrial(
               id: true,
               archivedAt: true,
               kind: true,
-              section: { select: { id: true, archivedAt: true } },
+              section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true } } } },
             },
           },
         },

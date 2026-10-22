@@ -9,6 +9,7 @@ import { packageById, packageForCheckout } from '@/lib/packages'
 import { alreadyHoldsSection } from '@/lib/payments/checkout-rules'
 import type { CheckoutItem } from '@/lib/payments/types'
 import { sectionName } from '@/lib/section-shape'
+import { sectionOnShelf } from '@/lib/trial-offer-shape'
 
 /** A stable key for a cart item, the same on the client and the server. */
 export function itemKey(ref: CartItemRef): string {
@@ -95,7 +96,7 @@ async function resolveItem(ref: CartItemRef): Promise<CheckoutItem | null> {
       where: { id: ref.id },
       include: { topic: true, author: true },
     })
-    if (!section || section.archivedAt !== null) return null
+    if (!section || !sectionOnShelf(section)) return null
     return {
       kind: 'section',
       id: section.id,

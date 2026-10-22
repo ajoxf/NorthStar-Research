@@ -1,4 +1,4 @@
-import { clampTrialDays } from '@/lib/trial-offer-shape'
+import { clampTrialDays, sectionOnShelf } from '@/lib/trial-offer-shape'
 
 /**
  * Free trials of a package.
@@ -39,7 +39,7 @@ export type TrialItem = {
   id: string
   archivedAt: Date | null
   kind: 'section' | 'product'
-  section: { id: string; archivedAt: Date | null } | null
+  section: { id: string; archivedAt: Date | null; author?: { archivedAt: Date | null } | null } | null
 }
 
 /**
@@ -56,8 +56,7 @@ export function grantableItems(items: TrialItem[]): TrialItem[] {
     (item) =>
       item.archivedAt === null &&
       item.kind === 'section' &&
-      item.section !== null &&
-      item.section.archivedAt === null,
+      sectionOnShelf(item.section),
   )
 }
 
