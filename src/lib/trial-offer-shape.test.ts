@@ -100,3 +100,8 @@ test("a retired expert's section is off the shelf", () => {
     false,
   )
 })
+
+test('a section of an expert not yet live is off the shelf', () => {
+  assert.equal(sectionOnShelf({ archivedAt: null, author: { archivedAt: null, live: false } }), false)
+  assert.equal(sectionOnShelf({ archivedAt: null, author: { archivedAt: null, live: true } }), true)
+})

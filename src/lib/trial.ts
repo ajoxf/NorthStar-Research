@@ -1,6 +1,7 @@
 import 'server-only'
 
 import { db } from '@/lib/db'
+import { PACKAGE_ON_SALE } from '@/lib/packages'
 import { readSettings, writeSetting } from '@/lib/secure-settings'
 import {
   RESEARCH_TRIAL_DAYS_KEY,
@@ -147,7 +148,7 @@ const OFFER_SELECT = {
   archivedAt: true,
   trialEnabled: true,
   trialDays: true,
-  section: { select: { archivedAt: true, author: { select: { archivedAt: true } } } },
+  section: { select: { archivedAt: true, author: { select: { archivedAt: true, live: true } } } },
 } as const
 
 function toOffer(
@@ -158,7 +159,7 @@ function toOffer(
     archivedAt: Date | null
     trialEnabled: boolean
     trialDays: number | null
-    section: { archivedAt: Date | null; author: { archivedAt: Date | null } } | null
+    section: { archivedAt: Date | null; author: { archivedAt: Date | null; live: boolean } } | null
   },
   defaultDays: number,
 ): TrialOffer | null {
@@ -179,7 +180,7 @@ const PACKAGE_ITEM_SELECT = {
   id: true,
   archivedAt: true,
   kind: true,
-  section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true } } } },
+  section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true, live: true } } } },
 } as const
 
 const PACKAGE_OFFER_SELECT = {
@@ -195,7 +196,7 @@ const PACKAGE_OFFER_SELECT = {
           id: true,
           archivedAt: true,
           kind: true,
-          section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true } } } },
+          section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true, live: true } } } },
         },
       },
     },
@@ -208,7 +209,7 @@ type PackageOfferRow = {
   archivedAt: Date | null
   trialEnabled: boolean
   trialDays: number | null
-  items: { item: { id: string; archivedAt: Date | null; kind: 'section' | 'product'; section: { id: string; archivedAt: Date | null; author: { archivedAt: Date | null } } | null } }[]
+  items: { item: { id: string; archivedAt: Date | null; kind: 'section' | 'product'; section: { id: string; archivedAt: Date | null; author: { archivedAt: Date | null; live: boolean } } | null } }[]
 }
 
 function toPackageOffer(pkg: PackageOfferRow, defaultDays: number): TrialOffer | null {
@@ -278,7 +279,7 @@ export async function trialOffers(): Promise<TrialOffer[]> {
       orderBy: { name: 'asc' },
     }),
     db.package.findMany({
-      where: { trialEnabled: true, archivedAt: null },
+      where: { trialEnabled: true, ...PACKAGE_ON_SALE },
       select: PACKAGE_OFFER_SELECT,
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     }),
@@ -315,8 +316,8 @@ export async function trialOfferFor(slug: string): Promise<TrialOffer | null> {
   if (packageSlug !== null) {
     await migrateLegacyTrialSettings()
     const { days } = await trialSettings()
-    const pkg = await db.package.findUnique({
-      where: { slug: packageSlug },
+    const pkg = await db.package.findFirst({
+      where: { slug: packageSlug, ...PACKAGE_ON_SALE },
       select: PACKAGE_OFFER_SELECT,
     })
     return pkg ? toPackageOffer(pkg as PackageOfferRow, days) : null

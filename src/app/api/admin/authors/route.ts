@@ -32,6 +32,8 @@ export async function POST(request: Request) {
       credentials: input.data.credentials,
       sortOrder: input.data.sortOrder,
       comingSoon: input.data.comingSoon,
+      // Hidden until the desk puts them live, so a half-built profile is never public.
+      live: input.data.live ?? false,
     },
   })
   return NextResponse.json({ ok: true, author })

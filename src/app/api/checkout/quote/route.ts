@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   if (parsed.data.sectionId) {
     const section = await db.section.findUnique({
       where: { id: parsed.data.sectionId },
-      select: { id: true, priceCents: true, currency: true, archivedAt: true, author: { select: { archivedAt: true } } },
+      select: { id: true, priceCents: true, currency: true, archivedAt: true, author: { select: { archivedAt: true, live: true } } },
     })
     if (!section || !sectionOnShelf(section)) {
       return NextResponse.json({ error: 'That is not on sale.' }, { status: 404 })

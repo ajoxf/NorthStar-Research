@@ -29,18 +29,24 @@ export function offerUsable(item: {
   return sectionOnShelf(item.section)
 }
 
-/** A section's own retirement, and its expert's. */
-export type SectionShelf = { archivedAt: Date | null; author?: { archivedAt: Date | null } | null }
+/** A section's own retirement, and its expert's standing. */
+export type SectionShelf = {
+  archivedAt: Date | null
+  author?: { archivedAt: Date | null; live?: boolean } | null
+}
 
 /**
  * Is this section still on sale?
  *
- * Not if it has been retired, and not if its expert has: somebody who stopped writing is
- * not a subject to sell or to trial. Existing subscribers keep reading either way — this
+ * Not if it has been retired, not if its expert has — somebody who stopped writing is
+ * not a subject to sell or to trial — and not while its expert is still being set up and
+ * has not been put live on the site. Existing subscribers keep reading either way — this
  * decides what is offered, never what is already held.
  */
 export function sectionOnShelf(section: SectionShelf | null | undefined): boolean {
-  return Boolean(section && !section.archivedAt && !section.author?.archivedAt)
+  return Boolean(
+    section && !section.archivedAt && !section.author?.archivedAt && section.author?.live !== false,
+  )
 }
 
 

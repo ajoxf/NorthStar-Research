@@ -203,6 +203,11 @@ export const authorInputSchema = z.object({
   /** List them before their work is ready. See comingSoonVisible. */
   comingSoon: z.boolean().default(false),
   /**
+   * Shown to visitors at all. Optional, so an edit that does not send it leaves it alone;
+   * a new expert starts hidden unless the form says otherwise.
+   */
+  live: z.boolean().optional(),
+  /**
    * This contributor's share of net revenue, as whole percent. Null is the house default.
    *
    * Nullable and optional all the way through, so editing somebody's biography cannot

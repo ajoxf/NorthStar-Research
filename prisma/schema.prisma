@@ -1506,6 +1506,11 @@ model Author {
   /// forthcoming on the same page it sells their work.
   comingSoon Boolean @default(false)
 
+  /// Shown to visitors at all. Off while an expert is being set up: they can sign in,
+  /// upload and preview, and the desk can build their sections and prices, but nothing
+  /// of theirs is listed, sold or trialled. Existing experts default to on.
+  live Boolean @default(true)
+
   /// Where this contributor sits on the homepage and in the contributors list.
   ///
   /// Alphabetical order is arbitrary as soon as there is a house desk among the names —

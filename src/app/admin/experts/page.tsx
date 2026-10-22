@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Eye, Pencil } from 'lucide-react'
 
+import { LiveSwitch } from '@/app/admin/experts/live-switch'
 import { ExpertPortalAccess } from '@/app/admin/sections/author-manager'
 import { ProfileChanges } from '@/app/admin/sections/profile-changes'
 import { AuthorAvatar } from '@/components/author-avatar'
@@ -31,6 +32,7 @@ export default async function AdminExpertsPage() {
         name: true,
         slug: true,
         headline: true,
+        live: true,
         photoUrl: true,
         memberId: true,
         archivedAt: true,
@@ -107,6 +109,7 @@ export default async function AdminExpertsPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-[16px] text-ink">{author.name}</span>
                       {author.archivedAt && <Badge tone="muted">retired</Badge>}
+                      {!author.archivedAt && !author.live && <Badge tone="muted">not live · hidden from visitors</Badge>}
                       {reports > 0 && <Badge tone="accent">{reports} report{reports === 1 ? '' : 's'} to review</Badge>}
                       {profileWaiting.has(author.id) && <Badge tone="accent">profile changes</Badge>}
                     </div>
@@ -121,6 +124,7 @@ export default async function AdminExpertsPage() {
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    {!author.archivedAt && <LiveSwitch authorId={author.id} name={author.name} live={author.live} />}
                     <Link
                       href={`/admin/experts/${author.id}/view`}
                       className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[13px] text-ink hover:border-accent/50"
