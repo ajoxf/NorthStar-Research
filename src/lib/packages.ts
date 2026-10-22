@@ -79,7 +79,8 @@ export async function packagesByAuthor(): Promise<{
   const [sellable, authors] = await Promise.all([
     sellablePackages(),
     db.author.findMany({
-      where: { archivedAt: null },
+      // Not one still being set up, even announced as coming soon: hidden means hidden.
+      where: { archivedAt: null, live: true },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
       select: {
         id: true,
@@ -121,8 +122,15 @@ export async function allPackages(): Promise<PackageShape[]> {
 }
 
 /** What can be bought right now. Empty means "nothing has been created" — see below. */
+/**
+ * A package is on sale while it is not archived and its expert, if it has one, is live on
+ * the site. One still being set up can have packages ready, priced and waiting; they go
+ * on sale the moment the desk switches the expert live.
+ */
+export const PACKAGE_ON_SALE = { archivedAt: null, NOT: { author: { is: { live: false } } } }
+
 export async function sellablePackages(): Promise<PackageShape[]> {
-  const rows = await db.package.findMany({ where: { archivedAt: null } })
+  const rows = await db.package.findMany({ where: PACKAGE_ON_SALE })
   return sortPackages(rows.map(toShape))
 }
 
@@ -151,10 +159,10 @@ export async function packageForCheckout(idOrSlug?: string | null): Promise<Pack
   if (!idOrSlug) return defaultPackage()
 
   const row = await db.package.findFirst({
-    where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }] },
+    where: { OR: [{ id: idOrSlug }, { slug: idOrSlug }], ...PACKAGE_ON_SALE },
   })
 
-  if (!row || row.archivedAt) return defaultPackage()
+  if (!row) return defaultPackage()
   return toShape(row)
 }
 
@@ -180,6 +188,12 @@ export async function intervalForPackage(id: string | null): Promise<BillingInte
  */
 export async function packageBySlug(slug: string): Promise<PackageShape | null> {
   const row = await db.package.findUnique({ where: { slug } })
+  return row ? toShape(row) : null
+}
+
+/** A package by id, only while it is on sale. */
+export async function sellablePackageById(id: string): Promise<PackageShape | null> {
+  const row = await db.package.findFirst({ where: { id, ...PACKAGE_ON_SALE } })
   return row ? toShape(row) : null
 }
 

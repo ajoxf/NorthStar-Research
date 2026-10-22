@@ -105,11 +105,17 @@ export async function ExpertDashboard({
       <div className="mt-3 flex flex-wrap items-center gap-3">
         <h1 className="text-3xl text-ink sm:text-4xl">{author.name}</h1>
         {author.archivedAt && <Badge tone="muted">retired</Badge>}
+        {!author.archivedAt && !author.live && <Badge tone="muted">not live yet</Badge>}
       </div>
       <p className="mt-2 text-[15px] text-ink-dim">
-        <Link href={`/experts/${author.slug}`} className="underline underline-offset-4 hover:text-ink">
-          Your public profile
-        </Link>{' '}
+        {/* Not a link while they are hidden: the page is a 404 to everybody but the desk. */}
+        {author.live ? (
+          <Link href={`/experts/${author.slug}`} className="underline underline-offset-4 hover:text-ink">
+            Your public profile
+          </Link>
+        ) : (
+          <span>Your profile is not on the site yet — the team puts it live when you are ready</span>
+        )}{' '}
         · your share is {shareSetting}% of each sale after fees, tax and any affiliate commission.
       </p>
 

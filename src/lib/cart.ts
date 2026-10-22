@@ -5,7 +5,7 @@ import { db } from '@/lib/db'
 import type { OfferShape, OfferTarget } from '@/lib/offer'
 import { offerByCode, offerForCheckout } from '@/lib/offers'
 import { isFallbackPackage } from '@/lib/package-shape'
-import { packageById, packageForCheckout } from '@/lib/packages'
+import { packageForCheckout, sellablePackageById } from '@/lib/packages'
 import { alreadyHoldsSection } from '@/lib/payments/checkout-rules'
 import type { CheckoutItem } from '@/lib/payments/types'
 import { sectionName } from '@/lib/section-shape'
@@ -110,7 +110,7 @@ async function resolveItem(ref: CartItemRef): Promise<CheckoutItem | null> {
     }
   }
   // A named package must exist and be on sale; the empty id is the default package.
-  const pkg = ref.id ? await packageById(ref.id) : await packageForCheckout(null)
+  const pkg = ref.id ? await sellablePackageById(ref.id) : await packageForCheckout(null)
   if (!pkg || pkg.archivedAt !== null) return null
   return {
     kind: 'package',

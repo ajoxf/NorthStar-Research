@@ -25,6 +25,7 @@ export type AuthorRow = {
   credentials: string[]
   sortOrder: number
   comingSoon: boolean
+  live: boolean
   archived: boolean
   sectionCount: number
   /** The member account that opens this expert's page, once invited. */
@@ -42,6 +43,8 @@ const EMPTY = {
   credentials: '',
   sortOrder: '0',
   comingSoon: false,
+  // New experts start hidden: set them up, then put them live.
+  live: false,
 }
 
 /**
@@ -74,6 +77,7 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
       credentials: author.credentials.join('\n'),
       sortOrder: String(author.sortOrder),
       comingSoon: author.comingSoon,
+      live: author.live,
     })
   }
 
@@ -111,6 +115,7 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
       // Blank means "leave it at the front of the tie-break", not NaN.
       sortOrder: Number(form.sortOrder) || 0,
       comingSoon: form.comingSoon,
+      live: form.live,
     }
     const ok = editing
       ? await send(`/api/admin/authors/${editing}`, 'PATCH', body, `${form.name} saved`)
@@ -194,6 +199,26 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
             behaviour is conditional: the badge appears only while they have nothing on
             sale, and retires itself when their first subject goes live.
           */}
+          <div className="mt-4">
+            <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#D6FD3A]"
+                checked={form.live}
+                onChange={(e) => setForm({ ...form, live: e.target.checked })}
+              />
+              <span className="min-w-0">
+                <span className="block text-[16px] text-ink">Live on site</span>
+                <span className="mt-1 block text-[15px] leading-relaxed text-ink-dim">
+                  Off while you are setting them up: they can sign in and upload reports, and you
+                  can build their sections and prices, but visitors see nothing of theirs — no
+                  profile, no subjects, no packages, nothing on sale. Tick it when they are ready
+                  to go live.
+                </span>
+              </span>
+            </label>
+          </div>
+
           <div className="mt-4">
             <label className="flex items-start gap-3 rounded-lg border border-line bg-panel-2 p-3.5">
               <input
@@ -308,6 +333,7 @@ export function AuthorManager({ authors }: { authors: AuthorRow[] }) {
                 <ExpertPortalAccess authorId={author.id} name={author.name} portal={author.portal} />
               </div>
               {author.archived && <Badge tone="muted">retired</Badge>}
+              {!author.archived && !author.live && <Badge tone="muted">not live</Badge>}
               <div className="flex gap-2">
                 <Button size="sm" variant="secondary" onClick={() => startEdit(author)}>
                   Edit

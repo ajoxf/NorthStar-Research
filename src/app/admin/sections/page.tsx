@@ -113,6 +113,7 @@ export default async function AdminSectionsPage() {
             credentials: author.credentials,
             sortOrder: author.sortOrder,
             comingSoon: author.comingSoon,
+            live: author.live,
             archived: author.archivedAt !== null,
             sectionCount: author._count.sections,
             portal: (() => {

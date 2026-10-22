@@ -34,8 +34,8 @@ export default async function CoveragePage() {
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     include: {
       sections: {
-        // Not a retired expert's: they are no longer a subject on sale.
-        where: { archivedAt: null, author: { archivedAt: null } },
+        // Only a live expert's: not one retired, nor one still being set up.
+        where: { archivedAt: null, author: { archivedAt: null, live: true } },
         orderBy: [{ sortOrder: 'asc' }, { slug: 'asc' }],
         include: { topic: true, author: true, item: { select: { slug: true } } },
       },

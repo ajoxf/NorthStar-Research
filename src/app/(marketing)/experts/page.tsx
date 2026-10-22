@@ -31,7 +31,8 @@ export default async function ExpertsPage() {
   if (!visible) notFound()
 
   const authors = await db.author.findMany({
-    where: { archivedAt: null },
+    // Not one still being set up: they are listed once the desk puts them live.
+    where: { archivedAt: null, live: true },
     orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     include: {
       sections: {

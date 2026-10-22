@@ -108,7 +108,7 @@ export async function POST(request: Request) {
       name: true,
       kind: true,
       archivedAt: true,
-      section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true } } } },
+      section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true, live: true } } } },
     },
   })
   const sectionId = item?.section?.id ?? null
@@ -266,7 +266,7 @@ async function grantPackageTrial(
               id: true,
               archivedAt: true,
               kind: true,
-              section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true } } } },
+              section: { select: { id: true, archivedAt: true, author: { select: { archivedAt: true, live: true } } } },
             },
           },
         },

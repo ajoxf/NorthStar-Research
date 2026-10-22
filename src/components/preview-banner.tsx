@@ -8,7 +8,7 @@ import { EyeOff } from 'lucide-react'
  * someone, or linking it in an email, on the reasonable assumption that a page they can
  * open is a page that exists.
  */
-export function PreviewBanner() {
+export function PreviewBanner({ switchAt = 'Admin → Sections' }: { switchAt?: string } = {}) {
   return (
     <div className="border-b border-accent/30 bg-accent/[0.07]">
       <p className="mx-auto flex max-w-5xl items-start gap-2.5 px-5 py-3 text-[13px] leading-relaxed text-ink-dim">
@@ -17,7 +17,7 @@ export function PreviewBanner() {
           <strong className="font-medium text-ink">Preview — not visible to the public.</strong>{' '}
           You can see this because you are signed in as an admin. Everyone else gets a 404, and
           nothing on the site links here. Turn it on in{' '}
-          <span className="font-mono text-[12px]">Admin → Sections</span>.
+          <span className="font-mono text-[12px]">{switchAt}</span>.
         </span>
       </p>
     </div>

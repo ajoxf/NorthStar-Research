@@ -30,7 +30,7 @@ export async function generateMetadata({
   params: { slug: string }
 }): Promise<Metadata> {
   const author = await db.author.findUnique({ where: { slug: params.slug } })
-  if (!author) return { title: 'Subject matter expert' }
+  if (!author || !author.live) return { title: 'Subject matter expert' }
   return {
     title: author.name,
     description: author.headline ?? undefined,
@@ -62,6 +62,13 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
   })
 
   if (!author || author.archivedAt !== null) notFound()
+
+  /*
+   * An expert still being set up is a 404 to everybody but the desk, who can open the
+   * profile to check it before switching them live.
+   */
+  const settingUp = !author.live
+  if (settingUp && (await getCurrentMember().catch(() => null))?.role !== 'admin') notFound()
 
   /*
    * What this contributor sells, in the order the admin put them in.
@@ -139,7 +146,7 @@ export default async function ExpertPage({ params }: { params: { slug: string } 
 
   return (
     <ToastProvider>
-      {preview && <PreviewBanner />}
+      {(preview || settingUp) && <PreviewBanner switchAt={settingUp ? 'Admin → Experts' : undefined} />}
 
       {/*
         A photograph-led hero, with the portrait in its own frame rather than bled across
